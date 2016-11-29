@@ -45,6 +45,7 @@ public:
 
     const ClassId xlate(jvmtiEnv *jvmti, jclass klass, NewSigHandler new_sig_handler);
     void remove(jvmtiEnv *jvmti, jclass klass);
+    bool find(ClassId &class_id, ClassSigPtr &sig);
 };
 
 #endif

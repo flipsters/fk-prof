@@ -157,6 +157,6 @@ void LogWriter::recordNewMethod(const map::HashType methodId, const char *fileNa
     writeWithSize(fileName);
     writeWithSize(className);
     writeWithSize(methodName);
-    std::cout << fileName << " " << className << " " << methodName << "\n";
+    //std::cout << fileName << " " << className << " " << methodName << "\n";
     output_.flush();
 }

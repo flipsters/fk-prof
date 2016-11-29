@@ -5,12 +5,14 @@
 #include <jvmti.h>
 #include <cstdlib>
 #include <set>
+#include <chrono>
 
 #include "globals.h"
 #include "thread_map.h"
 #include "profiler.h"
 #include "controller.h"
 #include "loaded_classes.h"
+#include "monitor_objects.h"
 #include "hprof_tracker.h"
 #include "util.h"
 
@@ -24,6 +26,7 @@ static Profiler* prof;
 static Controller* controller;
 static ThreadMap threadMap;
 static LoadedClasses loaded_classes;
+static MonitorObjects monitor_objects;
 
 static void* bci_library;
 
@@ -140,7 +143,7 @@ void JNICALL OnClassPrepare(jvmtiEnv *jvmti_env, JNIEnv *jni_env,
     // that all of the methodIDs have been initialized internally, for
     // AsyncGetCallTrace.  I imagine it slows down class loading a mite,
     // but honestly, how fast does class loading have to be?
-    std::cout << "Prep on thd "<< thread << "\n";
+    //std::cout << "Prep on thd "<< thread << "\n";
     process_prepared_class(jvmti_env, klass);
 }
 
@@ -150,6 +153,7 @@ void JNICALL OnVMDeath(jvmtiEnv *jvmti_env, JNIEnv *jni_env) {
 
     set_tracking(jni_env, false);
     loaded_classes.stop_reporting();
+    monitor_objects.stop_reporting();
 
     if (prof->isRunning())
         prof->stop();
@@ -170,6 +174,8 @@ static bool PrepareJvmti(jvmtiEnv *jvmti) {
     caps.can_generate_compiled_method_load_events = 1;
     caps.can_tag_objects = 1;
     caps.can_generate_object_free_events = 1;
+    caps.can_generate_monitor_events = 1;
+    caps.can_get_monitor_info = 1;
 #ifdef GETENV_NEW_THREAD_ASYNC_UNSAFE
     caps.can_generate_native_method_bind_events = 1;
 #endif
@@ -275,11 +281,58 @@ void JNICALL OnThreadEnd(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread) {
 }
 
 void JNICALL OnObjectFree(jvmtiEnv *jvmti_env, jlong tag) {
-    std::cout << "Free tag: " << tag << "\n";
+    //std::cout << "Free tag: " << tag << "\n";
 }
 
 void JNICALL OnClassUnload(jvmtiEnv* jvmti_env, jthread thd, jclass klass, ...) {
     loaded_classes.remove(jvmti_env, klass);
+}
+
+void process_monitor_event(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jobject &object,
+    MonitorObjects::MonitorId &monitor_id, std::string &tname, microseconds &epoch) {
+
+    epoch = duration_cast<microseconds>(system_clock::now().time_since_epoch());
+
+    ThreadBucket *threadInfo = threadMap.get(jni_env);
+    if(threadInfo == NULL || threadInfo->name == NULL) {
+        tname = "unknown thread";
+    } else {
+        tname = std::string(threadInfo->name);
+    }
+
+    monitor_id = monitor_objects.xlate(jvmti_env, jni_env, object, threadInfo, loaded_classes, NULL);
+}
+
+void JNICALL OnMonitorContendedEnter(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread, jobject object) {
+    MonitorObjects::MonitorId monitor_id;
+    std::string tname;
+    microseconds epoch;
+    process_monitor_event(jvmti_env, jni_env, object, monitor_id, tname, epoch);
+    monitor_objects.report_mc("mcbegin", monitor_id, tname, epoch);
+}
+
+void JNICALL OnMonitorContendedEntered(jvmtiEnv* jvmti_env, JNIEnv *jni_env, jthread thread, jobject object) {
+    MonitorObjects::MonitorId monitor_id;
+    std::string tname;
+    microseconds epoch;
+    process_monitor_event(jvmti_env, jni_env, object, monitor_id, tname, epoch);
+    monitor_objects.report_mc("mcend", monitor_id, tname, epoch);
+}
+
+void JNICALL OnMonitorWait(jvmtiEnv* jvmti_env, JNIEnv *jni_env, jthread thread, jobject object, jlong timeout) {
+    MonitorObjects::MonitorId monitor_id;
+    std::string tname;
+    microseconds epoch;
+    process_monitor_event(jvmti_env, jni_env, object, monitor_id, tname, epoch);
+    monitor_objects.report_m_wait(monitor_id, tname, epoch, timeout);
+}
+
+void JNICALL OnMonitorWaited(jvmtiEnv* jvmti_env, JNIEnv *jni_env, jthread thread, jobject object, jboolean timed_out) {
+    MonitorObjects::MonitorId monitor_id;
+    std::string tname;
+    microseconds epoch;
+    process_monitor_event(jvmti_env, jni_env, object, monitor_id, tname, epoch);
+    monitor_objects.report_m_waited(monitor_id, tname, epoch, timed_out);
 }
 
 static void crw_error_handler(const char * msg, const char *file, int line) {
@@ -308,7 +361,7 @@ void JNICALL OnClassFileLoadHook(jvmtiEnv *jvmti_env, JNIEnv* env,
                                         jint class_data_len, const unsigned char* class_data,
                                         jint* new_class_data_len, unsigned char** new_class_data) {
     auto total_instances_bci_ed = first_few_bci_instances.fetch_add(1, std::memory_order_relaxed);
-    
+
     char* classname = (name == nullptr) ? fn_get_class_name_from_file(class_data, class_data_len, &crw_error_handler) : strdup(name);
 
     if (strcmp(classname, jvmti_tracker_class_name) != 0) {
@@ -372,13 +425,20 @@ static bool RegisterJvmti(jvmtiEnv *jvmti) {
     callbacks->ClassFileLoadHook = &OnClassFileLoadHook;
     callbacks->ObjectFree = &OnObjectFree;
 
+    callbacks->MonitorContendedEnter = &OnMonitorContendedEnter;
+    callbacks->MonitorContendedEntered = &OnMonitorContendedEntered;
+    callbacks->MonitorWait = &OnMonitorWait;
+    callbacks->MonitorWaited = &OnMonitorWaited;
+
     JVMTI_ERROR_RET(
             (jvmti->SetEventCallbacks(callbacks, sizeof(jvmtiEventCallbacks))),
             false);
 
     jvmtiEvent events[] = {JVMTI_EVENT_CLASS_LOAD, JVMTI_EVENT_CLASS_PREPARE,
                            JVMTI_EVENT_VM_DEATH, JVMTI_EVENT_VM_INIT, JVMTI_EVENT_COMPILED_METHOD_LOAD,
-                           JVMTI_EVENT_OBJECT_FREE, JVMTI_EVENT_CLASS_FILE_LOAD_HOOK
+                           JVMTI_EVENT_OBJECT_FREE, JVMTI_EVENT_CLASS_FILE_LOAD_HOOK,
+                           JVMTI_EVENT_MONITOR_CONTENDED_ENTER, JVMTI_EVENT_MONITOR_CONTENDED_ENTERED,
+                           JVMTI_EVENT_MONITOR_WAIT, JVMTI_EVENT_MONITOR_WAITED
 #ifdef GETENV_NEW_THREAD_ASYNC_UNSAFE
         ,JVMTI_EVENT_THREAD_START,
         JVMTI_EVENT_THREAD_END,
@@ -482,7 +542,7 @@ static void parseArguments(char *options, ConfigurationOptions &configuration) {
 }
 
 void wireup_bci_helpers(jvmtiEnv* jvmti) {
-    bci_library = load_sun_boot_lib(jvmti, "libjava_crw_demo.so");
+    bci_library = load_sun_boot_lib(jvmti, "libjava_crw_demo.dylib");
     
     if (bci_library != nullptr) {
         fn_do_bci = reinterpret_cast<Fn_DoBci>(lib_symbol(bci_library, "java_crw_demo"));

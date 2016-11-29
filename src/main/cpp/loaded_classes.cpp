@@ -56,6 +56,10 @@ void LoadedClasses::remove(jvmtiEnv *jvmti, const jclass klass) { //implement me
     signatures.erase(class_id);
 }
 
+bool LoadedClasses::find(ClassId &class_id, ClassSigPtr &sig) {
+    return signatures.find(class_id, sig);
+}
+
 void LoadedClasses::stop_reporting() {
     do_report.store(false, std::memory_order_release);
     out.close();

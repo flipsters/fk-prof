@@ -17,6 +17,9 @@ traces.txt
 # IDE
 .idea
 *.iml
+.codelite/
+*.workspace
+*.project
 
 logs/*
 !.gitkeep

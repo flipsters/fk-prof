@@ -90,6 +90,8 @@ set(SOURCE_FILES
     ${SRC}/concurrent_map.cpp
     ${SRC}/loaded_classes.h
     ${SRC}/loaded_classes.cpp
+    ${SRC}/monitor_objects.h
+    ${SRC}/monitor_objects.cpp
     ${SRC}/util.h
     ${SRC}/util.cpp
     ${SRC}/hprof_tracker.h
@@ -105,7 +107,7 @@ set(TEST_FILES
     ${SRC_TEST}/test_agent.cpp
     ${SRC_TEST}/test.h
     ${SRC_TEST}/test_profiler_config.cpp
-    ${SRC_TEST}/test_recording_serde.cpp
+    #${SRC_TEST}/test_recording_serde.cpp
     ${SRC_TEST}/test_checksum.cpp
     ${SRC_TEST}/test_maps.cpp)
 
@@ -162,7 +164,7 @@ add_library(${OUTPUT} SHARED ${SOURCE_FILES})
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD") 
     target_link_libraries(${OUTPUT} ${JNI_LIBRARIES} proto ${PROTOBUF_LIBRARY} ${LIBCUCKOO_CITY_HASH_LIB} ${ZLIB_LIBRARY})
 else()
-    target_link_libraries(${OUTPUT} ${JNI_LIBRARIES} proto ${PROTOBUF_LIBRARY} ${LIBCUCKOO_CITY_HASH_LIB} ${ZLIB_LIBRARY} dl)
+    target_link_libraries(${OUTPUT} ${JNI_LIBRARIES} proto ${PROTOBUF_LIBRARY} ${LIBCUCKOO_CITY_HASH_LIB} ${ZLIB_LIBRARY} dl z)
 endif()
 
 add_library(testutil SHARED ${TEST_UTIL_FILES})
@@ -171,6 +173,7 @@ add_library(testjni SHARED ${TEST_JNI_FILES})
 
 if (DEFINED ENV{UNITTEST_LIBRARIES})
   message("User has configured " $ENV{UNITTEST_LIBRARIES} " as the unit test libraries")
+  target_link_libraries(testutil ${OUTPUT} $ENV{UNITTEST_LIBRARIES} ${JNI_LIBRARIES} proto ${PROTOBUF_LIBRARY} ${LIBCUCKOO_CITY_HASH_LIB} ${ZLIB_LIBRARY} dl z)
   target_link_libraries(unitTests testutil ${OUTPUT} $ENV{UNITTEST_LIBRARIES})
   target_link_libraries(testjni testutil ${OUTPUT} $ENV{UNITTEST_LIBRARIES})
 else()
