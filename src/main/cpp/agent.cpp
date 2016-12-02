@@ -21,6 +21,8 @@
 #endif
 
 jvmtiEnv *ti_env = nullptr;
+AllocRecorder* ar = nullptr;
+
 static ConfigurationOptions* CONFIGURATION;
 static Profiler* prof;
 static Controller* controller;
@@ -281,7 +283,11 @@ void JNICALL OnThreadEnd(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread) {
 }
 
 void JNICALL OnObjectFree(jvmtiEnv *jvmti_env, jlong tag) {
-    //std::cout << "Free tag: " << tag << "\n";
+    std::uint64_t utag = tag;
+    Alloc a;
+    a.sz = -1 * (utag >> size_lshift);
+    a.cid = (utag & class_id_mask);
+    ar->dw->enq(a);
 }
 
 void JNICALL OnClassUnload(jvmtiEnv* jvmti_env, jthread thd, jclass klass, ...) {
@@ -598,6 +604,7 @@ AGENTEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved
     prof = new Profiler(jvm, jvmti, CONFIGURATION, threadMap);
     controller = new Controller(jvm, jvmti, prof, CONFIGURATION);
 
+    ar = new AllocRecorder(jvm, jvmti, "/tmp/ALLOC.out");
     return 0;
 }
 
