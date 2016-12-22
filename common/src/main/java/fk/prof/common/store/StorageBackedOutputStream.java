@@ -74,11 +74,11 @@ public class StorageBackedOutputStream extends OutputStream {
     private void storeAndSwapBuffer() throws IOException {
         if(readyToWriteBuf != null) {
             storage.store(fileNameStrategy.getFileName(part), new ByteArrayInputStream(readyToWriteBuf));
+            ++part;
         }
         readyToWriteBuf = buf;
         buf = new byte[partSize];
 
-        ++part;
         pos = 0;
     }
 

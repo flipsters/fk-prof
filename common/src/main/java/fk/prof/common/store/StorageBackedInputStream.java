@@ -1,7 +1,7 @@
 package fk.prof.common.store;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutionException;
  */
 public class StorageBackedInputStream extends InputStream {
 
-    private static final Logger logger = LogManager.getLogger(StorageBackedInputStream.class);
+    Logger logger = LoggerFactory.getLogger(StorageBackedInputStream.class);
 
     private AsyncStorage storage;
     private FileNamingStrategy fileNameStrategy;
@@ -86,12 +86,15 @@ public class StorageBackedInputStream extends InputStream {
             }
             buf = storage.fetch(nextFileName).get();
             part++;
-        } catch (FileNotFoundException | ExecutionException | InterruptedException e) {
+        } catch (ExecutionException | InterruptedException e) {
             logger.warn("File: {} could not be fetched", nextFileName, e);
             buf = null;
 
             // mark eof
             eof = true;
+
+            // bubble up the cause
+            throw new IOException(e.getCause());
         }
     }
 
