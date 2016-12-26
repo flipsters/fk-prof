@@ -15,6 +15,146 @@ public final class AggregatedProfileModel {
         (com.google.protobuf.ExtensionRegistryLite) registry);
   }
   /**
+   * Protobuf enum {@code ProfileStatus}
+   */
+  public enum ProfileStatus
+      implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <pre>
+     * got all the samples
+     * </pre>
+     *
+     * <code>Completed = 0;</code>
+     */
+    Completed(0),
+    /**
+     * <pre>
+     * got only few of the samples.
+     * </pre>
+     *
+     * <code>Partial = 1;</code>
+     */
+    Partial(1),
+    /**
+     * <pre>
+     * may have duplicated samples because of retries 
+     * </pre>
+     *
+     * <code>Retried = 2;</code>
+     */
+    Retried(2),
+    /**
+     * <pre>
+     * {see if its required}.
+     * </pre>
+     *
+     * <code>Aborted = 3;</code>
+     */
+    Aborted(3),
+    ;
+
+    /**
+     * <pre>
+     * got all the samples
+     * </pre>
+     *
+     * <code>Completed = 0;</code>
+     */
+    public static final int Completed_VALUE = 0;
+    /**
+     * <pre>
+     * got only few of the samples.
+     * </pre>
+     *
+     * <code>Partial = 1;</code>
+     */
+    public static final int Partial_VALUE = 1;
+    /**
+     * <pre>
+     * may have duplicated samples because of retries 
+     * </pre>
+     *
+     * <code>Retried = 2;</code>
+     */
+    public static final int Retried_VALUE = 2;
+    /**
+     * <pre>
+     * {see if its required}.
+     * </pre>
+     *
+     * <code>Aborted = 3;</code>
+     */
+    public static final int Aborted_VALUE = 3;
+
+
+    public final int getNumber() {
+      return value;
+    }
+
+    /**
+     * @deprecated Use {@link #forNumber(int)} instead.
+     */
+    @java.lang.Deprecated
+    public static ProfileStatus valueOf(int value) {
+      return forNumber(value);
+    }
+
+    public static ProfileStatus forNumber(int value) {
+      switch (value) {
+        case 0: return Completed;
+        case 1: return Partial;
+        case 2: return Retried;
+        case 3: return Aborted;
+        default: return null;
+      }
+    }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<ProfileStatus>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static final com.google.protobuf.Internal.EnumLiteMap<
+        ProfileStatus> internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<ProfileStatus>() {
+            public ProfileStatus findValueByNumber(int number) {
+              return ProfileStatus.forNumber(number);
+            }
+          };
+
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(ordinal());
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return fk.prof.common.proto.AggregatedProfileModel.getDescriptor().getEnumTypes().get(0);
+    }
+
+    private static final ProfileStatus[] VALUES = values();
+
+    public static ProfileStatus valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+
+    private final int value;
+
+    private ProfileStatus(int value) {
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:ProfileStatus)
+  }
+
+  /**
    * Protobuf enum {@code WorkType}
    */
   public enum WorkType
@@ -99,7 +239,7 @@ public final class AggregatedProfileModel {
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return fk.prof.common.proto.AggregatedProfileModel.getDescriptor().getEnumTypes().get(0);
+      return fk.prof.common.proto.AggregatedProfileModel.getDescriptor().getEnumTypes().get(1);
     }
 
     private static final WorkType[] VALUES = values();
@@ -120,6 +260,2398 @@ public final class AggregatedProfileModel {
     }
 
     // @@protoc_insertion_point(enum_scope:WorkType)
+  }
+
+  public interface ProfileSourceInfoOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:ProfileSourceInfo)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>optional string ip = 1;</code>
+     */
+    boolean hasIp();
+    /**
+     * <code>optional string ip = 1;</code>
+     */
+    java.lang.String getIp();
+    /**
+     * <code>optional string ip = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getIpBytes();
+
+    /**
+     * <code>optional string hostname = 2;</code>
+     */
+    boolean hasHostname();
+    /**
+     * <code>optional string hostname = 2;</code>
+     */
+    java.lang.String getHostname();
+    /**
+     * <code>optional string hostname = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getHostnameBytes();
+
+    /**
+     * <code>optional string processName = 3;</code>
+     */
+    boolean hasProcessName();
+    /**
+     * <code>optional string processName = 3;</code>
+     */
+    java.lang.String getProcessName();
+    /**
+     * <code>optional string processName = 3;</code>
+     */
+    com.google.protobuf.ByteString
+        getProcessNameBytes();
+
+    /**
+     * <code>optional string zone = 4;</code>
+     */
+    boolean hasZone();
+    /**
+     * <code>optional string zone = 4;</code>
+     */
+    java.lang.String getZone();
+    /**
+     * <code>optional string zone = 4;</code>
+     */
+    com.google.protobuf.ByteString
+        getZoneBytes();
+
+    /**
+     * <code>optional string instanceType = 5;</code>
+     */
+    boolean hasInstanceType();
+    /**
+     * <code>optional string instanceType = 5;</code>
+     */
+    java.lang.String getInstanceType();
+    /**
+     * <code>optional string instanceType = 5;</code>
+     */
+    com.google.protobuf.ByteString
+        getInstanceTypeBytes();
+  }
+  /**
+   * Protobuf type {@code ProfileSourceInfo}
+   */
+  public  static final class ProfileSourceInfo extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:ProfileSourceInfo)
+      ProfileSourceInfoOrBuilder {
+    // Use ProfileSourceInfo.newBuilder() to construct.
+    private ProfileSourceInfo(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private ProfileSourceInfo() {
+      ip_ = "";
+      hostname_ = "";
+      processName_ = "";
+      zone_ = "";
+      instanceType_ = "";
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ProfileSourceInfo(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000001;
+              ip_ = bs;
+              break;
+            }
+            case 18: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000002;
+              hostname_ = bs;
+              break;
+            }
+            case 26: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000004;
+              processName_ = bs;
+              break;
+            }
+            case 34: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000008;
+              zone_ = bs;
+              break;
+            }
+            case 42: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000010;
+              instanceType_ = bs;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return fk.prof.common.proto.AggregatedProfileModel.internal_static_ProfileSourceInfo_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return fk.prof.common.proto.AggregatedProfileModel.internal_static_ProfileSourceInfo_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.class, fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int IP_FIELD_NUMBER = 1;
+    private volatile java.lang.Object ip_;
+    /**
+     * <code>optional string ip = 1;</code>
+     */
+    public boolean hasIp() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional string ip = 1;</code>
+     */
+    public java.lang.String getIp() {
+      java.lang.Object ref = ip_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          ip_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string ip = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getIpBytes() {
+      java.lang.Object ref = ip_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        ip_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int HOSTNAME_FIELD_NUMBER = 2;
+    private volatile java.lang.Object hostname_;
+    /**
+     * <code>optional string hostname = 2;</code>
+     */
+    public boolean hasHostname() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional string hostname = 2;</code>
+     */
+    public java.lang.String getHostname() {
+      java.lang.Object ref = hostname_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          hostname_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string hostname = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getHostnameBytes() {
+      java.lang.Object ref = hostname_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        hostname_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int PROCESSNAME_FIELD_NUMBER = 3;
+    private volatile java.lang.Object processName_;
+    /**
+     * <code>optional string processName = 3;</code>
+     */
+    public boolean hasProcessName() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional string processName = 3;</code>
+     */
+    public java.lang.String getProcessName() {
+      java.lang.Object ref = processName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          processName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string processName = 3;</code>
+     */
+    public com.google.protobuf.ByteString
+        getProcessNameBytes() {
+      java.lang.Object ref = processName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        processName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int ZONE_FIELD_NUMBER = 4;
+    private volatile java.lang.Object zone_;
+    /**
+     * <code>optional string zone = 4;</code>
+     */
+    public boolean hasZone() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional string zone = 4;</code>
+     */
+    public java.lang.String getZone() {
+      java.lang.Object ref = zone_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          zone_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string zone = 4;</code>
+     */
+    public com.google.protobuf.ByteString
+        getZoneBytes() {
+      java.lang.Object ref = zone_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        zone_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int INSTANCETYPE_FIELD_NUMBER = 5;
+    private volatile java.lang.Object instanceType_;
+    /**
+     * <code>optional string instanceType = 5;</code>
+     */
+    public boolean hasInstanceType() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional string instanceType = 5;</code>
+     */
+    public java.lang.String getInstanceType() {
+      java.lang.Object ref = instanceType_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          instanceType_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string instanceType = 5;</code>
+     */
+    public com.google.protobuf.ByteString
+        getInstanceTypeBytes() {
+      java.lang.Object ref = instanceType_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        instanceType_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, ip_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, hostname_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, processName_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 4, zone_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 5, instanceType_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, ip_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, hostname_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, processName_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, zone_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, instanceType_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo)) {
+        return super.equals(obj);
+      }
+      fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo other = (fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo) obj;
+
+      boolean result = true;
+      result = result && (hasIp() == other.hasIp());
+      if (hasIp()) {
+        result = result && getIp()
+            .equals(other.getIp());
+      }
+      result = result && (hasHostname() == other.hasHostname());
+      if (hasHostname()) {
+        result = result && getHostname()
+            .equals(other.getHostname());
+      }
+      result = result && (hasProcessName() == other.hasProcessName());
+      if (hasProcessName()) {
+        result = result && getProcessName()
+            .equals(other.getProcessName());
+      }
+      result = result && (hasZone() == other.hasZone());
+      if (hasZone()) {
+        result = result && getZone()
+            .equals(other.getZone());
+      }
+      result = result && (hasInstanceType() == other.hasInstanceType());
+      if (hasInstanceType()) {
+        result = result && getInstanceType()
+            .equals(other.getInstanceType());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasIp()) {
+        hash = (37 * hash) + IP_FIELD_NUMBER;
+        hash = (53 * hash) + getIp().hashCode();
+      }
+      if (hasHostname()) {
+        hash = (37 * hash) + HOSTNAME_FIELD_NUMBER;
+        hash = (53 * hash) + getHostname().hashCode();
+      }
+      if (hasProcessName()) {
+        hash = (37 * hash) + PROCESSNAME_FIELD_NUMBER;
+        hash = (53 * hash) + getProcessName().hashCode();
+      }
+      if (hasZone()) {
+        hash = (37 * hash) + ZONE_FIELD_NUMBER;
+        hash = (53 * hash) + getZone().hashCode();
+      }
+      if (hasInstanceType()) {
+        hash = (37 * hash) + INSTANCETYPE_FIELD_NUMBER;
+        hash = (53 * hash) + getInstanceType().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code ProfileSourceInfo}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:ProfileSourceInfo)
+        fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfoOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return fk.prof.common.proto.AggregatedProfileModel.internal_static_ProfileSourceInfo_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return fk.prof.common.proto.AggregatedProfileModel.internal_static_ProfileSourceInfo_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.class, fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.Builder.class);
+      }
+
+      // Construct using fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        ip_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        hostname_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        processName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000004);
+        zone_ = "";
+        bitField0_ = (bitField0_ & ~0x00000008);
+        instanceType_ = "";
+        bitField0_ = (bitField0_ & ~0x00000010);
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return fk.prof.common.proto.AggregatedProfileModel.internal_static_ProfileSourceInfo_descriptor;
+      }
+
+      public fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo getDefaultInstanceForType() {
+        return fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.getDefaultInstance();
+      }
+
+      public fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo build() {
+        fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo buildPartial() {
+        fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo result = new fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.ip_ = ip_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.hostname_ = hostname_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.processName_ = processName_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.zone_ = zone_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.instanceType_ = instanceType_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo) {
+          return mergeFrom((fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo other) {
+        if (other == fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.getDefaultInstance()) return this;
+        if (other.hasIp()) {
+          bitField0_ |= 0x00000001;
+          ip_ = other.ip_;
+          onChanged();
+        }
+        if (other.hasHostname()) {
+          bitField0_ |= 0x00000002;
+          hostname_ = other.hostname_;
+          onChanged();
+        }
+        if (other.hasProcessName()) {
+          bitField0_ |= 0x00000004;
+          processName_ = other.processName_;
+          onChanged();
+        }
+        if (other.hasZone()) {
+          bitField0_ |= 0x00000008;
+          zone_ = other.zone_;
+          onChanged();
+        }
+        if (other.hasInstanceType()) {
+          bitField0_ |= 0x00000010;
+          instanceType_ = other.instanceType_;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object ip_ = "";
+      /**
+       * <code>optional string ip = 1;</code>
+       */
+      public boolean hasIp() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional string ip = 1;</code>
+       */
+      public java.lang.String getIp() {
+        java.lang.Object ref = ip_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            ip_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string ip = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getIpBytes() {
+        java.lang.Object ref = ip_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          ip_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string ip = 1;</code>
+       */
+      public Builder setIp(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        ip_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string ip = 1;</code>
+       */
+      public Builder clearIp() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        ip_ = getDefaultInstance().getIp();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string ip = 1;</code>
+       */
+      public Builder setIpBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        ip_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object hostname_ = "";
+      /**
+       * <code>optional string hostname = 2;</code>
+       */
+      public boolean hasHostname() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional string hostname = 2;</code>
+       */
+      public java.lang.String getHostname() {
+        java.lang.Object ref = hostname_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            hostname_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string hostname = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getHostnameBytes() {
+        java.lang.Object ref = hostname_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          hostname_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string hostname = 2;</code>
+       */
+      public Builder setHostname(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        hostname_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string hostname = 2;</code>
+       */
+      public Builder clearHostname() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        hostname_ = getDefaultInstance().getHostname();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string hostname = 2;</code>
+       */
+      public Builder setHostnameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        hostname_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object processName_ = "";
+      /**
+       * <code>optional string processName = 3;</code>
+       */
+      public boolean hasProcessName() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional string processName = 3;</code>
+       */
+      public java.lang.String getProcessName() {
+        java.lang.Object ref = processName_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            processName_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string processName = 3;</code>
+       */
+      public com.google.protobuf.ByteString
+          getProcessNameBytes() {
+        java.lang.Object ref = processName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          processName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string processName = 3;</code>
+       */
+      public Builder setProcessName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        processName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string processName = 3;</code>
+       */
+      public Builder clearProcessName() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        processName_ = getDefaultInstance().getProcessName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string processName = 3;</code>
+       */
+      public Builder setProcessNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        processName_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object zone_ = "";
+      /**
+       * <code>optional string zone = 4;</code>
+       */
+      public boolean hasZone() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional string zone = 4;</code>
+       */
+      public java.lang.String getZone() {
+        java.lang.Object ref = zone_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            zone_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string zone = 4;</code>
+       */
+      public com.google.protobuf.ByteString
+          getZoneBytes() {
+        java.lang.Object ref = zone_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          zone_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string zone = 4;</code>
+       */
+      public Builder setZone(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        zone_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string zone = 4;</code>
+       */
+      public Builder clearZone() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        zone_ = getDefaultInstance().getZone();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string zone = 4;</code>
+       */
+      public Builder setZoneBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        zone_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object instanceType_ = "";
+      /**
+       * <code>optional string instanceType = 5;</code>
+       */
+      public boolean hasInstanceType() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional string instanceType = 5;</code>
+       */
+      public java.lang.String getInstanceType() {
+        java.lang.Object ref = instanceType_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            instanceType_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string instanceType = 5;</code>
+       */
+      public com.google.protobuf.ByteString
+          getInstanceTypeBytes() {
+        java.lang.Object ref = instanceType_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          instanceType_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string instanceType = 5;</code>
+       */
+      public Builder setInstanceType(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        instanceType_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string instanceType = 5;</code>
+       */
+      public Builder clearInstanceType() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        instanceType_ = getDefaultInstance().getInstanceType();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string instanceType = 5;</code>
+       */
+      public Builder setInstanceTypeBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        instanceType_ = value;
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:ProfileSourceInfo)
+    }
+
+    // @@protoc_insertion_point(class_scope:ProfileSourceInfo)
+    private static final fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo();
+    }
+
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final com.google.protobuf.Parser<ProfileSourceInfo>
+        PARSER = new com.google.protobuf.AbstractParser<ProfileSourceInfo>() {
+      public ProfileSourceInfo parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new ProfileSourceInfo(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<ProfileSourceInfo> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ProfileSourceInfo> getParserForType() {
+      return PARSER;
+    }
+
+    public fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface ProfileSummaryOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:ProfileSummary)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <pre>
+     * HH:mm:ss
+     * </pre>
+     *
+     * <code>optional string startTime = 1;</code>
+     */
+    boolean hasStartTime();
+    /**
+     * <pre>
+     * HH:mm:ss
+     * </pre>
+     *
+     * <code>optional string startTime = 1;</code>
+     */
+    java.lang.String getStartTime();
+    /**
+     * <pre>
+     * HH:mm:ss
+     * </pre>
+     *
+     * <code>optional string startTime = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getStartTimeBytes();
+
+    /**
+     * <pre>
+     * HH:mm:ss
+     * </pre>
+     *
+     * <code>optional string endTime = 2;</code>
+     */
+    boolean hasEndTime();
+    /**
+     * <pre>
+     * HH:mm:ss
+     * </pre>
+     *
+     * <code>optional string endTime = 2;</code>
+     */
+    java.lang.String getEndTime();
+    /**
+     * <pre>
+     * HH:mm:ss
+     * </pre>
+     *
+     * <code>optional string endTime = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getEndTimeBytes();
+
+    /**
+     * <code>optional uint32 recorderVersion = 3;</code>
+     */
+    boolean hasRecorderVersion();
+    /**
+     * <code>optional uint32 recorderVersion = 3;</code>
+     */
+    int getRecorderVersion();
+
+    /**
+     * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+     */
+    boolean hasSourceInfo();
+    /**
+     * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+     */
+    fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo getSourceInfo();
+    /**
+     * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+     */
+    fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfoOrBuilder getSourceInfoOrBuilder();
+
+    /**
+     * <code>optional .ProfileStatus status = 5;</code>
+     */
+    boolean hasStatus();
+    /**
+     * <code>optional .ProfileStatus status = 5;</code>
+     */
+    fk.prof.common.proto.AggregatedProfileModel.ProfileStatus getStatus();
+  }
+  /**
+   * Protobuf type {@code ProfileSummary}
+   */
+  public  static final class ProfileSummary extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:ProfileSummary)
+      ProfileSummaryOrBuilder {
+    // Use ProfileSummary.newBuilder() to construct.
+    private ProfileSummary(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private ProfileSummary() {
+      startTime_ = "";
+      endTime_ = "";
+      recorderVersion_ = 0;
+      status_ = 0;
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ProfileSummary(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000001;
+              startTime_ = bs;
+              break;
+            }
+            case 18: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000002;
+              endTime_ = bs;
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              recorderVersion_ = input.readUInt32();
+              break;
+            }
+            case 34: {
+              fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000008) == 0x00000008)) {
+                subBuilder = sourceInfo_.toBuilder();
+              }
+              sourceInfo_ = input.readMessage(fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(sourceInfo_);
+                sourceInfo_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000008;
+              break;
+            }
+            case 40: {
+              int rawValue = input.readEnum();
+              fk.prof.common.proto.AggregatedProfileModel.ProfileStatus value = fk.prof.common.proto.AggregatedProfileModel.ProfileStatus.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(5, rawValue);
+              } else {
+                bitField0_ |= 0x00000010;
+                status_ = rawValue;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return fk.prof.common.proto.AggregatedProfileModel.internal_static_ProfileSummary_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return fk.prof.common.proto.AggregatedProfileModel.internal_static_ProfileSummary_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              fk.prof.common.proto.AggregatedProfileModel.ProfileSummary.class, fk.prof.common.proto.AggregatedProfileModel.ProfileSummary.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int STARTTIME_FIELD_NUMBER = 1;
+    private volatile java.lang.Object startTime_;
+    /**
+     * <pre>
+     * HH:mm:ss
+     * </pre>
+     *
+     * <code>optional string startTime = 1;</code>
+     */
+    public boolean hasStartTime() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <pre>
+     * HH:mm:ss
+     * </pre>
+     *
+     * <code>optional string startTime = 1;</code>
+     */
+    public java.lang.String getStartTime() {
+      java.lang.Object ref = startTime_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          startTime_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * HH:mm:ss
+     * </pre>
+     *
+     * <code>optional string startTime = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getStartTimeBytes() {
+      java.lang.Object ref = startTime_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        startTime_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int ENDTIME_FIELD_NUMBER = 2;
+    private volatile java.lang.Object endTime_;
+    /**
+     * <pre>
+     * HH:mm:ss
+     * </pre>
+     *
+     * <code>optional string endTime = 2;</code>
+     */
+    public boolean hasEndTime() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <pre>
+     * HH:mm:ss
+     * </pre>
+     *
+     * <code>optional string endTime = 2;</code>
+     */
+    public java.lang.String getEndTime() {
+      java.lang.Object ref = endTime_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          endTime_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * HH:mm:ss
+     * </pre>
+     *
+     * <code>optional string endTime = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getEndTimeBytes() {
+      java.lang.Object ref = endTime_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        endTime_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int RECORDERVERSION_FIELD_NUMBER = 3;
+    private int recorderVersion_;
+    /**
+     * <code>optional uint32 recorderVersion = 3;</code>
+     */
+    public boolean hasRecorderVersion() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional uint32 recorderVersion = 3;</code>
+     */
+    public int getRecorderVersion() {
+      return recorderVersion_;
+    }
+
+    public static final int SOURCEINFO_FIELD_NUMBER = 4;
+    private fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo sourceInfo_;
+    /**
+     * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+     */
+    public boolean hasSourceInfo() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+     */
+    public fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo getSourceInfo() {
+      return sourceInfo_ == null ? fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.getDefaultInstance() : sourceInfo_;
+    }
+    /**
+     * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+     */
+    public fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfoOrBuilder getSourceInfoOrBuilder() {
+      return sourceInfo_ == null ? fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.getDefaultInstance() : sourceInfo_;
+    }
+
+    public static final int STATUS_FIELD_NUMBER = 5;
+    private int status_;
+    /**
+     * <code>optional .ProfileStatus status = 5;</code>
+     */
+    public boolean hasStatus() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional .ProfileStatus status = 5;</code>
+     */
+    public fk.prof.common.proto.AggregatedProfileModel.ProfileStatus getStatus() {
+      fk.prof.common.proto.AggregatedProfileModel.ProfileStatus result = fk.prof.common.proto.AggregatedProfileModel.ProfileStatus.valueOf(status_);
+      return result == null ? fk.prof.common.proto.AggregatedProfileModel.ProfileStatus.Completed : result;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, startTime_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, endTime_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeUInt32(3, recorderVersion_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeMessage(4, getSourceInfo());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeEnum(5, status_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, startTime_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, endTime_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(3, recorderVersion_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, getSourceInfo());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(5, status_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof fk.prof.common.proto.AggregatedProfileModel.ProfileSummary)) {
+        return super.equals(obj);
+      }
+      fk.prof.common.proto.AggregatedProfileModel.ProfileSummary other = (fk.prof.common.proto.AggregatedProfileModel.ProfileSummary) obj;
+
+      boolean result = true;
+      result = result && (hasStartTime() == other.hasStartTime());
+      if (hasStartTime()) {
+        result = result && getStartTime()
+            .equals(other.getStartTime());
+      }
+      result = result && (hasEndTime() == other.hasEndTime());
+      if (hasEndTime()) {
+        result = result && getEndTime()
+            .equals(other.getEndTime());
+      }
+      result = result && (hasRecorderVersion() == other.hasRecorderVersion());
+      if (hasRecorderVersion()) {
+        result = result && (getRecorderVersion()
+            == other.getRecorderVersion());
+      }
+      result = result && (hasSourceInfo() == other.hasSourceInfo());
+      if (hasSourceInfo()) {
+        result = result && getSourceInfo()
+            .equals(other.getSourceInfo());
+      }
+      result = result && (hasStatus() == other.hasStatus());
+      if (hasStatus()) {
+        result = result && status_ == other.status_;
+      }
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasStartTime()) {
+        hash = (37 * hash) + STARTTIME_FIELD_NUMBER;
+        hash = (53 * hash) + getStartTime().hashCode();
+      }
+      if (hasEndTime()) {
+        hash = (37 * hash) + ENDTIME_FIELD_NUMBER;
+        hash = (53 * hash) + getEndTime().hashCode();
+      }
+      if (hasRecorderVersion()) {
+        hash = (37 * hash) + RECORDERVERSION_FIELD_NUMBER;
+        hash = (53 * hash) + getRecorderVersion();
+      }
+      if (hasSourceInfo()) {
+        hash = (37 * hash) + SOURCEINFO_FIELD_NUMBER;
+        hash = (53 * hash) + getSourceInfo().hashCode();
+      }
+      if (hasStatus()) {
+        hash = (37 * hash) + STATUS_FIELD_NUMBER;
+        hash = (53 * hash) + status_;
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSummary parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSummary parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSummary parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSummary parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSummary parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSummary parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSummary parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSummary parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSummary parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSummary parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(fk.prof.common.proto.AggregatedProfileModel.ProfileSummary prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code ProfileSummary}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:ProfileSummary)
+        fk.prof.common.proto.AggregatedProfileModel.ProfileSummaryOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return fk.prof.common.proto.AggregatedProfileModel.internal_static_ProfileSummary_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return fk.prof.common.proto.AggregatedProfileModel.internal_static_ProfileSummary_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                fk.prof.common.proto.AggregatedProfileModel.ProfileSummary.class, fk.prof.common.proto.AggregatedProfileModel.ProfileSummary.Builder.class);
+      }
+
+      // Construct using fk.prof.common.proto.AggregatedProfileModel.ProfileSummary.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+          getSourceInfoFieldBuilder();
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        startTime_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        endTime_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        recorderVersion_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        if (sourceInfoBuilder_ == null) {
+          sourceInfo_ = null;
+        } else {
+          sourceInfoBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
+        status_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return fk.prof.common.proto.AggregatedProfileModel.internal_static_ProfileSummary_descriptor;
+      }
+
+      public fk.prof.common.proto.AggregatedProfileModel.ProfileSummary getDefaultInstanceForType() {
+        return fk.prof.common.proto.AggregatedProfileModel.ProfileSummary.getDefaultInstance();
+      }
+
+      public fk.prof.common.proto.AggregatedProfileModel.ProfileSummary build() {
+        fk.prof.common.proto.AggregatedProfileModel.ProfileSummary result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public fk.prof.common.proto.AggregatedProfileModel.ProfileSummary buildPartial() {
+        fk.prof.common.proto.AggregatedProfileModel.ProfileSummary result = new fk.prof.common.proto.AggregatedProfileModel.ProfileSummary(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.startTime_ = startTime_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.endTime_ = endTime_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.recorderVersion_ = recorderVersion_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        if (sourceInfoBuilder_ == null) {
+          result.sourceInfo_ = sourceInfo_;
+        } else {
+          result.sourceInfo_ = sourceInfoBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.status_ = status_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof fk.prof.common.proto.AggregatedProfileModel.ProfileSummary) {
+          return mergeFrom((fk.prof.common.proto.AggregatedProfileModel.ProfileSummary)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(fk.prof.common.proto.AggregatedProfileModel.ProfileSummary other) {
+        if (other == fk.prof.common.proto.AggregatedProfileModel.ProfileSummary.getDefaultInstance()) return this;
+        if (other.hasStartTime()) {
+          bitField0_ |= 0x00000001;
+          startTime_ = other.startTime_;
+          onChanged();
+        }
+        if (other.hasEndTime()) {
+          bitField0_ |= 0x00000002;
+          endTime_ = other.endTime_;
+          onChanged();
+        }
+        if (other.hasRecorderVersion()) {
+          setRecorderVersion(other.getRecorderVersion());
+        }
+        if (other.hasSourceInfo()) {
+          mergeSourceInfo(other.getSourceInfo());
+        }
+        if (other.hasStatus()) {
+          setStatus(other.getStatus());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        fk.prof.common.proto.AggregatedProfileModel.ProfileSummary parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (fk.prof.common.proto.AggregatedProfileModel.ProfileSummary) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object startTime_ = "";
+      /**
+       * <pre>
+       * HH:mm:ss
+       * </pre>
+       *
+       * <code>optional string startTime = 1;</code>
+       */
+      public boolean hasStartTime() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <pre>
+       * HH:mm:ss
+       * </pre>
+       *
+       * <code>optional string startTime = 1;</code>
+       */
+      public java.lang.String getStartTime() {
+        java.lang.Object ref = startTime_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            startTime_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * HH:mm:ss
+       * </pre>
+       *
+       * <code>optional string startTime = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getStartTimeBytes() {
+        java.lang.Object ref = startTime_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          startTime_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * HH:mm:ss
+       * </pre>
+       *
+       * <code>optional string startTime = 1;</code>
+       */
+      public Builder setStartTime(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        startTime_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * HH:mm:ss
+       * </pre>
+       *
+       * <code>optional string startTime = 1;</code>
+       */
+      public Builder clearStartTime() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        startTime_ = getDefaultInstance().getStartTime();
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * HH:mm:ss
+       * </pre>
+       *
+       * <code>optional string startTime = 1;</code>
+       */
+      public Builder setStartTimeBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        startTime_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object endTime_ = "";
+      /**
+       * <pre>
+       * HH:mm:ss
+       * </pre>
+       *
+       * <code>optional string endTime = 2;</code>
+       */
+      public boolean hasEndTime() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <pre>
+       * HH:mm:ss
+       * </pre>
+       *
+       * <code>optional string endTime = 2;</code>
+       */
+      public java.lang.String getEndTime() {
+        java.lang.Object ref = endTime_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            endTime_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * HH:mm:ss
+       * </pre>
+       *
+       * <code>optional string endTime = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getEndTimeBytes() {
+        java.lang.Object ref = endTime_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          endTime_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * HH:mm:ss
+       * </pre>
+       *
+       * <code>optional string endTime = 2;</code>
+       */
+      public Builder setEndTime(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        endTime_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * HH:mm:ss
+       * </pre>
+       *
+       * <code>optional string endTime = 2;</code>
+       */
+      public Builder clearEndTime() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        endTime_ = getDefaultInstance().getEndTime();
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * HH:mm:ss
+       * </pre>
+       *
+       * <code>optional string endTime = 2;</code>
+       */
+      public Builder setEndTimeBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        endTime_ = value;
+        onChanged();
+        return this;
+      }
+
+      private int recorderVersion_ ;
+      /**
+       * <code>optional uint32 recorderVersion = 3;</code>
+       */
+      public boolean hasRecorderVersion() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional uint32 recorderVersion = 3;</code>
+       */
+      public int getRecorderVersion() {
+        return recorderVersion_;
+      }
+      /**
+       * <code>optional uint32 recorderVersion = 3;</code>
+       */
+      public Builder setRecorderVersion(int value) {
+        bitField0_ |= 0x00000004;
+        recorderVersion_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint32 recorderVersion = 3;</code>
+       */
+      public Builder clearRecorderVersion() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        recorderVersion_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo sourceInfo_ = null;
+      private com.google.protobuf.SingleFieldBuilderV3<
+          fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo, fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.Builder, fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfoOrBuilder> sourceInfoBuilder_;
+      /**
+       * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+       */
+      public boolean hasSourceInfo() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+       */
+      public fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo getSourceInfo() {
+        if (sourceInfoBuilder_ == null) {
+          return sourceInfo_ == null ? fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.getDefaultInstance() : sourceInfo_;
+        } else {
+          return sourceInfoBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+       */
+      public Builder setSourceInfo(fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo value) {
+        if (sourceInfoBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          sourceInfo_ = value;
+          onChanged();
+        } else {
+          sourceInfoBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+       */
+      public Builder setSourceInfo(
+          fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.Builder builderForValue) {
+        if (sourceInfoBuilder_ == null) {
+          sourceInfo_ = builderForValue.build();
+          onChanged();
+        } else {
+          sourceInfoBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+       */
+      public Builder mergeSourceInfo(fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo value) {
+        if (sourceInfoBuilder_ == null) {
+          if (((bitField0_ & 0x00000008) == 0x00000008) &&
+              sourceInfo_ != null &&
+              sourceInfo_ != fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.getDefaultInstance()) {
+            sourceInfo_ =
+              fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.newBuilder(sourceInfo_).mergeFrom(value).buildPartial();
+          } else {
+            sourceInfo_ = value;
+          }
+          onChanged();
+        } else {
+          sourceInfoBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+       */
+      public Builder clearSourceInfo() {
+        if (sourceInfoBuilder_ == null) {
+          sourceInfo_ = null;
+          onChanged();
+        } else {
+          sourceInfoBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+      /**
+       * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+       */
+      public fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.Builder getSourceInfoBuilder() {
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return getSourceInfoFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+       */
+      public fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfoOrBuilder getSourceInfoOrBuilder() {
+        if (sourceInfoBuilder_ != null) {
+          return sourceInfoBuilder_.getMessageOrBuilder();
+        } else {
+          return sourceInfo_ == null ?
+              fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.getDefaultInstance() : sourceInfo_;
+        }
+      }
+      /**
+       * <code>optional .ProfileSourceInfo sourceInfo = 4;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo, fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.Builder, fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfoOrBuilder> 
+          getSourceInfoFieldBuilder() {
+        if (sourceInfoBuilder_ == null) {
+          sourceInfoBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo, fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfo.Builder, fk.prof.common.proto.AggregatedProfileModel.ProfileSourceInfoOrBuilder>(
+                  getSourceInfo(),
+                  getParentForChildren(),
+                  isClean());
+          sourceInfo_ = null;
+        }
+        return sourceInfoBuilder_;
+      }
+
+      private int status_ = 0;
+      /**
+       * <code>optional .ProfileStatus status = 5;</code>
+       */
+      public boolean hasStatus() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional .ProfileStatus status = 5;</code>
+       */
+      public fk.prof.common.proto.AggregatedProfileModel.ProfileStatus getStatus() {
+        fk.prof.common.proto.AggregatedProfileModel.ProfileStatus result = fk.prof.common.proto.AggregatedProfileModel.ProfileStatus.valueOf(status_);
+        return result == null ? fk.prof.common.proto.AggregatedProfileModel.ProfileStatus.Completed : result;
+      }
+      /**
+       * <code>optional .ProfileStatus status = 5;</code>
+       */
+      public Builder setStatus(fk.prof.common.proto.AggregatedProfileModel.ProfileStatus value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000010;
+        status_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional .ProfileStatus status = 5;</code>
+       */
+      public Builder clearStatus() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        status_ = 0;
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:ProfileSummary)
+    }
+
+    // @@protoc_insertion_point(class_scope:ProfileSummary)
+    private static final fk.prof.common.proto.AggregatedProfileModel.ProfileSummary DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new fk.prof.common.proto.AggregatedProfileModel.ProfileSummary();
+    }
+
+    public static fk.prof.common.proto.AggregatedProfileModel.ProfileSummary getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final com.google.protobuf.Parser<ProfileSummary>
+        PARSER = new com.google.protobuf.AbstractParser<ProfileSummary>() {
+      public ProfileSummary parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new ProfileSummary(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<ProfileSummary> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ProfileSummary> getParserForType() {
+      return PARSER;
+    }
+
+    public fk.prof.common.proto.AggregatedProfileModel.ProfileSummary getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
   }
 
   public interface ContextPropsOrBuilder extends
@@ -5282,39 +7814,53 @@ public final class AggregatedProfileModel {
         getClusterIdBytes();
 
     /**
-     * <code>optional string profileStartTime = 4;</code>
+     * <code>optional string procId = 4;</code>
+     */
+    boolean hasProcId();
+    /**
+     * <code>optional string procId = 4;</code>
+     */
+    java.lang.String getProcId();
+    /**
+     * <code>optional string procId = 4;</code>
+     */
+    com.google.protobuf.ByteString
+        getProcIdBytes();
+
+    /**
+     * <code>optional string profileStartTime = 5;</code>
      */
     boolean hasProfileStartTime();
     /**
-     * <code>optional string profileStartTime = 4;</code>
+     * <code>optional string profileStartTime = 5;</code>
      */
     java.lang.String getProfileStartTime();
     /**
-     * <code>optional string profileStartTime = 4;</code>
+     * <code>optional string profileStartTime = 5;</code>
      */
     com.google.protobuf.ByteString
         getProfileStartTimeBytes();
 
     /**
-     * <code>optional string profileEndTime = 5;</code>
+     * <code>optional string profileEndTime = 6;</code>
      */
     boolean hasProfileEndTime();
     /**
-     * <code>optional string profileEndTime = 5;</code>
+     * <code>optional string profileEndTime = 6;</code>
      */
     java.lang.String getProfileEndTime();
     /**
-     * <code>optional string profileEndTime = 5;</code>
+     * <code>optional string profileEndTime = 6;</code>
      */
     com.google.protobuf.ByteString
         getProfileEndTimeBytes();
 
     /**
-     * <code>optional .WorkType workType = 6;</code>
+     * <code>optional .WorkType workType = 7;</code>
      */
     boolean hasWorkType();
     /**
-     * <code>optional .WorkType workType = 6;</code>
+     * <code>optional .WorkType workType = 7;</code>
      */
     fk.prof.common.proto.AggregatedProfileModel.WorkType getWorkType();
   }
@@ -5333,6 +7879,7 @@ public final class AggregatedProfileModel {
       formatVersion_ = 0;
       appId_ = "";
       clusterId_ = "";
+      procId_ = "";
       profileStartTime_ = "";
       profileEndTime_ = "";
       workType_ = 0;
@@ -5386,22 +7933,28 @@ public final class AggregatedProfileModel {
             case 34: {
               com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000008;
-              profileStartTime_ = bs;
+              procId_ = bs;
               break;
             }
             case 42: {
               com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000010;
+              profileStartTime_ = bs;
+              break;
+            }
+            case 50: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000020;
               profileEndTime_ = bs;
               break;
             }
-            case 48: {
+            case 56: {
               int rawValue = input.readEnum();
               fk.prof.common.proto.AggregatedProfileModel.WorkType value = fk.prof.common.proto.AggregatedProfileModel.WorkType.valueOf(rawValue);
               if (value == null) {
-                unknownFields.mergeVarintField(6, rawValue);
+                unknownFields.mergeVarintField(7, rawValue);
               } else {
-                bitField0_ |= 0x00000020;
+                bitField0_ |= 0x00000040;
                 workType_ = rawValue;
               }
               break;
@@ -5530,16 +8083,58 @@ public final class AggregatedProfileModel {
       }
     }
 
-    public static final int PROFILESTARTTIME_FIELD_NUMBER = 4;
-    private volatile java.lang.Object profileStartTime_;
+    public static final int PROCID_FIELD_NUMBER = 4;
+    private volatile java.lang.Object procId_;
     /**
-     * <code>optional string profileStartTime = 4;</code>
+     * <code>optional string procId = 4;</code>
      */
-    public boolean hasProfileStartTime() {
+    public boolean hasProcId() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     /**
-     * <code>optional string profileStartTime = 4;</code>
+     * <code>optional string procId = 4;</code>
+     */
+    public java.lang.String getProcId() {
+      java.lang.Object ref = procId_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          procId_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string procId = 4;</code>
+     */
+    public com.google.protobuf.ByteString
+        getProcIdBytes() {
+      java.lang.Object ref = procId_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        procId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int PROFILESTARTTIME_FIELD_NUMBER = 5;
+    private volatile java.lang.Object profileStartTime_;
+    /**
+     * <code>optional string profileStartTime = 5;</code>
+     */
+    public boolean hasProfileStartTime() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional string profileStartTime = 5;</code>
      */
     public java.lang.String getProfileStartTime() {
       java.lang.Object ref = profileStartTime_;
@@ -5556,7 +8151,7 @@ public final class AggregatedProfileModel {
       }
     }
     /**
-     * <code>optional string profileStartTime = 4;</code>
+     * <code>optional string profileStartTime = 5;</code>
      */
     public com.google.protobuf.ByteString
         getProfileStartTimeBytes() {
@@ -5572,16 +8167,16 @@ public final class AggregatedProfileModel {
       }
     }
 
-    public static final int PROFILEENDTIME_FIELD_NUMBER = 5;
+    public static final int PROFILEENDTIME_FIELD_NUMBER = 6;
     private volatile java.lang.Object profileEndTime_;
     /**
-     * <code>optional string profileEndTime = 5;</code>
+     * <code>optional string profileEndTime = 6;</code>
      */
     public boolean hasProfileEndTime() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
+      return ((bitField0_ & 0x00000020) == 0x00000020);
     }
     /**
-     * <code>optional string profileEndTime = 5;</code>
+     * <code>optional string profileEndTime = 6;</code>
      */
     public java.lang.String getProfileEndTime() {
       java.lang.Object ref = profileEndTime_;
@@ -5598,7 +8193,7 @@ public final class AggregatedProfileModel {
       }
     }
     /**
-     * <code>optional string profileEndTime = 5;</code>
+     * <code>optional string profileEndTime = 6;</code>
      */
     public com.google.protobuf.ByteString
         getProfileEndTimeBytes() {
@@ -5614,16 +8209,16 @@ public final class AggregatedProfileModel {
       }
     }
 
-    public static final int WORKTYPE_FIELD_NUMBER = 6;
+    public static final int WORKTYPE_FIELD_NUMBER = 7;
     private int workType_;
     /**
-     * <code>optional .WorkType workType = 6;</code>
+     * <code>optional .WorkType workType = 7;</code>
      */
     public boolean hasWorkType() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
+      return ((bitField0_ & 0x00000040) == 0x00000040);
     }
     /**
-     * <code>optional .WorkType workType = 6;</code>
+     * <code>optional .WorkType workType = 7;</code>
      */
     public fk.prof.common.proto.AggregatedProfileModel.WorkType getWorkType() {
       fk.prof.common.proto.AggregatedProfileModel.WorkType result = fk.prof.common.proto.AggregatedProfileModel.WorkType.valueOf(workType_);
@@ -5656,13 +8251,16 @@ public final class AggregatedProfileModel {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 3, clusterId_);
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 4, profileStartTime_);
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 4, procId_);
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 5, profileEndTime_);
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 5, profileStartTime_);
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeEnum(6, workType_);
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 6, profileEndTime_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeEnum(7, workType_);
       }
       unknownFields.writeTo(output);
     }
@@ -5683,14 +8281,17 @@ public final class AggregatedProfileModel {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, clusterId_);
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, profileStartTime_);
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, procId_);
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, profileEndTime_);
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, profileStartTime_);
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(6, profileEndTime_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(6, workType_);
+          .computeEnumSize(7, workType_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -5723,6 +8324,11 @@ public final class AggregatedProfileModel {
       if (hasClusterId()) {
         result = result && getClusterId()
             .equals(other.getClusterId());
+      }
+      result = result && (hasProcId() == other.hasProcId());
+      if (hasProcId()) {
+        result = result && getProcId()
+            .equals(other.getProcId());
       }
       result = result && (hasProfileStartTime() == other.hasProfileStartTime());
       if (hasProfileStartTime()) {
@@ -5760,6 +8366,10 @@ public final class AggregatedProfileModel {
       if (hasClusterId()) {
         hash = (37 * hash) + CLUSTERID_FIELD_NUMBER;
         hash = (53 * hash) + getClusterId().hashCode();
+      }
+      if (hasProcId()) {
+        hash = (37 * hash) + PROCID_FIELD_NUMBER;
+        hash = (53 * hash) + getProcId().hashCode();
       }
       if (hasProfileStartTime()) {
         hash = (37 * hash) + PROFILESTARTTIME_FIELD_NUMBER;
@@ -5897,12 +8507,14 @@ public final class AggregatedProfileModel {
         bitField0_ = (bitField0_ & ~0x00000002);
         clusterId_ = "";
         bitField0_ = (bitField0_ & ~0x00000004);
-        profileStartTime_ = "";
+        procId_ = "";
         bitField0_ = (bitField0_ & ~0x00000008);
-        profileEndTime_ = "";
+        profileStartTime_ = "";
         bitField0_ = (bitField0_ & ~0x00000010);
-        workType_ = 0;
+        profileEndTime_ = "";
         bitField0_ = (bitField0_ & ~0x00000020);
+        workType_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
 
@@ -5942,13 +8554,17 @@ public final class AggregatedProfileModel {
         if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
           to_bitField0_ |= 0x00000008;
         }
-        result.profileStartTime_ = profileStartTime_;
+        result.procId_ = procId_;
         if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
           to_bitField0_ |= 0x00000010;
         }
-        result.profileEndTime_ = profileEndTime_;
+        result.profileStartTime_ = profileStartTime_;
         if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
           to_bitField0_ |= 0x00000020;
+        }
+        result.profileEndTime_ = profileEndTime_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
         }
         result.workType_ = workType_;
         result.bitField0_ = to_bitField0_;
@@ -6006,13 +8622,18 @@ public final class AggregatedProfileModel {
           clusterId_ = other.clusterId_;
           onChanged();
         }
-        if (other.hasProfileStartTime()) {
+        if (other.hasProcId()) {
           bitField0_ |= 0x00000008;
+          procId_ = other.procId_;
+          onChanged();
+        }
+        if (other.hasProfileStartTime()) {
+          bitField0_ |= 0x00000010;
           profileStartTime_ = other.profileStartTime_;
           onChanged();
         }
         if (other.hasProfileEndTime()) {
-          bitField0_ |= 0x00000010;
+          bitField0_ |= 0x00000020;
           profileEndTime_ = other.profileEndTime_;
           onChanged();
         }
@@ -6234,15 +8855,91 @@ public final class AggregatedProfileModel {
         return this;
       }
 
-      private java.lang.Object profileStartTime_ = "";
+      private java.lang.Object procId_ = "";
       /**
-       * <code>optional string profileStartTime = 4;</code>
+       * <code>optional string procId = 4;</code>
        */
-      public boolean hasProfileStartTime() {
+      public boolean hasProcId() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       /**
-       * <code>optional string profileStartTime = 4;</code>
+       * <code>optional string procId = 4;</code>
+       */
+      public java.lang.String getProcId() {
+        java.lang.Object ref = procId_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            procId_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string procId = 4;</code>
+       */
+      public com.google.protobuf.ByteString
+          getProcIdBytes() {
+        java.lang.Object ref = procId_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          procId_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string procId = 4;</code>
+       */
+      public Builder setProcId(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        procId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string procId = 4;</code>
+       */
+      public Builder clearProcId() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        procId_ = getDefaultInstance().getProcId();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string procId = 4;</code>
+       */
+      public Builder setProcIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        procId_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object profileStartTime_ = "";
+      /**
+       * <code>optional string profileStartTime = 5;</code>
+       */
+      public boolean hasProfileStartTime() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional string profileStartTime = 5;</code>
        */
       public java.lang.String getProfileStartTime() {
         java.lang.Object ref = profileStartTime_;
@@ -6259,7 +8956,7 @@ public final class AggregatedProfileModel {
         }
       }
       /**
-       * <code>optional string profileStartTime = 4;</code>
+       * <code>optional string profileStartTime = 5;</code>
        */
       public com.google.protobuf.ByteString
           getProfileStartTimeBytes() {
@@ -6275,36 +8972,36 @@ public final class AggregatedProfileModel {
         }
       }
       /**
-       * <code>optional string profileStartTime = 4;</code>
+       * <code>optional string profileStartTime = 5;</code>
        */
       public Builder setProfileStartTime(
           java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000008;
+  bitField0_ |= 0x00000010;
         profileStartTime_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional string profileStartTime = 4;</code>
+       * <code>optional string profileStartTime = 5;</code>
        */
       public Builder clearProfileStartTime() {
-        bitField0_ = (bitField0_ & ~0x00000008);
+        bitField0_ = (bitField0_ & ~0x00000010);
         profileStartTime_ = getDefaultInstance().getProfileStartTime();
         onChanged();
         return this;
       }
       /**
-       * <code>optional string profileStartTime = 4;</code>
+       * <code>optional string profileStartTime = 5;</code>
        */
       public Builder setProfileStartTimeBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000008;
+  bitField0_ |= 0x00000010;
         profileStartTime_ = value;
         onChanged();
         return this;
@@ -6312,13 +9009,13 @@ public final class AggregatedProfileModel {
 
       private java.lang.Object profileEndTime_ = "";
       /**
-       * <code>optional string profileEndTime = 5;</code>
+       * <code>optional string profileEndTime = 6;</code>
        */
       public boolean hasProfileEndTime() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
+        return ((bitField0_ & 0x00000020) == 0x00000020);
       }
       /**
-       * <code>optional string profileEndTime = 5;</code>
+       * <code>optional string profileEndTime = 6;</code>
        */
       public java.lang.String getProfileEndTime() {
         java.lang.Object ref = profileEndTime_;
@@ -6335,7 +9032,7 @@ public final class AggregatedProfileModel {
         }
       }
       /**
-       * <code>optional string profileEndTime = 5;</code>
+       * <code>optional string profileEndTime = 6;</code>
        */
       public com.google.protobuf.ByteString
           getProfileEndTimeBytes() {
@@ -6351,36 +9048,36 @@ public final class AggregatedProfileModel {
         }
       }
       /**
-       * <code>optional string profileEndTime = 5;</code>
+       * <code>optional string profileEndTime = 6;</code>
        */
       public Builder setProfileEndTime(
           java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000010;
+  bitField0_ |= 0x00000020;
         profileEndTime_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional string profileEndTime = 5;</code>
+       * <code>optional string profileEndTime = 6;</code>
        */
       public Builder clearProfileEndTime() {
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = (bitField0_ & ~0x00000020);
         profileEndTime_ = getDefaultInstance().getProfileEndTime();
         onChanged();
         return this;
       }
       /**
-       * <code>optional string profileEndTime = 5;</code>
+       * <code>optional string profileEndTime = 6;</code>
        */
       public Builder setProfileEndTimeBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000010;
+  bitField0_ |= 0x00000020;
         profileEndTime_ = value;
         onChanged();
         return this;
@@ -6388,35 +9085,35 @@ public final class AggregatedProfileModel {
 
       private int workType_ = 0;
       /**
-       * <code>optional .WorkType workType = 6;</code>
+       * <code>optional .WorkType workType = 7;</code>
        */
       public boolean hasWorkType() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
+        return ((bitField0_ & 0x00000040) == 0x00000040);
       }
       /**
-       * <code>optional .WorkType workType = 6;</code>
+       * <code>optional .WorkType workType = 7;</code>
        */
       public fk.prof.common.proto.AggregatedProfileModel.WorkType getWorkType() {
         fk.prof.common.proto.AggregatedProfileModel.WorkType result = fk.prof.common.proto.AggregatedProfileModel.WorkType.valueOf(workType_);
         return result == null ? fk.prof.common.proto.AggregatedProfileModel.WorkType.cpu_sample_work : result;
       }
       /**
-       * <code>optional .WorkType workType = 6;</code>
+       * <code>optional .WorkType workType = 7;</code>
        */
       public Builder setWorkType(fk.prof.common.proto.AggregatedProfileModel.WorkType value) {
         if (value == null) {
           throw new NullPointerException();
         }
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000040;
         workType_ = value.getNumber();
         onChanged();
         return this;
       }
       /**
-       * <code>optional .WorkType workType = 6;</code>
+       * <code>optional .WorkType workType = 7;</code>
        */
       public Builder clearWorkType() {
-        bitField0_ = (bitField0_ & ~0x00000020);
+        bitField0_ = (bitField0_ & ~0x00000040);
         workType_ = 0;
         onChanged();
         return this;
@@ -6471,6 +9168,16 @@ public final class AggregatedProfileModel {
   }
 
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_ProfileSourceInfo_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_ProfileSourceInfo_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_ProfileSummary_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_ProfileSummary_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_ContextProps_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -6519,26 +9226,34 @@ public final class AggregatedProfileModel {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\022aggregations.proto\"#\n\014ContextProps\022\023\n\013" +
-      "sampleCount\030\001 \001(\r\"5\n\007Context\022\014\n\004name\030\001 \002" +
-      "(\t\022\034\n\005props\030\002 \001(\0132\r.ContextProps\"(\n\013Cont" +
-      "extList\022\031\n\007context\030\001 \003(\0132\010.Context\"\034\n\014Me" +
-      "thodLookUp\022\014\n\004fqdn\030\001 \003(\t\"r\n\tFrameNode\022\020\n" +
-      "\010methodId\030\001 \002(\r\022\022\n\nchildCount\030\002 \002(\r\022\016\n\006l" +
-      "ineNo\030\003 \001(\r\022/\n\020cpuSamplingProps\030\004 \001(\0132\025." +
-      "CPUSamplingNodeProps\"X\n\tFrameTree\022\"\n\016thr" +
-      "eadRunNodes\030\001 \003(\0132\n.FrameNode\022\'\n\023unclass" +
-      "ifiableNodes\030\002 \003(\0132\n.FrameNode\"D\n\024CPUSam",
-      "plingNodeProps\022\024\n\014onCpuSamples\030\001 \001(\r\022\026\n\016" +
-      "onStackSamples\030\002 \001(\r\"\220\001\n\006Header\022\025\n\rforma" +
-      "tVersion\030\001 \002(\r\022\r\n\005appId\030\002 \001(\t\022\021\n\tcluster" +
-      "Id\030\003 \001(\t\022\030\n\020profileStartTime\030\004 \001(\t\022\026\n\016pr" +
-      "ofileEndTime\030\005 \001(\t\022\033\n\010workType\030\006 \001(\0162\t.W" +
-      "orkType*k\n\010WorkType\022\023\n\017cpu_sample_work\020\000" +
-      "\022\026\n\022thread_sample_work\020\001\022\033\n\027monitor_cont" +
-      "ention_work\020\002\022\025\n\021monitor_wait_work\020\003B.\n\024" +
-      "fk.prof.common.protoB\026AggregatedProfileM" +
-      "odel"
+      "\n\022aggregations.proto\"j\n\021ProfileSourceInf" +
+      "o\022\n\n\002ip\030\001 \001(\t\022\020\n\010hostname\030\002 \001(\t\022\023\n\013proce" +
+      "ssName\030\003 \001(\t\022\014\n\004zone\030\004 \001(\t\022\024\n\014instanceTy" +
+      "pe\030\005 \001(\t\"\225\001\n\016ProfileSummary\022\021\n\tstartTime" +
+      "\030\001 \001(\t\022\017\n\007endTime\030\002 \001(\t\022\027\n\017recorderVersi" +
+      "on\030\003 \001(\r\022&\n\nsourceInfo\030\004 \001(\0132\022.ProfileSo" +
+      "urceInfo\022\036\n\006status\030\005 \001(\0162\016.ProfileStatus" +
+      "\"#\n\014ContextProps\022\023\n\013sampleCount\030\001 \001(\r\"5\n" +
+      "\007Context\022\014\n\004name\030\001 \002(\t\022\034\n\005props\030\002 \001(\0132\r." +
+      "ContextProps\"(\n\013ContextList\022\031\n\007context\030\001",
+      " \003(\0132\010.Context\"\034\n\014MethodLookUp\022\014\n\004fqdn\030\001" +
+      " \003(\t\"r\n\tFrameNode\022\020\n\010methodId\030\001 \002(\r\022\022\n\nc" +
+      "hildCount\030\002 \002(\r\022\016\n\006lineNo\030\003 \001(\r\022/\n\020cpuSa" +
+      "mplingProps\030\004 \001(\0132\025.CPUSamplingNodeProps" +
+      "\"X\n\tFrameTree\022\"\n\016threadRunNodes\030\001 \003(\0132\n." +
+      "FrameNode\022\'\n\023unclassifiableNodes\030\002 \003(\0132\n" +
+      ".FrameNode\"D\n\024CPUSamplingNodeProps\022\024\n\014on" +
+      "CpuSamples\030\001 \001(\r\022\026\n\016onStackSamples\030\002 \001(\r" +
+      "\"\240\001\n\006Header\022\025\n\rformatVersion\030\001 \002(\r\022\r\n\005ap" +
+      "pId\030\002 \001(\t\022\021\n\tclusterId\030\003 \001(\t\022\016\n\006procId\030\004",
+      " \001(\t\022\030\n\020profileStartTime\030\005 \001(\t\022\026\n\016profil" +
+      "eEndTime\030\006 \001(\t\022\033\n\010workType\030\007 \001(\0162\t.WorkT" +
+      "ype*E\n\rProfileStatus\022\r\n\tCompleted\020\000\022\013\n\007P" +
+      "artial\020\001\022\013\n\007Retried\020\002\022\013\n\007Aborted\020\003*k\n\010Wo" +
+      "rkType\022\023\n\017cpu_sample_work\020\000\022\026\n\022thread_sa" +
+      "mple_work\020\001\022\033\n\027monitor_contention_work\020\002" +
+      "\022\025\n\021monitor_wait_work\020\003B.\n\024fk.prof.commo" +
+      "n.protoB\026AggregatedProfileModel"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -6552,54 +9267,66 @@ public final class AggregatedProfileModel {
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
-    internal_static_ContextProps_descriptor =
+    internal_static_ProfileSourceInfo_descriptor =
       getDescriptor().getMessageTypes().get(0);
+    internal_static_ProfileSourceInfo_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_ProfileSourceInfo_descriptor,
+        new java.lang.String[] { "Ip", "Hostname", "ProcessName", "Zone", "InstanceType", });
+    internal_static_ProfileSummary_descriptor =
+      getDescriptor().getMessageTypes().get(1);
+    internal_static_ProfileSummary_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_ProfileSummary_descriptor,
+        new java.lang.String[] { "StartTime", "EndTime", "RecorderVersion", "SourceInfo", "Status", });
+    internal_static_ContextProps_descriptor =
+      getDescriptor().getMessageTypes().get(2);
     internal_static_ContextProps_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_ContextProps_descriptor,
         new java.lang.String[] { "SampleCount", });
     internal_static_Context_descriptor =
-      getDescriptor().getMessageTypes().get(1);
+      getDescriptor().getMessageTypes().get(3);
     internal_static_Context_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Context_descriptor,
         new java.lang.String[] { "Name", "Props", });
     internal_static_ContextList_descriptor =
-      getDescriptor().getMessageTypes().get(2);
+      getDescriptor().getMessageTypes().get(4);
     internal_static_ContextList_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_ContextList_descriptor,
         new java.lang.String[] { "Context", });
     internal_static_MethodLookUp_descriptor =
-      getDescriptor().getMessageTypes().get(3);
+      getDescriptor().getMessageTypes().get(5);
     internal_static_MethodLookUp_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_MethodLookUp_descriptor,
         new java.lang.String[] { "Fqdn", });
     internal_static_FrameNode_descriptor =
-      getDescriptor().getMessageTypes().get(4);
+      getDescriptor().getMessageTypes().get(6);
     internal_static_FrameNode_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_FrameNode_descriptor,
         new java.lang.String[] { "MethodId", "ChildCount", "LineNo", "CpuSamplingProps", });
     internal_static_FrameTree_descriptor =
-      getDescriptor().getMessageTypes().get(5);
+      getDescriptor().getMessageTypes().get(7);
     internal_static_FrameTree_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_FrameTree_descriptor,
         new java.lang.String[] { "ThreadRunNodes", "UnclassifiableNodes", });
     internal_static_CPUSamplingNodeProps_descriptor =
-      getDescriptor().getMessageTypes().get(6);
+      getDescriptor().getMessageTypes().get(8);
     internal_static_CPUSamplingNodeProps_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_CPUSamplingNodeProps_descriptor,
         new java.lang.String[] { "OnCpuSamples", "OnStackSamples", });
     internal_static_Header_descriptor =
-      getDescriptor().getMessageTypes().get(7);
+      getDescriptor().getMessageTypes().get(9);
     internal_static_Header_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Header_descriptor,
-        new java.lang.String[] { "FormatVersion", "AppId", "ClusterId", "ProfileStartTime", "ProfileEndTime", "WorkType", });
+        new java.lang.String[] { "FormatVersion", "AppId", "ClusterId", "ProcId", "ProfileStartTime", "ProfileEndTime", "WorkType", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)
