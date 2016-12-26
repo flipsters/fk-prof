@@ -25,6 +25,10 @@ message ProfileSummary {
 	optional ProfileStatus status = 5;
 }
 
+message ProfileList {
+	repeated ProfileSummary info = 1;
+}
+
 
 // Additional properties computed for the context
 message ContextProps {
