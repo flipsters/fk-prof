@@ -1,19 +1,22 @@
 package fk.prof.test;
 
+import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.CodedOutputStream;
+import com.google.protobuf.TextFormat;
+import fk.prof.common.Utils;
+import fk.prof.common.proto.AggregatedProfileModel;
 import fk.prof.common.store.FileNamingStrategy;
 import fk.prof.common.store.StorageBackedInputStream;
 import fk.prof.common.store.StorageBackedOutputStream;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.UncheckedIOException;
+import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.zip.Adler32;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -25,7 +28,6 @@ import static org.mockito.Mockito.*;
 public class IOStreamTest {
 
     Util.StringStorage storage;
-    ExecutorService execSvc = Executors.newFixedThreadPool(2);
 
     OutputStream os;
     InputStream is;
@@ -57,7 +59,6 @@ public class IOStreamTest {
 
         // verify that we got the correct chunks
         for(int i = 0; i < contentSize/partSize; ++i) {
-
             String contentPart = storage.writtenContent.get(fileName.getFileName(i + 1));
             assertNotNull(contentPart);
             assertEquals(content.substring(i * partSize, (i + 2) * partSize > contentSize ? contentSize : (i + 1) * partSize), contentPart);

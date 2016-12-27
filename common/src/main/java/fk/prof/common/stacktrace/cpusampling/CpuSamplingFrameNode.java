@@ -1,14 +1,15 @@
 package fk.prof.common.stacktrace.cpusampling;
 
+import fk.prof.common.stacktrace.TreeNode;
+
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class CpuSamplingFrameNode {
+public class CpuSamplingFrameNode implements TreeNode<CpuSamplingFrameNode> {
     private final int methodId;
     private final int lineNumber;
-    private final List<CpuSamplingFrameNode> children = new ArrayList<>();
+    private final List<CpuSamplingFrameNode> children = new ArrayList<>(2);
 
     private final AtomicInteger onStackSamples = new AtomicInteger(0);
     private final AtomicInteger onCpuSamples = new AtomicInteger(0);
@@ -18,21 +19,10 @@ public class CpuSamplingFrameNode {
         this.lineNumber = lineNumber;
     }
 
-    /**
-     * Gets list of children of the node
-     * Any operation on the returned value is not thread-safe
-     * @return gets backing array list of children
-     */
-    public List<CpuSamplingFrameNode> getChildrenUnsafe() {
-        return this.children;
-    }
-
     public CpuSamplingFrameNode getOrAddChild(int childMethodId, int childLineNumber) {
         synchronized (children) {
             CpuSamplingFrameNode result = null;
-            Iterator<CpuSamplingFrameNode> i = children.iterator();
-            while (i.hasNext()) {
-                CpuSamplingFrameNode child = i.next();
+            for(CpuSamplingFrameNode child : children) {
                 if (child.methodId == childMethodId && child.lineNumber == childLineNumber) {
                     result = child;
                     break;
@@ -70,5 +60,15 @@ public class CpuSamplingFrameNode {
 
     public int incrementOnCpuSamples () {
         return this.onCpuSamples.incrementAndGet();
+    }
+
+    @Override
+    public int childCount() {
+        return children.size();
+    }
+
+    @Override
+    public Iterable<CpuSamplingFrameNode> children() {
+        return children;
     }
 }

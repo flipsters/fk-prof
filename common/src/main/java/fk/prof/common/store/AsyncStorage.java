@@ -8,7 +8,7 @@ import java.util.concurrent.Future;
  */
 public interface AsyncStorage {
 
-    Future<Void> store(String path, InputStream content);
+    void store(String path, InputStream content);
 
     Future<InputStream> fetch(String path);
 }

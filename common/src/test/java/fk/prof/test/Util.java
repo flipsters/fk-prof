@@ -29,16 +29,13 @@ public class Util {
 
         // sync impl
         @Override
-        public Future<Void> store(String path, InputStream content) {
+        public void store(String path, InputStream content) {
             try {
                 writtenContent.put(path, IOUtils.toString(content));
             }
             catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
-
-            // return null. future result not useful in tests.
-            return null;
         }
 
         @Override

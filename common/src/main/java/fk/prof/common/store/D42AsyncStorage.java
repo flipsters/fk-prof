@@ -28,8 +28,8 @@ public class D42AsyncStorage implements AsyncStorage {
     }
 
     @Override
-    public Future<Void> store(String path, InputStream content) {
-        return CompletableFuture.runAsync(() -> client.putObject(bucket, path, content, new ObjectMetadata()), executorService);
+    public void store(String path, InputStream content) {
+        CompletableFuture.runAsync(() -> client.putObject(bucket, path, content, new ObjectMetadata()), executorService);
     }
 
     @Override
