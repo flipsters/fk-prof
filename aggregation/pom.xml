@@ -1,50 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-	http://maven.apache.org/maven-v4_0_0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <artifactId>prof</artifactId>
     <groupId>fk</groupId>
     <version>1.0-SNAPSHOT</version>
   </parent>
+  <modelVersion>4.0.0</modelVersion>
 
   <groupId>fk.prof</groupId>
-  <artifactId>backend</artifactId>
-  <packaging>jar</packaging>
-  <version>1.0-SNAPSHOT</version>
-  <name>Backend for fk-prof</name>
+  <artifactId>aggregation</artifactId>
 
   <dependencies>
     <dependency>
-      <groupId>fk.prof</groupId>
-      <artifactId>storage</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>20.0</version>
     </dependency>
     <dependency>
-      <groupId>fk.prof</groupId>
-      <artifactId>aggregation</artifactId>
-      <version>1.0-SNAPSHOT</version>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-core</artifactId>
-      <version>3.3.3</version>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-web</artifactId>
-      <version>3.3.3</version>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-unit</artifactId>
-      <version>3.3.3</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
-      <version>3.5</version>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>3.1.0</version>
     </dependency>
   </dependencies>
 
@@ -69,7 +46,7 @@
               <outputTargets>
                 <outputTarget>
                   <type>java</type>
-                  <outputDirectory>src/main/java/</outputDirectory>
+                  <outputDirectory>src/main/java</outputDirectory>
                 </outputTarget>
               </outputTargets>
             </configuration>
@@ -78,5 +55,4 @@
       </plugin>
     </plugins>
   </build>
-
 </project>

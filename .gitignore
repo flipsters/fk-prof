@@ -45,4 +45,4 @@ cscope.*
 
 #Ignore proto generated recorder class
 backend/src/main/java/recording/Recorder.java
-common/src/main/java/fk/prof/common/proto/AggregatedProfileModel.java
+aggregation/src/main/java/fk/prof/aggregation/proto/AggregatedProfileModel.java
