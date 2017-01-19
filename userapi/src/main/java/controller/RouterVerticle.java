@@ -2,9 +2,12 @@ package controller;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import model.D42Verticle;
 
 /**
  * Routes requests to their respective handlers
@@ -17,8 +20,8 @@ public class RouterVerticle extends AbstractVerticle {
         router.route("/").handler(routingContext -> routingContext.response()
                 .putHeader("context-type", "text/html")
                 .end("<h1>Welcome to UserAPI for FKProfiler"));
-        router.get("/apps").handler(this::getAppIds);
-        router.get("/cluster/:appId").handler(this::getClusterIds);
+        router.get("/apps").blockingHandler(this::getAppIds, false);
+        router.get("/cluster/:appId").blockingHandler(this::getClusterIds, false);
         return router;
     }
 
@@ -26,15 +29,22 @@ public class RouterVerticle extends AbstractVerticle {
     public void start(Future<Void> startFuture) throws Exception {
         Router router = configureRouter();
 
+        Future<HttpServer> serverFuture = Future.future();
+        Future<String> dataFuture = Future.future();
+
         vertx.createHttpServer()
                 .requestHandler(router::accept)
-                .listen(config().getInteger("http.port", 8080), result -> {
-                    if (result.succeeded()) {
-                        startFuture.complete();
-                    } else {
-                        startFuture.fail(result.cause());
-                    }
-                });
+                .listen(config().getInteger("http.port", 8080), serverFuture.completer());
+
+        vertx.deployVerticle("model.D42Verticle", dataFuture.completer());
+
+        CompositeFuture.all(serverFuture, dataFuture).setHandler(compositeFutureAsyncResult -> {
+            if (compositeFutureAsyncResult.succeeded()) {
+                startFuture.complete();
+            } else {
+                startFuture.fail(compositeFutureAsyncResult.cause());
+            }
+        });
     }
 
     private void getAppIds(RoutingContext routingContext) {
@@ -43,6 +53,7 @@ public class RouterVerticle extends AbstractVerticle {
             routingContext.response().end("<h1>Will return all AppIds");
         } else {
             //TODO Query S3 to fetch all AppIds with prefix pre
+            D42Verticle.ShowBuckets();
             routingContext.response().end("<h1>Will return AppIds with prefix = " + prefix);
         }
     }
