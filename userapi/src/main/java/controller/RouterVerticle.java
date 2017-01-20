@@ -5,15 +5,20 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.Json;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import model.D42Verticle;
+import model.D42Store;
+
+import java.util.Set;
 
 /**
  * Routes requests to their respective handlers
  * Created by rohit.patiyal on 18/01/17.
  */
 public class RouterVerticle extends AbstractVerticle {
+
+    private D42Store d42Store = null;
 
     private Router configureRouter() {
         Router router = Router.router(vertx);
@@ -22,6 +27,10 @@ public class RouterVerticle extends AbstractVerticle {
                 .end("<h1>Welcome to UserAPI for FKProfiler"));
         router.get("/apps").blockingHandler(this::getAppIds, false);
         router.get("/cluster/:appId").blockingHandler(this::getClusterIds, false);
+        router.get("/proc/:appId/:clusterId").blockingHandler(this::getProcIds, false);
+//        router.get("/profiles/:appId/:clusterId/:proc").blockingHandler(this::getProfiles, false);
+//        router.get("/traces/:appId/:clusterId/:proc/:workType").blockingHandler(this.getTraces, false);
+
         return router;
     }
 
@@ -30,15 +39,19 @@ public class RouterVerticle extends AbstractVerticle {
         Router router = configureRouter();
 
         Future<HttpServer> serverFuture = Future.future();
-        Future<String> dataFuture = Future.future();
+        Future<String> dbFuture = Future.future();
 
         vertx.createHttpServer()
                 .requestHandler(router::accept)
                 .listen(config().getInteger("http.port", 8080), serverFuture.completer());
 
-        vertx.deployVerticle("model.D42Verticle", dataFuture.completer());
 
-        CompositeFuture.all(serverFuture, dataFuture).setHandler(compositeFutureAsyncResult -> {
+        vertx.executeBlocking(future -> {
+            d42Store = new D42Store();
+            future.complete();
+        }, dbFuture.completer());
+
+        CompositeFuture.all(serverFuture, dbFuture).setHandler(compositeFutureAsyncResult -> {
             if (compositeFutureAsyncResult.succeeded()) {
                 startFuture.complete();
             } else {
@@ -48,29 +61,60 @@ public class RouterVerticle extends AbstractVerticle {
     }
 
     private void getAppIds(RoutingContext routingContext) {
-        final String prefix = routingContext.request().getParam("prefix");
+        String prefix = routingContext.request().getParam("prefix");
         if (prefix == null) {
-            routingContext.response().end("<h1>Will return all AppIds");
+            prefix = "";
+        }
+        if (d42Store != null) {
+            Set<String> appIds = d42Store.getAppIdsWithPrefix(prefix);
+            routingContext.response().
+                    putHeader("content-type", "application/json; charset=utf-8").
+                    end(Json.encodePrettily(appIds));
         } else {
-            //TODO Query S3 to fetch all AppIds with prefix pre
-            D42Verticle.ShowBuckets();
-            routingContext.response().end("<h1>Will return AppIds with prefix = " + prefix);
+            routingContext.response().setStatusCode(HttpResponseStatus.GATEWAY_TIMEOUT.code()).end();
         }
     }
 
     private void getClusterIds(RoutingContext routingContext) {
-        final String prefix = routingContext.request().getParam("prefix");
         final String appId = routingContext.request().getParam("appId");
+        String prefix = routingContext.request().getParam("prefix");
+
         if (appId == null) {
             routingContext.response().setStatusCode(HttpResponseStatus.BAD_REQUEST.code()).end();
         } else {
             if (prefix == null) {
-                routingContext.response().end("<h1>Will return all clusterIds for appId = " + appId);
+                prefix = "";
+            }
+            if (d42Store != null) {
+                Set<String> clusterIds = d42Store.getClusterIdsWithPrefix(appId, prefix);
+                routingContext.response().
+                        putHeader("content-type", "application/json; charset=utf-8").
+                        end(Json.encodePrettily(clusterIds));
             } else {
-                //TODO Query S3 to fetch all AppIds with prefix pre
-                routingContext.response().end("<h1>Will return ApiIds with appId = " + appId + "; pre = " + prefix);
+                routingContext.response().setStatusCode(HttpResponseStatus.GATEWAY_TIMEOUT.code()).end();
             }
         }
     }
 
+    private void getProcIds(RoutingContext routingContext) {
+        final String appId = routingContext.request().getParam("appId");
+        final String clusterId = routingContext.request().getParam("clusterId");
+        String prefix = routingContext.request().getParam("prefix");
+
+        if (appId == null || clusterId == null) {
+            routingContext.response().setStatusCode(HttpResponseStatus.BAD_REQUEST.code()).end();
+        } else {
+            if (prefix == null) {
+                prefix = "";
+            }
+            if (d42Store != null) {
+                Set<String> procIds = d42Store.getProcIdsWithPrefix(appId, clusterId, prefix);
+                routingContext.response().
+                        putHeader("content-type", "application/json; charset=utf-8").
+                        end(Json.encodePrettily(procIds));
+            } else {
+                routingContext.response().setStatusCode(HttpResponseStatus.GATEWAY_TIMEOUT.code()).end();
+            }
+        }
+    }
 }

@@ -1,11 +1,6 @@
 package model;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
-import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.model.Bucket;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
@@ -34,16 +29,7 @@ public class D42Verticle extends AbstractVerticle {
     public void start(Future<Void> startFuture) throws Exception {
         //super.start(startFuture);
         vertx.executeBlocking(future -> {
-            conn = new AmazonS3Client(
-                    new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY),
-                    new ClientConfiguration().withProtocol(Protocol.HTTP));
-            try {
-                conn.setEndpoint("http://10.47.2.3:80");
-                conn.setS3ClientOptions(new S3ClientOptions().withPathStyleAccess(true));
-                future.complete();
-            } catch (Exception e) {
-                future.fail(e);
-            }
+
         }, asyncResult -> {
             if (asyncResult.succeeded()) {
                 startFuture.complete();
