@@ -1,4 +1,4 @@
-package model;
+package helper;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
@@ -7,6 +7,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.model.*;
+import model.Profile;
 import org.apache.commons.codec.binary.Base32;
 
 import java.io.ByteArrayInputStream;
@@ -16,8 +17,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -29,6 +30,7 @@ public class D42StoreHelper {
     private static final String SECRET_KEY = "fGEJrdiSWNJlsZTiIiTPpUntDm0wCRV4tYbwu2M+";
     private static final String S3_BACKUP_ELB_END_POINT = "http://10.47.2.3:80";
     private static final String DELIMITER = "_";
+    private static final String BUCKET_NAME = "bck1";
     private static AmazonS3 conn = null;
 
     private static void createConn() {
@@ -138,15 +140,15 @@ public class D42StoreHelper {
             System.out.println("Bucket: " + bucket.getName()
                     + " | CreationDate: " + bucket.getCreationDate()
                     + " | Owner: " + bucket.getOwner());
-            // ObjectListing objects = conn.listObjects(bucket.getName());
-            ObjectListing objects = conn.listObjects(new ListObjectsRequest().withBucketName(bucket.getName()).withPrefix(prefix).withDelimiter(DELIMITER));
-            System.err.println(objects.getMarker());
-            System.err.println(objects.getDelimiter());
-            System.err.println(objects.getMaxKeys());
-            System.err.println(objects.getPrefix());
-            System.err.println(objects.getObjectSummaries());
-            System.err.println(objects.getNextMarker());
-            System.err.println(objects.getCommonPrefixes());
+            ObjectListing objects = conn.listObjects(bucket.getName());
+            //ObjectListing objects = conn.listObjects(new ListObjectsRequest().withBucketName(bucket.getName()).withPrefix(prefix).withDelimiter(DELIMITER));
+//            System.err.println(objects.getMarker());
+//            System.err.println(objects.getDelimiter());
+//            System.err.println(objects.getMaxKeys());
+//            System.err.println(objects.getPrefix());
+//            System.err.println(objects.getObjectSummaries());
+//            System.err.println(objects.getNextMarker());
+//            System.err.println(objects.getCommonPrefixes());
             do {
                 for (S3ObjectSummary objectSummary : objects.getObjectSummaries()) {
                     System.out.println(" `-----Key: " + objectSummary.getKey()
@@ -173,12 +175,34 @@ public class D42StoreHelper {
         createConn();
         if (conn != null) {
             // VerifyBase32();
-            //VerifyObjWriting();
             // VerifyObjReading();
             // VerifyObjCleanup();
             //VerifyBucketCleanup();
-            showBucketsWithObjects("v001_");
+            showBucketsWithObjects("v001_MZXW6===_MJQXE");
+            // VerifyObjWriting();
             //VerifyFileNameSplit();
+            //  groupByTimeWindow();
+            getProfiles();
+        }
+    }
+
+    private static Profile getProfile(String key) {
+        String[] splits = key.split("_");
+        String start = splits[4];
+//         new TimeInterval(start, ZonedDateTime.parse(start).plusSeconds(Long.parseLong(splits[5])).toString());
+        return new Profile(start, ZonedDateTime.parse(start).plusSeconds(Long.parseLong(splits[5])).toString());
+    }
+
+    private static void getProfiles() {
+        String prefix = "v001_MZXW6===_MJQXE";
+        Set<String> allObjects = getAllWithPrefix(prefix);
+        Map<Profile, Set<String>> profilesMap = allObjects.stream().collect(Collectors.groupingBy(D42StoreHelper::getProfile, Collectors.mapping(D42StoreHelper::getWorkType, Collectors.toSet())));
+        Set<Profile> profiles = profilesMap.entrySet().stream().map(profileSetEntry -> {
+            profileSetEntry.getKey().setValues(profileSetEntry.getValue());
+            return profileSetEntry.getKey();
+        }).collect(Collectors.toSet());
+        for (Profile p : profiles) {
+            System.err.println(p.getStart() + ":" + p.getEnd() + " --- " + p.getValues().size());
         }
     }
 
@@ -210,6 +234,38 @@ public class D42StoreHelper {
         showBucketsWithObjects("prefix");
     }
 
+    private static Set<String> getAllWithPrefix(String prefix) {
+        Set<String> allObjects = new HashSet<>();
+        ObjectListing objects = conn.listObjects(new ListObjectsRequest()
+                .withBucketName(BUCKET_NAME).withPrefix(prefix));
+        do {
+            for (S3ObjectSummary objSummary : objects.getObjectSummaries()) {
+                allObjects.add(objSummary.getKey());
+                System.out.println(objSummary.getKey());
+            }
+        } while (objects.isTruncated());
+        return allObjects;
+    }
+
+    private static void groupByTimeWindow() {
+        Set<String> allObjects = getAllWithPrefix("v001_MZXW6===_MJQXE===_main_2017-01-20T12:37:20");
+        Map<TimeInterval, Set<String>> mp = allObjects.stream().collect(Collectors.groupingBy(D42StoreHelper::getTimeWindow, Collectors.mapping(D42StoreHelper::getWorkType, Collectors.toSet())));
+        for (Map.Entry<TimeInterval, Set<String>> e : mp.entrySet()) {
+            System.out.println(e.getKey().getStart() + ":" + e.getKey().getEnd() + " :: " + e.getValue());
+        }
+    }
+
+    private static TimeInterval getTimeWindow(String key) {
+        String[] splits = key.split("_");
+        String start = splits[4];
+        return TimeInterval.getTimeInterval(start, ZonedDateTime.parse(start).plusSeconds(Long.parseLong(splits[5])).toString());
+    }
+
+    private static String getWorkType(String key) {
+        String[] splits = key.split("_");
+        return splits[6];
+
+    }
 
     private static void VerifyObjReading() {
         List<String> fileNames = new ArrayList<>();
@@ -218,15 +274,59 @@ public class D42StoreHelper {
     }
 
     private static void VerifyObjWriting() {
-        showBucketsWithObjects("prefix");
-        //       List<String> objects = new ArrayList<>();
+        //showBucketsWithObjects("prefix");
+        List<String> objects = new ArrayList<>();
         //       objects.add("v001_MFYHAMI=_MNWHK43UMVZDC===_process1_2017-01-20T11:23:36.877+05:30_1200_worktype1_0000");
-
+        objects.add("v001_MZXW6===_MJQXE===_main_2017-01-20T12:37:20.551+05:30_1500_iosamples_0001");
         //writeObjInBucket(getWritableBucket("bck1"),objects);
-        writeObjInBucket(getWritableBucket("bck1"), generateS3Names("foo", "bar", "main", "cpusamples", 1800, 0, 1));
-        writeObjInBucket(getWritableBucket("bck2"), generateS3Names("foo", "bar", "main", "cpusamples", 1800, 2, 4));
+        //writeObjInBucket(getWritableBucket("bck1"), generateS3Names("foo", "bar", "main", "cpusamples", 1800, 0, 1));
+        //writeObjInBucket(getWritableBucket("bck2"), generateS3Names("foo", "bar", "main", "cpusamples", 1800, 2, 4));
         //writeObjInBucket(getWritableBucket("bck4"),generateS3Names("app1","cluster1","process1","worktype1", 1200, 1));
-        writeObjInBucket(getWritableBucket("bck1"), generateS3Names("app1", "cluster1", "process1", "worktype1", 1200, 0, 1));
-        showBucketsWithObjects("prefix");
+        //writeObjInBucket(getWritableBucket("bck1"), generateS3Names("app1", "cluster1", "process1", "worktype1", 1200, 0, 1));
+        writeObjInBucket(getWritableBucket("bck1"), objects);
+
+        // showBucketsWithObjects("prefix");
+    }
+
+    private static class TimeInterval {
+        private String start;
+        private String end;
+
+        TimeInterval(String start, String end) {
+            this.start = start;
+            this.end = end;
+
+        }
+
+        static TimeInterval getTimeInterval(String start, String end) {
+
+            return new TimeInterval(start, end);
+        }
+
+        public String getStart() {
+            return start;
+        }
+
+        public String getEnd() {
+            return end;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            TimeInterval that = (TimeInterval) o;
+
+            if (start != null ? !start.equals(that.start) : that.start != null) return false;
+            return end != null ? end.equals(that.end) : that.end == null;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = start != null ? start.hashCode() : 0;
+            result = 31 * result + (end != null ? end.hashCode() : 0);
+            return result;
+        }
     }
 }

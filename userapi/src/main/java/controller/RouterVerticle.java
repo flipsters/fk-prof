@@ -9,6 +9,8 @@ import io.vertx.core.json.Json;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import model.D42Store;
+import model.IDataStore;
+import model.Profile;
 
 import java.util.Set;
 
@@ -18,7 +20,7 @@ import java.util.Set;
  */
 public class RouterVerticle extends AbstractVerticle {
 
-    private D42Store d42Store = null;
+    private IDataStore d42Store = null;
 
     private Router configureRouter() {
         Router router = Router.router(vertx);
@@ -28,8 +30,8 @@ public class RouterVerticle extends AbstractVerticle {
         router.get("/apps").blockingHandler(this::getAppIds, false);
         router.get("/cluster/:appId").blockingHandler(this::getClusterIds, false);
         router.get("/proc/:appId/:clusterId").blockingHandler(this::getProcIds, false);
-//        router.get("/profiles/:appId/:clusterId/:proc").blockingHandler(this::getProfiles, false);
-//        router.get("/traces/:appId/:clusterId/:proc/:workType").blockingHandler(this.getTraces, false);
+        router.get("/profiles/:appId/:clusterId/:proc").blockingHandler(this::getProfiles, false);
+        // router.get("/traces/:appId/:clusterId/:proc/:workType").blockingHandler(this.getTraces, false);
 
         return router;
     }
@@ -112,6 +114,33 @@ public class RouterVerticle extends AbstractVerticle {
                 routingContext.response().
                         putHeader("content-type", "application/json; charset=utf-8").
                         end(Json.encodePrettily(procIds));
+            } else {
+                routingContext.response().setStatusCode(HttpResponseStatus.GATEWAY_TIMEOUT.code()).end();
+            }
+        }
+    }
+
+    private void getProfiles(RoutingContext routingContext) {
+        final String appId = routingContext.request().getParam("appId");
+        final String clusterId = routingContext.request().getParam("clusterId");
+        final String proc = routingContext.request().getParam("proc");
+        String start = routingContext.request().getParam("start");
+        String duration = routingContext.request().getParam("duration");
+
+        if (appId == null || clusterId == null || proc == null) {
+            routingContext.response().setStatusCode(HttpResponseStatus.BAD_REQUEST.code()).end();
+        } else {
+            if (start == null) {
+                start = "";
+            }
+            if (duration == null) {
+                duration = "";
+            }
+            if (d42Store != null) {
+                Set<Profile> profiles = d42Store.getProfilesInTimeWindow(appId, clusterId, proc, start, duration);
+                routingContext.response().
+                        putHeader("content-type", "application/json; charset=utf-8").
+                        end(Json.encodePrettily(profiles));
             } else {
                 routingContext.response().setStatusCode(HttpResponseStatus.GATEWAY_TIMEOUT.code()).end();
             }
