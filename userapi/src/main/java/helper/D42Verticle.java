@@ -1,4 +1,4 @@
-package model;
+package helper;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.Bucket;
