@@ -12,7 +12,6 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.commons.codec.binary.Base32;
 
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -80,7 +79,6 @@ public class D42Store implements IDataStore {
         do {
             for (S3ObjectSummary objSummary : objects.getObjectSummaries()) {
                 allObjects.add(objSummary.getKey());
-                System.out.println(objSummary.getKey());
             }
         } while (objects.isTruncated());
         return allObjects;
@@ -126,7 +124,7 @@ public class D42Store implements IDataStore {
     @Override
     public Set<Profile> getProfilesInTimeWindow(String appId, String clusterId, String proc, String startTime, String durationInSeconds) {
         String prefix = VERSION + DELIMITER + new String(base32.encode(appId.getBytes()))
-                + DELIMITER + new String(base32.encode(clusterId.getBytes())) + DELIMITER + startTime;
+                + DELIMITER + new String(base32.encode(clusterId.getBytes())) + DELIMITER + proc + DELIMITER;
         Map<Profile, Set<String>> profilesMap = getAllWithPrefix(prefix).stream().collect(Collectors.groupingBy(D42Store::getProfile, Collectors.mapping(D42Store::getWorkType, Collectors.toSet())));
         Set<Profile> profiles = profilesMap.entrySet().stream().map(profileSetEntry -> {
             profileSetEntry.getKey().setValues(profileSetEntry.getValue());
@@ -135,8 +133,9 @@ public class D42Store implements IDataStore {
         try {
             ZonedDateTime startTimeAsTime = ZonedDateTime.parse(startTime);
             Long durationInSecondsAsLong = Long.parseLong(durationInSeconds);
-            profiles = profiles.stream().filter(k -> ZonedDateTime.parse(k.getEnd()).isAfter(startTimeAsTime.plusSeconds(durationInSecondsAsLong))).collect(Collectors.toSet());
-        } catch (DateTimeParseException e) {
+            profiles = profiles.stream().filter(k -> ZonedDateTime.parse(k.getEnd()).isBefore(startTimeAsTime.plusSeconds(durationInSecondsAsLong).plusNanos(1))
+                    && ZonedDateTime.parse(k.getStart()).isAfter(startTimeAsTime.minusNanos(1))).collect(Collectors.toSet());
+        } catch (Exception e) {
             System.err.println(e);
         }
 
