@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Helps in generating, verifying and writing dummy data to D42Store
+ * Helps in generating, verifying and writing dummy data to D42Model
  * Created by rohit.patiyal on 19/01/17.
  */
 public class D42StoreHelper {
@@ -140,15 +140,15 @@ public class D42StoreHelper {
             System.out.println("Bucket: " + bucket.getName()
                     + " | CreationDate: " + bucket.getCreationDate()
                     + " | Owner: " + bucket.getOwner());
-            ObjectListing objects = conn.listObjects(bucket.getName());
-            //ObjectListing objects = conn.listObjects(new ListObjectsRequest().withBucketName(bucket.getName()).withPrefix(prefix).withDelimiter(DELIMITER));
-//            System.err.println(objects.getMarker());
-//            System.err.println(objects.getDelimiter());
-//            System.err.println(objects.getMaxKeys());
-//            System.err.println(objects.getPrefix());
-//            System.err.println(objects.getObjectSummaries());
-//            System.err.println(objects.getNextMarker());
-//            System.err.println(objects.getCommonPrefixes());
+            //  ObjectListing objects = conn.listObjects(bucket.getName());
+            ObjectListing objects = conn.listObjects(new ListObjectsRequest().withBucketName(bucket.getName()).withPrefix(prefix).withDelimiter(DELIMITER));
+            System.err.println(objects.getMarker());
+            System.err.println(objects.getDelimiter());
+            System.err.println(objects.getMaxKeys());
+            System.err.println(objects.getPrefix());
+            System.err.println(objects.getObjectSummaries());
+            System.err.println(objects.getNextMarker());
+            System.err.println(objects.getCommonPrefixes());
             do {
                 for (S3ObjectSummary objectSummary : objects.getObjectSummaries()) {
                     System.out.println(" `-----Key: " + objectSummary.getKey()
@@ -178,11 +178,11 @@ public class D42StoreHelper {
             // VerifyObjReading();
             // VerifyObjCleanup();
             //VerifyBucketCleanup();
-            showBucketsWithObjects("v001_MZXW6===_MJQXE");
+            showBucketsWithObjects("v001_MZXW6===_MJQXE===_");
             // VerifyObjWriting();
             //VerifyFileNameSplit();
             //  groupByTimeWindow();
-            getProfiles();
+            //       getProfiles();
         }
     }
 

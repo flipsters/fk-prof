@@ -1,91 +1,53 @@
 package model;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.S3ClientOptions;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import fk.prof.storage.AsyncStorage;
+import fk.prof.storage.D42AsyncStorage;
 import org.apache.commons.codec.binary.Base32;
 
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 /**
  * Connects with the D42 Simple Storage Service
  * Created by rohit.patiyal on 19/01/17.
  */
-public class D42Store implements IDataStore {
+public class D42Model implements IDataModel {
     private static final String ACCESS_KEY = "66ZX9WC7ZRO6S5BSO8TG";
     private static final String SECRET_KEY = "fGEJrdiSWNJlsZTiIiTPpUntDm0wCRV4tYbwu2M+";
     private static final String S3_BACKUP_ELB_END_POINT = "http://10.47.2.3:80";
-    private static final String BUCKET_NAME = "bck1";
+    private static final String BUCKET = "bck1";
     private static final String VERSION = "v001";
     private static final String DELIMITER = "_";
-    private static AmazonS3 conn = null;
+    private static final String PATH_SEPARATOR = "/";
+    private D42AsyncStorage store = null;
     private Base32 base32 = null;
 
-    public D42Store() {
-        initDataStore();
-        base32 = new Base32();
+    public D42Model() {
+        this.IDataModel(new D42AsyncStorage(S3_BACKUP_ELB_END_POINT, ACCESS_KEY, SECRET_KEY, Executors.newSingleThreadExecutor()));
     }
 
     private static String getWorkType(String key) {
-        String[] splits = key.split("_");
+        String[] splits = key.split(DELIMITER);
         return splits[6];
-
     }
 
     private static Profile getProfile(String key) {
-        String[] splits = key.split("_");
+        String[] splits = key.split(DELIMITER);
         String start = splits[4];
         return new Profile(start, ZonedDateTime.parse(start).plusSeconds(Long.parseLong(splits[5])).toString());
     }
 
-    public void initDataStore() {
-        conn = new AmazonS3Client(
-                new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY),
-                new ClientConfiguration().withProtocol(Protocol.HTTP));
-        conn.setEndpoint(S3_BACKUP_ELB_END_POINT);
-        conn.setS3ClientOptions(new S3ClientOptions().withPathStyleAccess(true));
-        conn.getS3AccountOwner().getId();
-    }
-
     private String getLastFromCommonPrefix(String commonPrefix) {
-        String[] splits = commonPrefix.split("_");
+        String[] splits = commonPrefix.split(DELIMITER);
         return splits[splits.length - 1];
     }
 
-    private List<String> getCommonPrefixes(String prefix) {
-        List<String> commonPrefixes = new ArrayList<>();
-        ObjectListing objects = conn.listObjects(new ListObjectsRequest()
-                .withBucketName(BUCKET_NAME).withDelimiter(DELIMITER).withPrefix(prefix));
-        do {
-            for (String commonPrefix : objects.getCommonPrefixes()) {
-                commonPrefixes.add(commonPrefix);
-            }
-        } while (objects.isTruncated());
-        return commonPrefixes;
-    }
-
-    private Set<String> getAllWithPrefix(String prefix) {
-        Set<String> allObjects = new HashSet<>();
-        ObjectListing objects = conn.listObjects(new ListObjectsRequest()
-                .withBucketName(BUCKET_NAME).withPrefix(prefix));
-        do {
-            for (S3ObjectSummary objSummary : objects.getObjectSummaries()) {
-                allObjects.add(objSummary.getKey());
-            }
-        } while (objects.isTruncated());
-        return allObjects;
-    }
-
     private Set<String> getListingAtLevelWithPrefix(String level, String objPrefix, boolean encoded) {
-        List<String> commonPrefixes = getCommonPrefixes(level);
+        Set<String> commonPrefixes = store.getCommonPrefixes(level);
         Set<String> objs = new HashSet<>();
         for (String commonPrefix : commonPrefixes) {
             String objName = getLastFromCommonPrefix(commonPrefix);
@@ -100,32 +62,38 @@ public class D42Store implements IDataStore {
     }
 
     @Override
+    public void IDataModel(AsyncStorage store) {
+        this.store = (D42AsyncStorage) store;
+        base32 = new Base32();
+    }
+
+    @Override
     public Set<String> getAppIdsWithPrefix(String appIdPrefix) {
-        return getListingAtLevelWithPrefix(VERSION + DELIMITER, appIdPrefix, true);
+        return getListingAtLevelWithPrefix(BUCKET + PATH_SEPARATOR + VERSION + DELIMITER, appIdPrefix, true);
 
     }
 
     @Override
     public Set<String> getClusterIdsWithPrefix(String appId, String clusterIdPrefix) {
         return getListingAtLevelWithPrefix(
-                VERSION + DELIMITER + new String(base32.encode(appId.getBytes())) + DELIMITER,
+                BUCKET + PATH_SEPARATOR + VERSION + DELIMITER + new String(base32.encode(appId.getBytes())) + DELIMITER,
                 clusterIdPrefix,
                 true);
     }
 
     @Override
-    public Set<String> getProcIdsWithPrefix(String appId, String clusterId, String procIdPrefix) {
-        return getListingAtLevelWithPrefix(VERSION + DELIMITER + new String(base32.encode(appId.getBytes()))
+    public Set<String> getProcsWithPrefix(String appId, String clusterId, String procPrefix) {
+        return getListingAtLevelWithPrefix(BUCKET + PATH_SEPARATOR + VERSION + DELIMITER + new String(base32.encode(appId.getBytes()))
                         + DELIMITER + new String(base32.encode(clusterId.getBytes())) + DELIMITER,
-                procIdPrefix,
+                procPrefix,
                 false);
     }
 
     @Override
     public Set<Profile> getProfilesInTimeWindow(String appId, String clusterId, String proc, String startTime, String durationInSeconds) {
-        String prefix = VERSION + DELIMITER + new String(base32.encode(appId.getBytes()))
+        String prefix = BUCKET + PATH_SEPARATOR + VERSION + DELIMITER + new String(base32.encode(appId.getBytes()))
                 + DELIMITER + new String(base32.encode(clusterId.getBytes())) + DELIMITER + proc + DELIMITER;
-        Map<Profile, Set<String>> profilesMap = getAllWithPrefix(prefix).stream().collect(Collectors.groupingBy(D42Store::getProfile, Collectors.mapping(D42Store::getWorkType, Collectors.toSet())));
+        Map<Profile, Set<String>> profilesMap = store.listAll(prefix).stream().collect(Collectors.groupingBy(D42Model::getProfile, Collectors.mapping(D42Model::getWorkType, Collectors.toSet())));
         Set<Profile> profiles = profilesMap.entrySet().stream().map(profileSetEntry -> {
             profileSetEntry.getKey().setValues(profileSetEntry.getValue());
             return profileSetEntry.getKey();
