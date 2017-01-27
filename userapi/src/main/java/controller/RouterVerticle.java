@@ -67,13 +67,14 @@ public class RouterVerticle extends AbstractVerticle {
         if (prefix == null) {
             prefix = "";
         }
-        if (d42Store != null) {
+        try {
             Set<String> appIds = d42Store.getAppIdsWithPrefix(prefix);
             routingContext.response().
                     putHeader("content-type", "application/json; charset=utf-8").
                     end(Json.encodePrettily(appIds));
-        } else {
+        } catch (Exception e) {
             routingContext.response().setStatusCode(HttpResponseStatus.GATEWAY_TIMEOUT.code()).end();
+            e.printStackTrace();
         }
     }
 
@@ -87,12 +88,12 @@ public class RouterVerticle extends AbstractVerticle {
             if (prefix == null) {
                 prefix = "";
             }
-            if (d42Store != null) {
+            try {
                 Set<String> clusterIds = d42Store.getClusterIdsWithPrefix(appId, prefix);
                 routingContext.response().
                         putHeader("content-type", "application/json; charset=utf-8").
                         end(Json.encodePrettily(clusterIds));
-            } else {
+            } catch (Exception e) {
                 routingContext.response().setStatusCode(HttpResponseStatus.GATEWAY_TIMEOUT.code()).end();
             }
         }
@@ -109,13 +110,13 @@ public class RouterVerticle extends AbstractVerticle {
             if (prefix == null) {
                 prefix = "";
             }
-            if (d42Store != null) {
+            try {
                 Set<String> procIds = d42Store.getProcsWithPrefix(appId, clusterId, prefix);
                 routingContext.response().
                         putHeader("content-type", "application/json; charset=utf-8").
                         end(Json.encodePrettily(procIds));
-            } else {
-                routingContext.response().setStatusCode(HttpResponseStatus.GATEWAY_TIMEOUT.code()).end();
+            } catch (Exception e) {
+                routingContext.response().setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code()).end();
             }
         }
     }
@@ -136,12 +137,12 @@ public class RouterVerticle extends AbstractVerticle {
             if (duration == null) {
                 duration = "";
             }
-            if (d42Store != null) {
+            try {
                 Set<Profile> profiles = d42Store.getProfilesInTimeWindow(appId, clusterId, proc, start, duration);
                 routingContext.response().
                         putHeader("content-type", "application/json; charset=utf-8").
                         end(Json.encodePrettily(profiles));
-            } else {
+            } catch (Exception e) {
                 routingContext.response().setStatusCode(HttpResponseStatus.GATEWAY_TIMEOUT.code()).end();
             }
         }

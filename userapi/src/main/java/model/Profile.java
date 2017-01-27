@@ -41,14 +41,16 @@ public class Profile {
 
         Profile profile = (Profile) o;
 
-        return getStart().equals(profile.getStart()) && getEnd().equals(profile.getEnd());
+        if (!getStart().equals(profile.getStart())) return false;
+        if (!getEnd().equals(profile.getEnd())) return false;
+        return getValues().equals(profile.getValues());
     }
 
     @Override
     public int hashCode() {
         int result = getStart().hashCode();
         result = 31 * result + getEnd().hashCode();
+        result = 31 * result + getValues().hashCode();
         return result;
     }
-
 }
