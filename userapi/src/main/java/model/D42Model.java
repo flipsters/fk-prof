@@ -26,6 +26,7 @@ public class D42Model implements IDataModel {
     private static final String DELIMITER = "_";
     private static final String BUCKET = "bck1";
     private static final String PATH_SEPARATOR = "/";
+    private static final int TIMEOUT = 2;
     private static org.slf4j.Logger LOGGER = LoggerFactory.getLogger(D42Model.class);
     private S3AsyncStorage store = null;
     private Base32 base32 = null;
@@ -52,7 +53,7 @@ public class D42Model implements IDataModel {
     }
 
     private Set<String> getListingAtLevelWithPrefix(String level, String objPrefix, boolean encoded) throws Exception {
-        Set<String> commonPrefixes = store.listAsync(level, false).get(2, TimeUnit.SECONDS);
+        Set<String> commonPrefixes = store.listAsync(level, false).get(TIMEOUT, TimeUnit.SECONDS);
         Set<String> objs = new HashSet<>();
         for (String commonPrefix : commonPrefixes) {
             String objName = getLastFromCommonPrefix(commonPrefix);

@@ -8,6 +8,7 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.Json;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.TimeoutHandler;
 import model.D42Model;
 import model.IDataModel;
 import model.Profile;
@@ -20,10 +21,18 @@ import java.util.Set;
  */
 public class RouterVerticle extends AbstractVerticle {
 
-    private IDataModel d42Store = null;
+    private static final long REQ_TIMEOUT = 2000;
+    private IDataModel dataModel = null;
+
+    private void setIDataModel(IDataModel IDataModel) {
+        if (dataModel == null) {
+            this.dataModel = IDataModel;
+        }
+    }
 
     private Router configureRouter() {
         Router router = Router.router(vertx);
+        router.route().handler(TimeoutHandler.create(REQ_TIMEOUT));
         router.route("/").handler(routingContext -> routingContext.response()
                 .putHeader("context-type", "text/html")
                 .end("<h1>Welcome to UserAPI for FKProfiler"));
@@ -49,7 +58,7 @@ public class RouterVerticle extends AbstractVerticle {
 
 
         vertx.executeBlocking(future -> {
-            d42Store = new D42Model();
+            setIDataModel(new D42Model());
             future.complete();
         }, dbFuture.completer());
 
@@ -68,12 +77,12 @@ public class RouterVerticle extends AbstractVerticle {
             prefix = "";
         }
         try {
-            Set<String> appIds = d42Store.getAppIdsWithPrefix(prefix);
+            Set<String> appIds = dataModel.getAppIdsWithPrefix(prefix);
             routingContext.response().
                     putHeader("content-type", "application/json; charset=utf-8").
                     end(Json.encodePrettily(appIds));
         } catch (Exception e) {
-            routingContext.response().setStatusCode(HttpResponseStatus.GATEWAY_TIMEOUT.code()).end();
+            routingContext.response().setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code()).end();
             e.printStackTrace();
         }
     }
@@ -82,20 +91,16 @@ public class RouterVerticle extends AbstractVerticle {
         final String appId = routingContext.request().getParam("appId");
         String prefix = routingContext.request().getParam("prefix");
 
-        if (appId == null) {
-            routingContext.response().setStatusCode(HttpResponseStatus.BAD_REQUEST.code()).end();
-        } else {
-            if (prefix == null) {
-                prefix = "";
-            }
-            try {
-                Set<String> clusterIds = d42Store.getClusterIdsWithPrefix(appId, prefix);
-                routingContext.response().
-                        putHeader("content-type", "application/json; charset=utf-8").
-                        end(Json.encodePrettily(clusterIds));
-            } catch (Exception e) {
-                routingContext.response().setStatusCode(HttpResponseStatus.GATEWAY_TIMEOUT.code()).end();
-            }
+        if (prefix == null) {
+            prefix = "";
+        }
+        try {
+            Set<String> clusterIds = dataModel.getClusterIdsWithPrefix(appId, prefix);
+            routingContext.response().
+                    putHeader("content-type", "application/json; charset=utf-8").
+                    end(Json.encodePrettily(clusterIds));
+        } catch (Exception e) {
+            routingContext.response().setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code()).end();
         }
     }
 
@@ -104,20 +109,16 @@ public class RouterVerticle extends AbstractVerticle {
         final String clusterId = routingContext.request().getParam("clusterId");
         String prefix = routingContext.request().getParam("prefix");
 
-        if (appId == null || clusterId == null) {
-            routingContext.response().setStatusCode(HttpResponseStatus.BAD_REQUEST.code()).end();
-        } else {
-            if (prefix == null) {
-                prefix = "";
-            }
-            try {
-                Set<String> procIds = d42Store.getProcsWithPrefix(appId, clusterId, prefix);
-                routingContext.response().
-                        putHeader("content-type", "application/json; charset=utf-8").
-                        end(Json.encodePrettily(procIds));
-            } catch (Exception e) {
-                routingContext.response().setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code()).end();
-            }
+        if (prefix == null) {
+            prefix = "";
+        }
+        try {
+            Set<String> procIds = dataModel.getProcsWithPrefix(appId, clusterId, prefix);
+            routingContext.response().
+                    putHeader("content-type", "application/json; charset=utf-8").
+                    end(Json.encodePrettily(procIds));
+        } catch (Exception e) {
+            routingContext.response().setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code()).end();
         }
     }
 
@@ -128,23 +129,20 @@ public class RouterVerticle extends AbstractVerticle {
         String start = routingContext.request().getParam("start");
         String duration = routingContext.request().getParam("duration");
 
-        if (appId == null || clusterId == null || proc == null) {
-            routingContext.response().setStatusCode(HttpResponseStatus.BAD_REQUEST.code()).end();
-        } else {
-            if (start == null) {
-                start = "";
-            }
-            if (duration == null) {
-                duration = "";
-            }
-            try {
-                Set<Profile> profiles = d42Store.getProfilesInTimeWindow(appId, clusterId, proc, start, duration);
-                routingContext.response().
-                        putHeader("content-type", "application/json; charset=utf-8").
-                        end(Json.encodePrettily(profiles));
-            } catch (Exception e) {
-                routingContext.response().setStatusCode(HttpResponseStatus.GATEWAY_TIMEOUT.code()).end();
-            }
+        if (start == null) {
+            start = "";
+        }
+        if (duration == null) {
+            duration = "";
+        }
+        try {
+            Set<Profile> profiles = dataModel.getProfilesInTimeWindow(appId, clusterId, proc, start, duration);
+            routingContext.response().
+                    putHeader("content-type", "application/json; charset=utf-8").
+                    end(Json.encodePrettily(profiles));
+        } catch (Exception e) {
+            routingContext.response().setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code()).end();
         }
     }
+
 }

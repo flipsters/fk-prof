@@ -21,7 +21,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests for {@link IDataModel} DataModel Interface using mocked behaviour of S3 listAysnc API
+ * Tests for {@link IDataModel} DataModel Interface using mocked behaviour of S3 listAysnc {@link S3AsyncStorage}API
  * Created by rohit.patiyal on 24/01/17.
  */
 @RunWith(MockitoJUnitRunner.class)
