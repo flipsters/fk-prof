@@ -1,0 +1,17 @@
+#!/bin/bash -e
+
+JAVA_OPTS=""
+ULIMIT=150000
+PACKAGE="fk-prof-userapi"
+USER="profsvc"
+CP="/usr/share/${PACKAGE}/${PACKAGE}.jar:/usr/share/${PACKAGE}/lib/*:/usr/share/${PACKAGE}/lib"
+MAIN="io.vertx.core.Launcher"
+CONFIG="/etc/${PACKAGE}/conf/userapi-conf.json"
+
+if [ -f /etc/default/${PACKAGE} ]; then
+	source /etc/default/${PACKAGE}
+fi
+
+ulimit -n ${ULIMIT}
+exec ${JAVA_HOME}/bin/java ${JAVA_OPTS} -cp ${CP} ${MAIN} -conf ${CONFIG}
+#exec setuidgid ${USER} ${JAVA_HOME}/bin/java ${JAVA_OPTS} -jar /usr/share/${PACKAGE}/${PACKAGE}.jar -conf ${CONFIG}

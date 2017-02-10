@@ -11,11 +11,13 @@
   <groupId>fk.prof</groupId>
   <artifactId>userapi</artifactId>
   <packaging>jar</packaging>
-  <version>1.0-SNAPSHOT</version>
-  <name>UserAPI for fk-prof</name>
+    <version>${userapi.version}</version>
+    <name>UserAPI</name>
 
-  <properties>
+
+    <properties>
     <vertx.version>3.3.3</vertx.version>
+        <userapi.version>1.0-SNAPSHOT</userapi.version>
   </properties>
 
   <dependencies>
@@ -77,31 +79,39 @@
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>2.3</version>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>3.0.0</version>
         <executions>
           <execution>
-            <phase>package</phase>
+              <phase>install</phase>
             <goals>
-              <goal>shade</goal>
+                <goal>copy-dependencies</goal>
             </goals>
             <configuration>
-              <transformers>
-                <transformer
-                    implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <manifestEntries>
-                    <Main-Class>io.vertx.core.Launcher</Main-Class>
-                    <Main-Verticle>fk.prof.userapi.verticles.MainVerticle</Main-Verticle>
-                  </manifestEntries>
-                </transformer>
-              </transformers>
-              <artifactSet/>
-              <outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar
-              </outputFile>
+                <outputDirectory>${project.build.directory}/lib</outputDirectory>
             </configuration>
           </execution>
         </executions>
+      </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <version>3.0.2</version>
+            <configuration>
+                <archive>
+                    <manifest>
+                        <addClasspath>true</addClasspath>
+                        <classpathPrefix>lib/</classpathPrefix>
+                    </manifest>
+                    <manifestEntries>
+                        <Main-Class>io.vertx.core.Launcher</Main-Class>
+                        <Main-Verticle>fk.prof.userapi.verticles.MainVerticle</Main-Verticle>
+                    </manifestEntries>
+                </archive>
+                <includes>
+                    <include>fk/**/*</include>
+                </includes>
+            </configuration>
       </plugin>
     </plugins>
   </build>

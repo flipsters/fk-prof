@@ -1,0 +1,51 @@
+#!/bin/bash -e
+
+#version
+MAJOR_VERSION=1
+MINOR_VERSION=$(git log -n1 --format="%ct")
+VERSION="${MAJOR_VERSION}.${MINOR_VERSION}"
+
+# destination
+PACKAGE="fk-prof-userapi"
+TEMP_DIR="/tmp/deb-${PACKAGE}-${VERSION}"
+DEB="/tmp/${PACKAGE}-${VERSION}.deb"
+
+echo "=============== Build Config ================="
+echo "PACKAGE: ${PACKAGE}"
+echo "VERSION: ${VERSION}"
+echo "TEMP_DIR: ${TEMP_DIR}"
+echo "DEB: ${DEB}"
+
+echo "=============== Maven Build ==================="
+mvn -q clean install -DskipTests
+
+echo "=============== Copying Package Files ==================="
+mkdir ${TEMP_DIR} && cp -a ${PACKAGE}/* ${TEMP_DIR}
+
+echo "=============== Copying Jars ==================="
+mkdir -p ${TEMP_DIR}/usr/share/${PACKAGE}
+JAR=$(ls target | egrep "userapi-[0-9.]+-[a-zA-Z-]+.jar" | head -n1)
+cp -a target/${JAR} ${TEMP_DIR}/usr/share/${PACKAGE}/${JAR}
+cd ${TEMP_DIR}/usr/share/${PACKAGE}
+ln -s ${JAR} "${PACKAGE}.jar"
+cd -
+
+echo "=============== Copying dependencies ==================="
+cp -a target/lib  ${TEMP_DIR}/usr/share/${PACKAGE}
+
+echo "=============== Creating DEB ====================="
+sed -i -e "s/_PACKAGE_/$PACKAGE/g" ${TEMP_DIR}/DEBIAN/control
+sed -i -e "s/_VERSION_/$VERSION/g" ${TEMP_DIR}/DEBIAN/control
+dpkg -b ${TEMP_DIR} ${DEB}
+
+echo "=============== Uploading to machine =================="
+scp ${DEB} 10.85.112.118:~/
+#echo "=============== Uploading to Repo-SVC =================="
+#reposervice --host repo-svc-app-0001.nm.flipkart.com --port 8080 \
+#	pub \
+#	--appkey config-service \
+#	--repo config-service-api \
+#	--debs ${DEB}
+
+echo "=============== Cleaning up ==============="
+rm -rf ${TEMP_DIR} ${DEB}
