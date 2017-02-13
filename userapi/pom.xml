@@ -11,13 +11,12 @@
   <groupId>fk.prof</groupId>
   <artifactId>userapi</artifactId>
   <packaging>jar</packaging>
-    <version>${userapi.version}</version>
-    <name>UserAPI</name>
+    <version>1.0-SNAPSHOT</version>
+    <name>UserAPI for fk-prof</name>
 
 
     <properties>
     <vertx.version>3.3.3</vertx.version>
-        <userapi.version>1.0-SNAPSHOT</userapi.version>
   </properties>
 
   <dependencies>
@@ -44,8 +43,13 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
-      <version>${vertx.version}</version>
+        <version>${vertx.version}</version>
     </dependency>
+      <dependency>
+          <groupId>io.vertx</groupId>
+          <artifactId>vertx-dropwizard-metrics</artifactId>
+          <version>${vertx.version}</version>
+      </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>

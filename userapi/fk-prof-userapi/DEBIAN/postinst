@@ -18,7 +18,7 @@ if [ "$1" == "configure" ]; then
 
     # create log dir
     mkdir -p /var/log/${PACKAGE}
-    chown ${USER}:${GROUP} /var/log/${PACKAGE}/
+    chown -R ${USER}:${GROUP} /var/log/${PACKAGE}/
 
     # create service
     ln -s /etc/sv/${PACKAGE} /etc/service/${PACKAGE}

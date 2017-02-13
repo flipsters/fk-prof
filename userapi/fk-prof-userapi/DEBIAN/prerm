@@ -3,5 +3,4 @@
 PACKAGE="fk-prof-userapi"
 
 svc -dx /etc/service/${PACKAGE}
-svc -dx /etc/service/${PACKAGE}/log
-rm -rf /etc/service/${PACKAGE}
+rm -rf /etc/sv/${PACKAGE}
