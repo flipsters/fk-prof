@@ -17,11 +17,13 @@ echo "TEMP_DIR: ${TEMP_DIR}"
 echo "DEB: ${DEB}"
 
 echo "=============== Maven Build ==================="
-mvn -q clean install -DskipTests
+cd ..
+mvn clean install
+cd -
 
 echo "=============== Copying Package Files ==================="
 #Coping the config and log4j.properties files to the etc directory
-mkdir -p ${PACKAGE}
+mkdir -p ${PACKAGE}/etc/${PACKAGE}/
 cp -a src/conf ${PACKAGE}/etc/${PACKAGE}/
 cp -a src/resources ${PACKAGE}/etc/${PACKAGE}/
 mkdir -p ${TEMP_DIR} && cp -a ${PACKAGE}/* ${TEMP_DIR}
