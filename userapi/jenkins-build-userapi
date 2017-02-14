@@ -17,7 +17,7 @@ echo "TEMP_DIR: ${TEMP_DIR}"
 echo "DEB: ${DEB}"
 
 echo "=============== Maven Build ==================="
-mvn -q clean install 
+mvn -q clean install
 
 echo "=============== Copying Package Files ==================="
 mkdir ${TEMP_DIR} && cp -a ${PACKAGE}/* ${TEMP_DIR}
