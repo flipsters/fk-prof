@@ -17,10 +17,14 @@ echo "TEMP_DIR: ${TEMP_DIR}"
 echo "DEB: ${DEB}"
 
 echo "=============== Maven Build ==================="
-mvn -q clean install
+mvn -q clean install -DskipTests
 
 echo "=============== Copying Package Files ==================="
-mkdir ${TEMP_DIR} && cp -a ${PACKAGE}/* ${TEMP_DIR}
+#Coping the config and log4j.properties files to the etc directory
+mkdir -p ${PACKAGE}
+cp -a src/conf ${PACKAGE}/etc/${PACKAGE}/
+cp -a src/resources ${PACKAGE}/etc/${PACKAGE}/
+mkdir -p ${TEMP_DIR} && cp -a ${PACKAGE}/* ${TEMP_DIR}
 
 echo "=============== Copying Jars ==================="
 mkdir -p ${TEMP_DIR}/usr/share/${PACKAGE}
@@ -38,14 +42,15 @@ sed -i -e "s/_PACKAGE_/$PACKAGE/g" ${TEMP_DIR}/DEBIAN/control
 sed -i -e "s/_VERSION_/$VERSION/g" ${TEMP_DIR}/DEBIAN/control
 dpkg -b ${TEMP_DIR} ${DEB}
 
-echo "=============== Uploading to machine =================="
-scp ${DEB} 10.85.112.118:~/
-#echo "=============== Uploading to Repo-SVC =================="
-#reposervice --host repo-svc-app-0001.nm.flipkart.com --port 8080 \
-#	pub \
-#	--appkey config-service \
-#	--repo config-service-api \
-#	--debs ${DEB}
+#echo "=============== Uploading to machine =================="
+#scp ${DEB} 10.85.112.118:~/
+
+echo "=============== Uploading to Repo-SVC =================="
+reposervice --host 10.85.51.142 --port 8080 \
+    pub \
+    --appkey fk-prof-stage \
+    --repo fk-prof-userapi-staging \
+    --debs ${DEB}
 
 echo "=============== Cleaning up ==============="
 rm -rf ${TEMP_DIR} ${DEB}
