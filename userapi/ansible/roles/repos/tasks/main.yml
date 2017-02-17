@@ -1,0 +1,3 @@
+- name: Update repos
+  shell: reposervice --host 10.85.51.142 --port 8080 env --appkey {{dev_app_key}} --name {{env_name}} > /etc/apt/sources.list.d/{{env_name}}.list
+

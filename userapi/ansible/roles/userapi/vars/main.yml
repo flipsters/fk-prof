@@ -1,0 +1,17 @@
+svc_name: fk-prof-userapi
+port: 8082
+
+d42_end_point: http://10.47.2.3:80
+access_key: 66ZX9WC7ZRO6S5BSO8TG
+secret_key: fGEJrdiSWNJlsZTiIiTPpUntDm0wCRV4tYbwu2M+
+
+app_log_level: INFO
+app_log_threshold: DEBUG
+access_log_level: INFO
+access_log_threshold: INFO
+max_log_file_size: 500MB
+log_backup_count: 4
+
+ulimit: 100000
+min_heap: 6g 
+max_heap: 6g

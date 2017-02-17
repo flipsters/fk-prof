@@ -1,0 +1,14 @@
+---
+ - hosts: dev
+   become: yes
+   become_method: sudo 
+   roles: 
+    - { role: repos, tags: ['bootstrap'] }
+    - { role: java8, tags: ['java8'] }
+    - { role: userapi, tags: ['userapi'] }
+
+
+# TO RUN :
+# ssh-agent bash
+# ssh-add ~/.ssh/id_rsa
+# ansible-playbook -i dev-inventory deploy-api.yml --verbose

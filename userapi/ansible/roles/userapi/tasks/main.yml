@@ -1,0 +1,69 @@
+
+ - name: Stop service
+   svc:
+     name: "{{svc_name}}"
+     state: stopped 
+     service_dir: /etc/sv
+
+ - name: Remove package
+   apt: 
+     name: "{{svc_name}}"
+     state: absent
+     force: yes
+
+ - name: Remove service dir
+   file:
+     path: /etc/service/{{svc_name}}
+     state: absent
+
+ - name: Remove sv dir
+   file: 
+     path: /etc/sv/{{svc_name}}
+     state: absent
+
+ - name: Install package
+   apt: 
+     name: "{{svc_name}}"
+     state: latest
+     update_cache: yes 
+     force: yes
+   notify:
+    - check-port
+    - health-check   
+ 
+ - name: Copy defaults
+   template:
+     src: "{{svc_name}}.j2"
+     dest: /etc/default/{{svc_name}}
+     owner: root
+     group: root
+     mode: 0755
+   notify: 
+    - restart-service
+    - health-check  
+
+ - name: Copy config
+   template: 
+     src: userapi-conf.json.j2
+     dest: /etc/{{svc_name}}/conf/userapi-conf.json
+   notify: 
+    - restart-service
+    - health-check
+
+ - name: Copy log4j.properties
+   template:
+     src: log4j.properties.j2
+     dest: /etc/{{svc_name}}/resources/log4j.properties
+   notify:
+    - restart-service
+    - health-check
+
+ - name: Start service
+   svc: 
+     name: "{{svc_name}}"
+     state: started
+     service_dir: /etc/sv
+   notify: 
+    - check-port
+    - health-check
+
