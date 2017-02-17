@@ -25,8 +25,8 @@ import java.util.Set;
  */
 public class HttpVerticle extends AbstractVerticle {
 
-    public static final int AGGREGATION_DURATION = 30; // in min
-    public static final String BASE_DIR = "profiles";
+    private static final int AGGREGATION_DURATION = 30; // in min
+    private static final String BASE_DIR = "profiles";
 
     private ProfileStoreAPI profileStoreAPI;
 
@@ -38,9 +38,10 @@ public class HttpVerticle extends AbstractVerticle {
         Router router = Router.router(vertx);
         router.route().handler(LoggerHandler.create());
         router.route().handler(TimeoutHandler.create(config().getInteger("req.timeout")));
-        router.route("/").handler(routingContext -> routingContext.response()
+        router.route("/healthcheck").handler(routingContext -> routingContext.response()
+                .setStatusCode(200)
                 .putHeader("context-type", "text/html")
-                .end("<h1>Welcome to UserAPI for FKProfiler"));
+                .end("<h1>Health: OK</h1>"));
         router.get("/apps").handler(this::getAppIds);
         router.get("/cluster/:appId").handler(this::getClusterIds);
         router.get("/proc/:appId/:clusterId").handler(this::getProcs);
@@ -64,7 +65,7 @@ public class HttpVerticle extends AbstractVerticle {
                 });
     }
 
-    public void getAppIds(RoutingContext routingContext) {
+    private void getAppIds(RoutingContext routingContext) {
         String prefix = routingContext.request().getParam("prefix");
         if (prefix == null) {
             prefix = "";
@@ -119,7 +120,7 @@ public class HttpVerticle extends AbstractVerticle {
                 BASE_DIR, appId, clusterId, proc, startTime, duration);
     }
 
-    public void getTracesRequest(RoutingContext routingContext) {
+    private void getTracesRequest(RoutingContext routingContext) {
         String appId = routingContext.request().getParam("appId");
         String clusterId = routingContext.request().getParam("clusterId");
         String procId = routingContext.request().getParam("procId");
@@ -148,7 +149,7 @@ public class HttpVerticle extends AbstractVerticle {
         profileStoreAPI.load(future, filename);
     }
 
-    public void getCpuSamplingTraces(RoutingContext routingContext) {
+    private void getCpuSamplingTraces(RoutingContext routingContext) {
         String appId = routingContext.request().getParam("appId");
         String clusterId = routingContext.request().getParam("clusterId");
         String procId = routingContext.request().getParam("procId");

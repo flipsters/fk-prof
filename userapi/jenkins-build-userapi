@@ -44,9 +44,6 @@ sed -i -e "s/_PACKAGE_/$PACKAGE/g" ${TEMP_DIR}/DEBIAN/control
 sed -i -e "s/_VERSION_/$VERSION/g" ${TEMP_DIR}/DEBIAN/control
 dpkg -b ${TEMP_DIR} ${DEB}
 
-#echo "=============== Uploading to machine =================="
-#scp ${DEB} 10.85.112.118:~/
-
 echo "=============== Uploading to Repo-SVC =================="
 reposervice --host 10.85.51.142 --port 8080 \
     pub \
