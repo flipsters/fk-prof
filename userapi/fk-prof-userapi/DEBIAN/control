@@ -5,4 +5,4 @@ Section: flipkart/infra
 Priority: standard
 Maintainer: Prof Dev <fk-prof-dev@flipkart.com>
 Depends: default-jre | java8-runtime
-Description: Profiler UserApi
+Description: Profiler UserAPI
