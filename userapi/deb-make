@@ -29,7 +29,7 @@ mvn clean install -DskipTests
 cd -
 
 echo "=============== Copying Package Files ==================="
-Coping the config and log4j.properties files to the etc directory
+# Coping the config and log4j.properties files to the etc directory
 mkdir -p ${PACKAGE}/etc/${PACKAGE}/
 cp -a src/conf ${PACKAGE}/etc/${PACKAGE}/
 cp -a src/resources ${PACKAGE}/etc/${PACKAGE}/
