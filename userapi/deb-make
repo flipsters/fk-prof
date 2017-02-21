@@ -25,7 +25,7 @@ echo "DEB: ${DEB}"
 
 echo "=============== Maven Build ==================="
 cd ..
-mvn clean install -DskipTests
+mvn -q clean install -DskipTests
 cd -
 
 echo "=============== Copying Package Files ==================="
