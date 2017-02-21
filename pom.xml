@@ -10,8 +10,8 @@
     <name>functional-context aware perf-profiler</name>
 
     <modules>
-        <module>recorder</module>
-        <module>backend</module>
+        <!--<module>recorder</module>-->
+        <!--<module>backend</module>-->
         <module>userapi</module>
         <module>e2etest</module>
         <module>storage</module>
