@@ -31,6 +31,9 @@ cd -
 echo "=============== Copying Package Files ==================="
 # Coping the config and log4j.properties files to the etc directory
 mkdir -p ${PACKAGE}/etc/${PACKAGE}/
+echo "pwd at userapi/  $(pwd)"
+echo "ls at userapi/ $(ls -l)"
+
 cp -a src/conf ${PACKAGE}/etc/${PACKAGE}/
 cp -a src/resources ${PACKAGE}/etc/${PACKAGE}/
 mkdir -p ${DEB_DIR} && cp -a ${PACKAGE}/* ${DEB_DIR}
@@ -38,10 +41,13 @@ mkdir -p ${DEB_DIR} && cp -a ${PACKAGE}/* ${DEB_DIR}
 echo "=============== Copying Jars ==================="
 mkdir -p ${DEB_DIR}/usr/share/${PACKAGE}
 JAR=$(ls target | egrep "userapi-[0-9.]+-[a-zA-Z-]+.jar" | head -n1)
+echo "pwd at userapi/  $(pwd)"
+echo "ls at userapi/ $(ls -l)"
 cp -a target/${JAR} ${DEB_DIR}/usr/share/${PACKAGE}/${JAR}
 cd ${DEB_DIR}/usr/share/${PACKAGE}
 ln -s ${JAR} "${PACKAGE}.jar"
 cd -
+
 
 echo "=============== Copying dependencies ==================="
 cp -a target/lib  ${DEB_DIR}/usr/share/${PACKAGE}
