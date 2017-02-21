@@ -12,6 +12,10 @@ function die()
 
 [ -z "${DEB_DIR}" ] && die "No debian directory specified"
 [ -z "${DEB}" ] && die "No destination for debian specified"
+[ -z "${PACKAGE}" ] && die "No base dir specified"
 
 echo "=============== Cleaning up ==============="
 rm -rf ${DEB_DIR} ${DEB}
+
+echo "========= Clean up moved resources========"
+rm -rf ${PACKAGE}/etc/${PACKAGE}
