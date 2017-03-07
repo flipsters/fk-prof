@@ -11,5 +11,5 @@ import java.util.concurrent.CompletableFuture;
  * Created by rohit.patiyal on 07/03/17.
  */
 public interface PolicyStore {
-    CompletableFuture<List<PolicyDetails>> getAssociatedPolicies(Recorder.ProcessGroup processGroup);
+  CompletableFuture<List<PolicyDetails>> getAssociatedPolicies(Recorder.ProcessGroup processGroup);
 }

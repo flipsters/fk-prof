@@ -95,7 +95,8 @@ public class LeaderElectionTest {
   public void leaderUpdateOnLeaderElection(TestContext testContext) throws InterruptedException {
     vertx = Vertx.vertx(new VertxOptions(configManager.getVertxConfig()));
     CountDownLatch latch = new CountDownLatch(1);
-    Runnable leaderElectedTask = () -> {};
+    Runnable leaderElectedTask = () -> {
+    };
     MockLeaderStores.TestLeaderStore leaderStore = new MockLeaderStores.TestLeaderStore(configManager.getIPAddress(), latch);
 
     VerticleDeployer leaderParticipatorDeployer = new LeaderElectionParticipatorVerticleDeployer(vertx, configManager, curatorClient, leaderElectedTask);
@@ -121,7 +122,7 @@ public class LeaderElectionTest {
     List<String> backendDeployments = new ArrayList<>();
     CountDownLatch aggDepLatch = new CountDownLatch(1);
 
-      VerticleDeployer backendVerticleDeployer = new BackendHttpVerticleDeployer(vertx, configManager, leaderStore, profileWorkService, null);
+    VerticleDeployer backendVerticleDeployer = new BackendHttpVerticleDeployer(vertx, configManager, leaderStore, profileWorkService, null);
     backendVerticleDeployer.deploy().setHandler(asyncResult -> {
       if (asyncResult.succeeded()) {
         backendDeployments.addAll(asyncResult.result().list());

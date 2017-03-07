@@ -101,7 +101,7 @@ public class BackendManager {
           CompositeFuture leaderDeployFuture = CompositeFuture.all(
               leaderElectionParticipatorVerticleDeployer.deploy(), leaderElectionWatcherVerticleDeployer.deploy());
           leaderDeployFuture.setHandler(leaderDeployResult -> {
-            if(leaderDeployResult.succeeded()) {
+            if (leaderDeployResult.succeeded()) {
               result.complete();
             } else {
               result.fail(leaderDeployResult.cause());

@@ -105,7 +105,7 @@ public class AssociationApiTest {
     final Async async = context.async();
     Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId("a").setCluster("c").setProcName("p1").build();
     makeRequestGetAssociation(processGroup).setHandler(ar -> {
-      if(ar.succeeded()) {
+      if (ar.succeeded()) {
         context.assertEquals(503, ar.result().getStatusCode());
         async.complete();
       } else {
@@ -126,7 +126,7 @@ public class AssociationApiTest {
     VerticleDeployer leaderWatcherDeployer = new LeaderElectionWatcherVerticleDeployer(vertx, configManager, curatorClient, inMemoryLeaderStore);
 
     CompositeFuture.all(leaderParticipatorDeployer.deploy(), leaderWatcherDeployer.deploy()).setHandler(deployResult -> {
-      if(deployResult.succeeded()) {
+      if (deployResult.succeeded()) {
         try {
           boolean released = latch.await(10, TimeUnit.SECONDS);
           if (!released) {
@@ -161,6 +161,7 @@ public class AssociationApiTest {
    * => association is requested from backend, proxied to leader, which returns 500 because no backends are known to leader
    * => one backend reports its load to leader
    * => association is requested again, proxied to leader, returns the backend which reported its load earlier
+   *
    * @param context
    * @throws InterruptedException
    */
@@ -175,7 +176,7 @@ public class AssociationApiTest {
     VerticleDeployer leaderWatcherDeployer = new LeaderElectionWatcherVerticleDeployer(vertx, configManager, curatorClient, inMemoryLeaderStore);
 
     CompositeFuture.all(leaderParticipatorDeployer.deploy(), leaderWatcherDeployer.deploy()).setHandler(deployResult -> {
-      if(deployResult.succeeded()) {
+      if (deployResult.succeeded()) {
         try {
           //This sleep should be enough for leader store to get updated with the new leader and leader elected task to be executed
           Thread.sleep(5000);
@@ -184,7 +185,7 @@ public class AssociationApiTest {
           //Leader has been elected, it will be same as backend, since backend verticles were not undeployed
           Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId("a").setCluster("c").setProcName("p1").build();
           makeRequestGetAssociation(processGroup).setHandler(ar -> {
-            if(ar.succeeded()) {
+            if (ar.succeeded()) {
               context.assertEquals(500, ar.result().getStatusCode());
               try {
                 makeRequestReportLoad(BackendDTO.LoadReportRequest.newBuilder().setIp("1").setLoad(0.5f).setCurrTick(1).build())
@@ -223,14 +224,14 @@ public class AssociationApiTest {
   }
 
   private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestGetAssociation(Recorder.ProcessGroup payload)
-    throws IOException {
+      throws IOException {
     Future<ProfHttpClient.ResponseWithStatusTuple> future = Future.future();
     HttpClientRequest request = vertx.createHttpClient()
-          .put(port, "localhost", "/association")
+        .put(port, "localhost", "/association")
         .handler(response -> {
           response.bodyHandler(buffer -> {
             try {
-              future.complete(ProfHttpClient.ResponseWithStatusTuple.of(response.statusCode(),buffer));
+              future.complete(ProfHttpClient.ResponseWithStatusTuple.of(response.statusCode(), buffer));
             } catch (Exception ex) {
               future.fail(ex);
             }

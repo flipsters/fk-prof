@@ -15,7 +15,7 @@ public class BackendHttpVerticleDeployer extends VerticleDeployer {
 
   private final LeaderReadContext leaderReadContext;
   private final IProfileWorkService profileWorkService;
-    private final PolicyStore policyStore;
+  private final PolicyStore policyStore;
 
   public BackendHttpVerticleDeployer(Vertx vertx,
                                      ConfigManager configManager,
@@ -24,7 +24,7 @@ public class BackendHttpVerticleDeployer extends VerticleDeployer {
     super(vertx, configManager);
     this.leaderReadContext = Preconditions.checkNotNull(leaderReadContext);
     this.profileWorkService = Preconditions.checkNotNull(profileWorkService);
-      this.policyStore = Preconditions.checkNotNull(policyStore);
+    this.policyStore = Preconditions.checkNotNull(policyStore);
   }
 
   @Override
@@ -34,7 +34,7 @@ public class BackendHttpVerticleDeployer extends VerticleDeployer {
 
   @Override
   protected Verticle buildVerticle() {
-      return new BackendHttpVerticle(getConfigManager(), leaderReadContext, profileWorkService, policyStore);
+    return new BackendHttpVerticle(getConfigManager(), leaderReadContext, profileWorkService, policyStore);
   }
 
 }
