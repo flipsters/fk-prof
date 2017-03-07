@@ -14,6 +14,7 @@ import java.util.Properties;
  * Use this POJO to access config and remove jsonobject getters from rest of the code base
  */
 public class ConfigManager {
+    public static final String METRIC_REGISTRY = "vertx-registry";
   private static final String IP_ADDRESS_KEY = "ip.address";
   private static final String BACKEND_HTTP_PORT_KEY = "backend.http.port";
   private static final String LEADER_HTTP_PORT_KEY = "leader.http.port";
@@ -28,10 +29,9 @@ public class ConfigManager {
   private static final String LEADER_HTTP_DEPLOYMENT_OPTIONS_KEY = "leaderHttpOptions";
   private static final String LOGFACTORY_SYSTEM_PROPERTY_KEY = "vertx.logger-delegate-factory-class-name";
   private static final String LOGFACTORY_SYSTEM_PROPERTY_DEFAULT_VALUE = "io.vertx.core.logging.SLF4JLogDelegateFactory";
-
-  public static final String METRIC_REGISTRY = "vertx-registry";
-
+    private static final String POLICY_OPTIONS_KEY = "policyOptions";
   private final JsonObject config;
+
 
   public ConfigManager(String configFilePath) throws IOException {
     Preconditions.checkNotNull(configFilePath);
@@ -43,6 +43,12 @@ public class ConfigManager {
     Preconditions.checkNotNull(config);
     this.config = config;
   }
+
+    public static void setDefaultSystemProperties() {
+        Properties properties = System.getProperties();
+        properties.computeIfAbsent(ConfigManager.LOGFACTORY_SYSTEM_PROPERTY_KEY, k -> ConfigManager.LOGFACTORY_SYSTEM_PROPERTY_DEFAULT_VALUE);
+        properties.computeIfAbsent("vertx.metrics.options.enabled", k -> true);
+    }
 
   public String getIPAddress() {
     return config.getString(IP_ADDRESS_KEY, "127.0.0.1");
@@ -99,9 +105,7 @@ public class ConfigManager {
     return deploymentConfig;
   }
 
-  public static void setDefaultSystemProperties() {
-    Properties properties = System.getProperties();
-    properties.computeIfAbsent(ConfigManager.LOGFACTORY_SYSTEM_PROPERTY_KEY, k -> ConfigManager.LOGFACTORY_SYSTEM_PROPERTY_DEFAULT_VALUE);
-    properties.computeIfAbsent("vertx.metrics.options.enabled", k -> true);
+    public JsonObject getPolicyConfig() {
+        return config.getJsonObject(POLICY_OPTIONS_KEY, new JsonObject());
   }
 }

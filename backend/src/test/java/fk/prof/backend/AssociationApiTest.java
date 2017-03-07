@@ -5,18 +5,22 @@ import fk.prof.backend.deployer.impl.BackendHttpVerticleDeployer;
 import fk.prof.backend.deployer.impl.LeaderElectionParticipatorVerticleDeployer;
 import fk.prof.backend.deployer.impl.LeaderElectionWatcherVerticleDeployer;
 import fk.prof.backend.deployer.impl.LeaderHttpVerticleDeployer;
+import fk.prof.backend.http.ProfHttpClient;
 import fk.prof.backend.leader.election.LeaderElectedTask;
 import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator;
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
+import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.model.policy.impl.ZookeeperBasedPolicyStore;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.service.ProfileWorkService;
-import fk.prof.backend.http.ProfHttpClient;
 import fk.prof.backend.util.ProtoUtil;
-import io.vertx.core.*;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -32,6 +36,7 @@ import recording.Recorder;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Mockito.spy;
@@ -39,6 +44,8 @@ import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
 public class AssociationApiTest {
+  private final String backendAssociationPath = "/assoc";
+  private final String policyPath = "/policy";
   private Vertx vertx;
   private Integer port;
   private int leaderPort;
@@ -47,8 +54,7 @@ public class AssociationApiTest {
   private BackendAssociationStore backendAssociationStore;
   private InMemoryLeaderStore inMemoryLeaderStore;
   private ConfigManager configManager;
-
-  private final String backendAssociationPath = "/assoc";
+  private PolicyStore policyStore;
 
   @Before
   public void setBefore() throws Exception {
@@ -59,6 +65,7 @@ public class AssociationApiTest {
     curatorClient.start();
     curatorClient.blockUntilConnected(10, TimeUnit.SECONDS);
     curatorClient.create().forPath(backendAssociationPath);
+    curatorClient.create().forPath(policyPath);
 
     configManager = new ConfigManager(AssociationApiTest.class.getClassLoader().getResource("config.json").getFile());
     vertx = Vertx.vertx(new VertxOptions(configManager.getVertxConfig()));
@@ -66,9 +73,11 @@ public class AssociationApiTest {
     leaderPort = configManager.getLeaderHttpPort();
 
     backendAssociationStore = new ZookeeperBasedBackendAssociationStore(vertx, curatorClient, "/assoc", 1, 1, configManager.getBackendHttpPort(), new ProcessGroupCountBasedBackendComparator());
+    policyStore = new ZookeeperBasedPolicyStore(curatorClient, Executors.newCachedThreadPool(), policyPath);
+
     inMemoryLeaderStore = spy(new InMemoryLeaderStore(configManager.getIPAddress()));
 
-    VerticleDeployer backendHttpVerticleDeployer = new BackendHttpVerticleDeployer(vertx, configManager, inMemoryLeaderStore, new ProfileWorkService());
+    VerticleDeployer backendHttpVerticleDeployer = new BackendHttpVerticleDeployer(vertx, configManager, inMemoryLeaderStore, new ProfileWorkService(), policyStore);
     backendHttpVerticleDeployer.deploy();
     //Wait for some time for deployment to complete
     Thread.sleep(1000);

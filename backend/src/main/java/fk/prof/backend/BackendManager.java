@@ -11,8 +11,13 @@ import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator;
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
+import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.model.policy.impl.ZookeeperBasedPolicyStore;
 import fk.prof.backend.service.ProfileWorkService;
-import io.vertx.core.*;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -24,6 +29,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -77,13 +83,13 @@ public class BackendManager {
     Future result = Future.future();
     InMemoryLeaderStore leaderStore = new InMemoryLeaderStore(configManager.getIPAddress());
     ProfileWorkService profileWorkService = new ProfileWorkService();
+    PolicyStore policyStore = createPolicyStore(curatorClient);
 
-    VerticleDeployer backendHttpVerticleDeployer = new BackendHttpVerticleDeployer(vertx, configManager, leaderStore, profileWorkService);
+    VerticleDeployer backendHttpVerticleDeployer = new BackendHttpVerticleDeployer(vertx, configManager, leaderStore, profileWorkService, policyStore);
     backendHttpVerticleDeployer.deploy().setHandler(backendDeployResult -> {
       if (backendDeployResult.succeeded()) {
         try {
           List<String> backendDeployments = backendDeployResult.result().list();
-
           BackendAssociationStore backendAssociationStore = createBackendAssociationStore(vertx, curatorClient);
           VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore);
           Runnable leaderElectedTask = createLeaderElectedTask(vertx, leaderHttpVerticleDeployer, backendDeployments);
@@ -110,6 +116,12 @@ public class BackendManager {
     });
 
     return result;
+  }
+
+  private PolicyStore createPolicyStore(CuratorFramework curatorClient) {
+    JsonObject policyConfig = configManager.getPolicyConfig();
+    String policyPath = policyConfig.getString("policy.path", "/policy");
+    return new ZookeeperBasedPolicyStore(curatorClient, Executors.newCachedThreadPool(), policyPath);
   }
 
 

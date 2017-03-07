@@ -47,5 +47,8 @@
   "leaderHttpOptions": {
     "backend.association.path": "/association",
     "load.miss.tolerance": 1
+  },
+  "policyOptions": {
+    "policy.path": "/policy"
   }
 }

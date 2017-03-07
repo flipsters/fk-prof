@@ -1,12 +1,7 @@
 package fk.prof.backend;
 
 import com.google.protobuf.CodedOutputStream;
-import fk.prof.aggregation.model.MethodIdLookup;
-import fk.prof.aggregation.model.CpuSamplingFrameNode;
-import fk.prof.aggregation.model.CpuSamplingTraceDetail;
-import fk.prof.aggregation.model.FinalizedAggregationWindow;
-import fk.prof.aggregation.model.FinalizedCpuSamplingAggregationBucket;
-import fk.prof.aggregation.model.FinalizedProfileWorkInfo;
+import fk.prof.aggregation.model.*;
 import fk.prof.aggregation.proto.AggregatedProfileModel;
 import fk.prof.aggregation.state.AggregationState;
 import fk.prof.backend.aggregator.AggregationWindow;
@@ -14,9 +9,13 @@ import fk.prof.backend.deployer.VerticleDeployer;
 import fk.prof.backend.deployer.impl.BackendHttpVerticleDeployer;
 import fk.prof.backend.mock.MockProfileObjects;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
+import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.service.IProfileWorkService;
 import fk.prof.backend.service.ProfileWorkService;
-import io.vertx.core.*;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.ext.unit.Async;
@@ -49,6 +48,7 @@ public class ProfileApiTest {
   private static Integer port;
   private static IProfileWorkService profileWorkService;
   private static AtomicLong workIdCounter = new AtomicLong(0);
+    private static PolicyStore policyStore;
 
   @BeforeClass
   public static void setUp(TestContext context) throws Exception {
@@ -59,7 +59,7 @@ public class ProfileApiTest {
     profileWorkService = new ProfileWorkService();
     port = configManager.getBackendHttpPort();
 
-    VerticleDeployer backendVerticleDeployer = new BackendHttpVerticleDeployer(vertx, configManager, new InMemoryLeaderStore(configManager.getIPAddress()), profileWorkService);
+      VerticleDeployer backendVerticleDeployer = new BackendHttpVerticleDeployer(vertx, configManager, new InMemoryLeaderStore(configManager.getIPAddress()), profileWorkService, null);
     backendVerticleDeployer.deploy();
     //Wait for some time for verticles to be deployed
     Thread.sleep(1000);
@@ -69,6 +69,139 @@ public class ProfileApiTest {
   public static void tearDown(TestContext context) {
     vertx.close();
   }
+
+    private static void chunkAndWriteToRequest(HttpClientRequest request, byte[] requestBytes, int chunkSizeInBytes) {
+        int i = 0;
+        for (; (i + chunkSizeInBytes) <= requestBytes.length; i += chunkSizeInBytes) {
+            writeChunkToRequest(request, requestBytes, i, i + chunkSizeInBytes);
+        }
+        writeChunkToRequest(request, requestBytes, i, requestBytes.length);
+
+        request.end();
+    }
+
+    private static void writeChunkToRequest(HttpClientRequest request, byte[] bytes, int start, int end) {
+        request.write(Buffer.buffer(Arrays.copyOfRange(bytes, start, end)));
+        try {
+            Thread.sleep(10);
+        } catch (Exception ex) {
+        }
+    }
+
+    private static void writeMockHeaderToRequest(Recorder.RecordingHeader recordingHeader, ByteArrayOutputStream requestStream) throws IOException {
+        writeMockHeaderToRequest(recordingHeader, requestStream, HeaderPayloadStrategy.VALID);
+    }
+
+    private static void writeMockHeaderToRequest(Recorder.RecordingHeader recordingHeader, ByteArrayOutputStream requestStream, HeaderPayloadStrategy payloadStrategy) throws IOException {
+        int encodedVersion = 1;
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        CodedOutputStream codedOutputStream = CodedOutputStream.newInstance(outputStream);
+
+        byte[] recordingHeaderBytes = recordingHeader.toByteArray();
+        codedOutputStream.writeUInt32NoTag(encodedVersion);
+
+        if (payloadStrategy.equals(HeaderPayloadStrategy.INVALID_HEADER_LENGTH)) {
+            codedOutputStream.writeUInt32NoTag(Integer.MAX_VALUE);
+        } else {
+            codedOutputStream.writeUInt32NoTag(recordingHeaderBytes.length);
+        }
+
+        if (payloadStrategy.equals(HeaderPayloadStrategy.INVALID_RECORDING_HEADER)) {
+            byte[] invalidArr = Arrays.copyOfRange(recordingHeaderBytes, 0, recordingHeaderBytes.length);
+            invalidArr[0] = invalidArr[1] = invalidArr[3] = 0;
+            invalidArr[invalidArr.length - 1] = invalidArr[invalidArr.length - 2] = invalidArr[invalidArr.length - 3] = 0;
+            codedOutputStream.writeByteArrayNoTag(invalidArr);
+        } else {
+            recordingHeader.writeTo(codedOutputStream);
+        }
+        codedOutputStream.flush();
+        byte[] bytesWritten = outputStream.toByteArray();
+
+        Checksum recordingHeaderChecksum = new Adler32();
+        recordingHeaderChecksum.update(bytesWritten, 0, bytesWritten.length);
+        long checksumValue = payloadStrategy.equals(HeaderPayloadStrategy.INVALID_CHECKSUM) ? 0 : recordingHeaderChecksum.getValue();
+        codedOutputStream.writeUInt32NoTag((int) checksumValue);
+        codedOutputStream.flush();
+        outputStream.writeTo(requestStream);
+    }
+
+    private static void writeMockWseEntriesToRequest(List<Recorder.Wse> wseList, ByteArrayOutputStream requestStream) throws IOException {
+        writeMockWseEntriesToRequest(wseList, requestStream, WsePayloadStrategy.VALID);
+    }
+
+    private static void writeMockWseEntriesToRequest(List<Recorder.Wse> wseList, ByteArrayOutputStream requestStream, WsePayloadStrategy payloadStrategy) throws IOException {
+        if (wseList != null) {
+            for (Recorder.Wse wse : wseList) {
+                writeWseToRequest(wse, requestStream, payloadStrategy);
+            }
+        }
+    }
+
+    private static void writeWseToRequest(Recorder.Wse wse, ByteArrayOutputStream requestStream, WsePayloadStrategy payloadStrategy) throws IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        CodedOutputStream codedOutputStream = CodedOutputStream.newInstance(outputStream);
+        byte[] wseBytes = wse.toByteArray();
+
+        if (payloadStrategy.equals(WsePayloadStrategy.INVALID_WSE_LENGTH)) {
+            codedOutputStream.writeUInt32NoTag(Integer.MAX_VALUE);
+        } else {
+            codedOutputStream.writeUInt32NoTag(wseBytes.length);
+        }
+
+        if (payloadStrategy.equals(WsePayloadStrategy.INVALID_WSE)) {
+            byte[] invalidArr = Arrays.copyOfRange(wseBytes, 0, wseBytes.length);
+            invalidArr[0] = invalidArr[1] = invalidArr[3] = 0;
+            invalidArr[invalidArr.length - 1] = invalidArr[invalidArr.length - 2] = invalidArr[invalidArr.length - 3] = 0;
+            codedOutputStream.writeByteArrayNoTag(invalidArr);
+        } else {
+            wse.writeTo(codedOutputStream);
+        }
+        codedOutputStream.flush();
+        byte[] bytesWritten = outputStream.toByteArray();
+
+        Checksum wseChecksum = new Adler32();
+        wseChecksum.update(bytesWritten, 0, bytesWritten.length);
+        long checksumValue = payloadStrategy.equals(WsePayloadStrategy.INVALID_CHECKSUM) ? 0 : wseChecksum.getValue();
+        codedOutputStream.writeUInt32NoTag((int) checksumValue);
+        codedOutputStream.flush();
+
+        outputStream.writeTo(requestStream);
+    }
+
+    private static List<Recorder.Wse> getMockWseEntriesForSingleProfile() {
+        List<Recorder.StackSample> samples = MockProfileObjects.getPredefinedStackSamples(1);
+        Recorder.StackSampleWse ssw1 = Recorder.StackSampleWse.newBuilder()
+                .addStackSample(samples.get(0))
+                .addStackSample(samples.get(1))
+                .build();
+        Recorder.StackSampleWse ssw2 = Recorder.StackSampleWse.newBuilder()
+                .addStackSample(samples.get(2))
+                .build();
+
+        Recorder.Wse wse1 = MockProfileObjects.getMockCpuWseWithStackSample(ssw1, null);
+        Recorder.Wse wse2 = MockProfileObjects.getMockCpuWseWithStackSample(ssw2, ssw1);
+
+        return Arrays.asList(wse1, wse2);
+    }
+
+    private static List<Recorder.Wse> getMockWseEntriesForMultipleProfiles() {
+        List<Recorder.StackSample> samples = MockProfileObjects.getPredefinedStackSamples(1);
+        Recorder.StackSampleWse ssw1 = Recorder.StackSampleWse.newBuilder()
+                .addStackSample(samples.get(0))
+                .build();
+        Recorder.StackSampleWse ssw2 = Recorder.StackSampleWse.newBuilder()
+                .addStackSample(samples.get(1))
+                .build();
+        Recorder.StackSampleWse ssw3 = Recorder.StackSampleWse.newBuilder()
+                .addStackSample(samples.get(2))
+                .build();
+
+        Recorder.Wse wse1 = MockProfileObjects.getMockCpuWseWithStackSample(ssw1, null);
+        Recorder.Wse wse2 = MockProfileObjects.getMockCpuWseWithStackSample(ssw2, null);
+        Recorder.Wse wse3 = MockProfileObjects.getMockCpuWseWithStackSample(ssw3, null);
+
+        return Arrays.asList(wse1, wse2, wse3);
+    }
 
   @Test
   public void testWithValidSingleProfile(TestContext context) {
@@ -446,139 +579,6 @@ public class ProfileApiTest {
     FinalizedProfileWorkInfo expectedProfileWorkInfo = new FinalizedProfileWorkInfo(1, AggregationState.COMPLETED,
         startedAt, endedAt, expectedTraceCoverages, samplesMap);
     return expectedProfileWorkInfo;
-  }
-
-  private static void chunkAndWriteToRequest(HttpClientRequest request, byte[] requestBytes, int chunkSizeInBytes) {
-    int i = 0;
-    for (; (i + chunkSizeInBytes) <= requestBytes.length; i += chunkSizeInBytes) {
-      writeChunkToRequest(request, requestBytes, i, i + chunkSizeInBytes);
-    }
-    writeChunkToRequest(request, requestBytes, i, requestBytes.length);
-
-    request.end();
-  }
-
-  private static void writeChunkToRequest(HttpClientRequest request, byte[] bytes, int start, int end) {
-    request.write(Buffer.buffer(Arrays.copyOfRange(bytes, start, end)));
-    try {
-      Thread.sleep(10);
-    } catch (Exception ex) {
-    }
-  }
-
-  private static void writeMockHeaderToRequest(Recorder.RecordingHeader recordingHeader, ByteArrayOutputStream requestStream) throws IOException {
-    writeMockHeaderToRequest(recordingHeader, requestStream, HeaderPayloadStrategy.VALID);
-  }
-
-  private static void writeMockHeaderToRequest(Recorder.RecordingHeader recordingHeader, ByteArrayOutputStream requestStream, HeaderPayloadStrategy payloadStrategy) throws IOException {
-    int encodedVersion = 1;
-    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    CodedOutputStream codedOutputStream = CodedOutputStream.newInstance(outputStream);
-
-    byte[] recordingHeaderBytes = recordingHeader.toByteArray();
-    codedOutputStream.writeUInt32NoTag(encodedVersion);
-
-    if (payloadStrategy.equals(HeaderPayloadStrategy.INVALID_HEADER_LENGTH)) {
-      codedOutputStream.writeUInt32NoTag(Integer.MAX_VALUE);
-    } else {
-      codedOutputStream.writeUInt32NoTag(recordingHeaderBytes.length);
-    }
-
-    if (payloadStrategy.equals(HeaderPayloadStrategy.INVALID_RECORDING_HEADER)) {
-      byte[] invalidArr = Arrays.copyOfRange(recordingHeaderBytes, 0, recordingHeaderBytes.length);
-      invalidArr[0] = invalidArr[1] = invalidArr[3] = 0;
-      invalidArr[invalidArr.length - 1] = invalidArr[invalidArr.length - 2] = invalidArr[invalidArr.length - 3] = 0;
-      codedOutputStream.writeByteArrayNoTag(invalidArr);
-    } else {
-      recordingHeader.writeTo(codedOutputStream);
-    }
-    codedOutputStream.flush();
-    byte[] bytesWritten = outputStream.toByteArray();
-
-    Checksum recordingHeaderChecksum = new Adler32();
-    recordingHeaderChecksum.update(bytesWritten, 0, bytesWritten.length);
-    long checksumValue = payloadStrategy.equals(HeaderPayloadStrategy.INVALID_CHECKSUM) ? 0 : recordingHeaderChecksum.getValue();
-    codedOutputStream.writeUInt32NoTag((int) checksumValue);
-    codedOutputStream.flush();
-    outputStream.writeTo(requestStream);
-  }
-
-  private static void writeMockWseEntriesToRequest(List<Recorder.Wse> wseList, ByteArrayOutputStream requestStream) throws IOException {
-    writeMockWseEntriesToRequest(wseList, requestStream, WsePayloadStrategy.VALID);
-  }
-
-  private static void writeMockWseEntriesToRequest(List<Recorder.Wse> wseList, ByteArrayOutputStream requestStream, WsePayloadStrategy payloadStrategy) throws IOException {
-    if (wseList != null) {
-      for (Recorder.Wse wse : wseList) {
-        writeWseToRequest(wse, requestStream, payloadStrategy);
-      }
-    }
-  }
-
-  private static void writeWseToRequest(Recorder.Wse wse, ByteArrayOutputStream requestStream, WsePayloadStrategy payloadStrategy) throws IOException {
-    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    CodedOutputStream codedOutputStream = CodedOutputStream.newInstance(outputStream);
-    byte[] wseBytes = wse.toByteArray();
-
-    if (payloadStrategy.equals(WsePayloadStrategy.INVALID_WSE_LENGTH)) {
-      codedOutputStream.writeUInt32NoTag(Integer.MAX_VALUE);
-    } else {
-      codedOutputStream.writeUInt32NoTag(wseBytes.length);
-    }
-
-    if (payloadStrategy.equals(WsePayloadStrategy.INVALID_WSE)) {
-      byte[] invalidArr = Arrays.copyOfRange(wseBytes, 0, wseBytes.length);
-      invalidArr[0] = invalidArr[1] = invalidArr[3] = 0;
-      invalidArr[invalidArr.length - 1] = invalidArr[invalidArr.length - 2] = invalidArr[invalidArr.length - 3] = 0;
-      codedOutputStream.writeByteArrayNoTag(invalidArr);
-    } else {
-      wse.writeTo(codedOutputStream);
-    }
-    codedOutputStream.flush();
-    byte[] bytesWritten = outputStream.toByteArray();
-
-    Checksum wseChecksum = new Adler32();
-    wseChecksum.update(bytesWritten, 0, bytesWritten.length);
-    long checksumValue = payloadStrategy.equals(WsePayloadStrategy.INVALID_CHECKSUM) ? 0 : wseChecksum.getValue();
-    codedOutputStream.writeUInt32NoTag((int) checksumValue);
-    codedOutputStream.flush();
-
-    outputStream.writeTo(requestStream);
-  }
-
-  private static List<Recorder.Wse> getMockWseEntriesForSingleProfile() {
-    List<Recorder.StackSample> samples = MockProfileObjects.getPredefinedStackSamples(1);
-    Recorder.StackSampleWse ssw1 = Recorder.StackSampleWse.newBuilder()
-        .addStackSample(samples.get(0))
-        .addStackSample(samples.get(1))
-        .build();
-    Recorder.StackSampleWse ssw2 = Recorder.StackSampleWse.newBuilder()
-        .addStackSample(samples.get(2))
-        .build();
-
-    Recorder.Wse wse1 = MockProfileObjects.getMockCpuWseWithStackSample(ssw1, null);
-    Recorder.Wse wse2 = MockProfileObjects.getMockCpuWseWithStackSample(ssw2, ssw1);
-
-    return Arrays.asList(wse1, wse2);
-  }
-
-  private static List<Recorder.Wse> getMockWseEntriesForMultipleProfiles() {
-    List<Recorder.StackSample> samples = MockProfileObjects.getPredefinedStackSamples(1);
-    Recorder.StackSampleWse ssw1 = Recorder.StackSampleWse.newBuilder()
-        .addStackSample(samples.get(0))
-        .build();
-    Recorder.StackSampleWse ssw2 = Recorder.StackSampleWse.newBuilder()
-        .addStackSample(samples.get(1))
-        .build();
-    Recorder.StackSampleWse ssw3 = Recorder.StackSampleWse.newBuilder()
-        .addStackSample(samples.get(2))
-        .build();
-
-    Recorder.Wse wse1 = MockProfileObjects.getMockCpuWseWithStackSample(ssw1, null);
-    Recorder.Wse wse2 = MockProfileObjects.getMockCpuWseWithStackSample(ssw2, null);
-    Recorder.Wse wse3 = MockProfileObjects.getMockCpuWseWithStackSample(ssw3, null);
-
-    return Arrays.asList(wse1, wse2, wse3);
   }
 
   public enum HeaderPayloadStrategy {
