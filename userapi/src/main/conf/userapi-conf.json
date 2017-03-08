@@ -2,11 +2,12 @@
   "http.port": 8082,
   "http.instances": 1,
   "req.timeout": 10000,
-  "profile.retention.duration": 30,
-  "storage": "store",
-  "store": {
-    "end.point": "end.point",
-    "access.key": "access.key",
-    "secret.key": "secret.key"
+  "profile.retention.duration.min": 30,
+  "aggregation_window.duration.min": 30,
+  "storage": "S3",
+  "S3": {
+    "end.point": "<endpoint>",
+    "access.key": "<access_key>",
+    "secret.key": "<secret_key>"
   }
 }
