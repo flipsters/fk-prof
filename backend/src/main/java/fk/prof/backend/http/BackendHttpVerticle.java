@@ -6,6 +6,7 @@ import fk.prof.backend.http.handler.RecordedProfileRequestHandler;
 import fk.prof.backend.model.election.LeaderReadContext;
 import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.model.policy.impl.PolicyWithAppId;
+import fk.prof.backend.model.policy.impl.PolicyWithAppIdClusterId;
 import fk.prof.backend.request.CompositeByteBufInputStream;
 import fk.prof.backend.request.profile.RecordedProfileProcessor;
 import fk.prof.backend.request.profile.impl.SharedMapBasedSingleProcessingOfProfileGate;
@@ -88,6 +89,8 @@ public class BackendHttpVerticle extends AbstractVerticle {
         .handler(this::handlePutAssociation);
 
     router.get(ApiPathConstants.BACKEND_GET_POLICIES_GIVEN_APPID).handler(this::handleGetPoliciesGivenAppId);
+
+    router.get(ApiPathConstants.BACKEND_GET_POLICIES_GIVEN_APPID_CLUSTERID).handler(this::handleGetPoliciesGivenAppIdClusterId);
     return router;
   }
 
@@ -156,8 +159,19 @@ public class BackendHttpVerticle extends AbstractVerticle {
     future.setHandler(event -> setResponse(event, routingContext));
     policyStore.getAssociatedPolicies(Recorder.ProcessGroup.newBuilder().setAppId(appId).build()).whenComplete((policyDetails, throwable) -> {
       List<PolicyWithAppId> policyWithAppIds = new ArrayList<>();
-      policyDetails.forEach(policyDetails1 -> policyWithAppIds.add(new PolicyWithAppId(appId, policyDetails1)));
+      policyDetails.forEach(policyDetail -> policyWithAppIds.add(new PolicyWithAppId(appId, policyDetail)));
       future.complete(policyWithAppIds);
+    });
+  }
+
+  private void handleGetPoliciesGivenAppIdClusterId(RoutingContext routingContext) {
+    final String appId = routingContext.request().getParam("appId");
+    final String clusterId = routingContext.request().getParam("clusterId");
+    Future<List<PolicyWithAppIdClusterId>> future = Future.future();
+    policyStore.getAssociatedPolicies(Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).build()).whenComplete((policyDetails, throwable) -> {
+      List<PolicyWithAppIdClusterId> policyWithAppIdClusterIds = new ArrayList<>();
+      policyDetails.forEach(policyDetail -> policyWithAppIdClusterIds.add(new PolicyWithAppIdClusterId(appId, clusterId, policyDetail)));
+      future.complete(policyWithAppIdClusterIds);
     });
   }
 

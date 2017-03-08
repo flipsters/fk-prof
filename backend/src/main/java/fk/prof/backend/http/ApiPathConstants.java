@@ -7,6 +7,7 @@ public final class ApiPathConstants {
   public static final String LEADER_PUT_ASSOCIATION = "/leader/association";
   public static final String BACKEND_PUT_ASSOCIATION = "/association";
   public static final String BACKEND_GET_POLICIES_GIVEN_APPID = "/policies/:appId";
+  public static final String BACKEND_GET_POLICIES_GIVEN_APPID_CLUSTERID = "/policies/:appId/:clusterId";
 
   private ApiPathConstants() {
   }
