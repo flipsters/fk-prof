@@ -31,6 +31,7 @@ import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -82,7 +83,8 @@ public class AgentRunner {
         String agentArg = "-agentpath:../recorder/build/libfkpagent" + Platforms.getDynamicLibraryExtension() + (args != null ? "=" + args : "");
         // Eg: java -agentpath:build/liblagent.so -cp target/classes/ InfiniteExample
 
-        List<String> classpath = discoverClasspath(getClass());
+        // manually setting classpath
+        List<String> classpath = Arrays.asList("../recorder/target/classes/", "target/test-classes/:target/lib/*");
         //System.out.println("classpath = " + classpath);
         process = new ProcessBuilder()
                 .command("java", agentArg, "-cp", String.join(":", classpath), fqdn)
