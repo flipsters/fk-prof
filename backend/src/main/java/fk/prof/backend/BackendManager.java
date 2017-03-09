@@ -12,7 +12,7 @@ import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
 import fk.prof.backend.model.policy.PolicyStore;
-import fk.prof.backend.model.policy.impl.ZookeeperBasedPolicyStore;
+import fk.prof.backend.model.policy.impl.ZKWithCachePolicyStore;
 import fk.prof.backend.service.ProfileWorkService;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -29,7 +29,6 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 
 import java.util.List;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -121,7 +120,7 @@ public class BackendManager {
   private PolicyStore createPolicyStore(CuratorFramework curatorClient) {
     JsonObject policyConfig = configManager.getPolicyConfig();
     String policyPath = policyConfig.getString("policy.path", "/policy");
-    return new ZookeeperBasedPolicyStore(curatorClient, Executors.newCachedThreadPool(), policyPath);
+    return new ZKWithCachePolicyStore(curatorClient, policyPath);
   }
 
 

@@ -3,7 +3,7 @@ package fk.prof.backend.model.policy;
 import policy.PolicyDetails;
 import recording.Recorder;
 
-import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -11,5 +11,15 @@ import java.util.concurrent.CompletableFuture;
  * Created by rohit.patiyal on 07/03/17.
  */
 public interface PolicyStore {
-  CompletableFuture<List<PolicyDetails>> getAssociatedPolicies(Recorder.ProcessGroup processGroup);
+  //  List<PolicyDetails> getAssociatedPolicies(Future<List<PolicyWithAppId>> future, Recorder.ProcessGroup processGroup);
+  PolicyDetails getAssociatedPolicy(Recorder.ProcessGroup processGroup);
+
+  Map<Recorder.ProcessGroup, PolicyDetails> getAssociatedPolicies(String appId);
+
+  Map<Recorder.ProcessGroup, PolicyDetails> getAssociatedPolicies(String appId, String clusterId);
+
+  Map<Recorder.ProcessGroup, PolicyDetails> getAssociatedPolicies(String appId, String clusterId, String process);
+
+  CompletableFuture<Void> setPolicy(Recorder.ProcessGroup processGroup, PolicyDetails policyDetails);
+
 }
