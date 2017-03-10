@@ -24,7 +24,7 @@ public class ZKWithCachePolicyStore implements PolicyStore {
   private String policyPath;
   private CachedPolicyStore cachedPolicies;
 
-  public ZKWithCachePolicyStore(CuratorFramework curatorClient, String policyPath) {
+  ZKWithCachePolicyStore(CuratorFramework curatorClient, String policyPath) {
     if (curatorClient == null) {
       throw new IllegalStateException("Curator client is required");
     }
