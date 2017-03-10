@@ -39,7 +39,6 @@ public class ZookeeperUtil {
     return future;
   }
 
-  //TODO: Keeping this around in case required for policy CRUD. If not used there, remove
   public static CompletableFuture<byte[]> readZNodeAsync(CuratorFramework curatorClient, String zNodePath) {
     CompletableFuture<byte[]> future = new CompletableFuture<>();
     try {
@@ -50,12 +49,11 @@ public class ZookeeperUtil {
     return future;
   }
 
-  //TODO: Keeping this around in case required for policy CRUD. If not used there, remove
   public static CompletableFuture<Void> writeZNodeAsync(CuratorFramework curatorClient, String zNodePath, byte[] data, boolean create) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     try {
       if (create) {
-        curatorClient.create().inBackground((client, event) -> completeFuture(event, null, future)).forPath(zNodePath, data);
+        curatorClient.create().creatingParentsIfNeeded().inBackground((client, event) -> completeFuture(event, null, future)).forPath(zNodePath, data);
       } else {
         curatorClient.setData().inBackground((client, event) -> completeFuture(event, null, future)).forPath(zNodePath, data);
       }
@@ -69,7 +67,7 @@ public class ZookeeperUtil {
     if (KeeperException.Code.OK.intValue() == event.getResultCode()) {
       future.complete(result);
     } else {
-      future.completeExceptionally(new RuntimeException("Error from ZooKeeper, result_code=" + event.getResultCode()));
+      future.completeExceptionally(new RuntimeException("Error from ZooKeeper, result=" + KeeperException.Code.get(event.getResultCode()).name()));
     }
   }
 }
