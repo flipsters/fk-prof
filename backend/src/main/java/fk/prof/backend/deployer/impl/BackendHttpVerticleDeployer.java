@@ -34,7 +34,7 @@ public class BackendHttpVerticleDeployer extends VerticleDeployer {
 
   @Override
   protected Verticle buildVerticle() {
-    return new BackendHttpVerticle(getConfigManager(), leaderReadContext, profileWorkService, policyStore);
+    return new BackendHttpVerticle(getConfigManager(), leaderReadContext, profileWorkService);
   }
 
 }

@@ -90,7 +90,7 @@ public class BackendManager {
         try {
           List<String> backendDeployments = backendDeployResult.result().list();
           BackendAssociationStore backendAssociationStore = createBackendAssociationStore(vertx, curatorClient);
-          VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore);
+          VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore, policyStore);
           Runnable leaderElectedTask = createLeaderElectedTask(vertx, leaderHttpVerticleDeployer, backendDeployments);
 
           VerticleDeployer leaderElectionParticipatorVerticleDeployer = new LeaderElectionParticipatorVerticleDeployer(

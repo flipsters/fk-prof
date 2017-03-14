@@ -69,7 +69,7 @@ public class LeaderAPILoadAndAssociationTest {
         leaderHttpConfig.getInteger("load.miss.tolerance", 1), configManager.getBackendHttpPort(),
         new ProcessGroupCountBasedBackendComparator());
 
-    VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore);
+    VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore, null);
     leaderHttpDeployer.deploy();
     //Wait for some time for deployment to complete
     Thread.sleep(1000);

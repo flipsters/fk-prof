@@ -15,48 +15,48 @@ class CachedPolicyStore {
 
   private final Map<String, Map<String, Map<String, PolicyDetails>>> processGroupAsTreeToPolicyLookup = new ConcurrentHashMap<>();
 
-  public Map<Recorder.ProcessGroup, PolicyDetails> get(String appId) {
-    Map<Recorder.ProcessGroup, PolicyDetails> processGroupPolicyDetailsMap = new HashMap<>();
+  public Map<String, Map<String, Map<String, PolicyDetails>>> get(String appId) {
+    Map<String, Map<String, Map<String, PolicyDetails>>> policies = new HashMap<>();
     Map<String, Map<String, PolicyDetails>> clusterIdProcToPolicyLookup = processGroupAsTreeToPolicyLookup.get(appId);
     if (clusterIdProcToPolicyLookup != null) {
-      for (Map.Entry<String, Map<String, PolicyDetails>> clusterProcToPolicy : clusterIdProcToPolicyLookup.entrySet()) {
-        for (Map.Entry<String, PolicyDetails> procToPolicy : clusterProcToPolicy.getValue().entrySet()) {
-          Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterProcToPolicy.getKey()).setProcName(procToPolicy.getKey()).build();
-          processGroupPolicyDetailsMap.put(processGroup, procToPolicy.getValue());
-        }
-      }
+      policies.put(appId, clusterIdProcToPolicyLookup);
     }
-    return processGroupPolicyDetailsMap;
+
+    return policies;
   }
 
-  public Map<Recorder.ProcessGroup, PolicyDetails> get(String appId, String clusterId) {
-    Map<Recorder.ProcessGroup, PolicyDetails> processGroupPolicyDetailsMap = new HashMap<>();
+  public Map<String, Map<String, Map<String, PolicyDetails>>> get(String appId, String clusterId) {
+    Map<String, Map<String, Map<String, PolicyDetails>>> policies = new HashMap<>();
     Map<String, Map<String, PolicyDetails>> clusterIdProcToPolicyLookup = processGroupAsTreeToPolicyLookup.get(appId);
     if (clusterIdProcToPolicyLookup != null) {
       Map<String, PolicyDetails> procToPolicyLookup = clusterIdProcToPolicyLookup.get(clusterId);
       if (procToPolicyLookup != null) {
-        for (Map.Entry<String, PolicyDetails> procToPolicy : procToPolicyLookup.entrySet()) {
-          Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).setProcName(procToPolicy.getKey()).build();
-          processGroupPolicyDetailsMap.put(processGroup, procToPolicy.getValue());
-        }
+        policies.put(appId, new HashMap<String, Map<String, PolicyDetails>>() {{
+          put(clusterId, procToPolicyLookup);
+        }});
       }
     }
-    return processGroupPolicyDetailsMap;
+    return policies;
   }
 
-  public Map<Recorder.ProcessGroup, PolicyDetails> get(String appId, String clusterId, String process) {
-    Map<Recorder.ProcessGroup, PolicyDetails> processGroupPolicyDetailsMap = new HashMap<>();
+  public Map<String, Map<String, Map<String, PolicyDetails>>> get(String appId, String clusterId, String process) {
+    Map<String, Map<String, Map<String, PolicyDetails>>> policies = new HashMap<>();
     Map<String, Map<String, PolicyDetails>> clusterIdProcToPolicyLookup = processGroupAsTreeToPolicyLookup.get(appId);
     if (clusterIdProcToPolicyLookup != null) {
       Map<String, PolicyDetails> procToPolicyLookup = clusterIdProcToPolicyLookup.get(clusterId);
       if (procToPolicyLookup != null) {
         if (procToPolicyLookup.containsKey(process)) {
-          Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).setProcName(process).build();
-          processGroupPolicyDetailsMap.put(processGroup, procToPolicyLookup.get(process));
+          policies.put(appId, new HashMap<String, Map<String, PolicyDetails>>() {{
+            put(clusterId,
+                new HashMap<String, PolicyDetails>() {{
+                  put(process, procToPolicyLookup.get(process));
+                }}
+            );
+          }});
         }
       }
     }
-    return processGroupPolicyDetailsMap;
+    return policies;
   }
 
   public void put(Recorder.ProcessGroup processGroup, PolicyDetails policyDetails) {

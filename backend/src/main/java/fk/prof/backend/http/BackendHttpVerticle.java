@@ -4,9 +4,6 @@ import fk.prof.backend.ConfigManager;
 import fk.prof.backend.exception.HttpFailure;
 import fk.prof.backend.http.handler.RecordedProfileRequestHandler;
 import fk.prof.backend.model.election.LeaderReadContext;
-import fk.prof.backend.model.policy.PolicyStore;
-import fk.prof.backend.model.policy.impl.PolicyWithAppId;
-import fk.prof.backend.model.policy.impl.PolicyWithAppIdClusterId;
 import fk.prof.backend.request.CompositeByteBufInputStream;
 import fk.prof.backend.request.profile.RecordedProfileProcessor;
 import fk.prof.backend.request.profile.impl.SharedMapBasedSingleProcessingOfProfileGate;
@@ -19,7 +16,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerResponse;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -30,10 +26,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import recording.Recorder;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class BackendHttpVerticle extends AbstractVerticle {
   private static Logger logger = LoggerFactory.getLogger(BackendHttpVerticle.class);
@@ -42,21 +35,19 @@ public class BackendHttpVerticle extends AbstractVerticle {
   private final LeaderReadContext leaderReadContext;
   private final IProfileWorkService profileWorkService;
   private final int leaderPort;
-  private final PolicyStore policyStore;
+
 
   private LocalMap<Long, Boolean> workIdsInPipeline;
   private ProfHttpClient httpClient;
 
   public BackendHttpVerticle(ConfigManager configManager,
                              LeaderReadContext leaderReadContext,
-                             IProfileWorkService profileWorkService,
-                             PolicyStore policyStore) {
+                             IProfileWorkService profileWorkService) {
     this.configManager = configManager;
     this.leaderPort = configManager.getLeaderHttpPort();
 
     this.leaderReadContext = leaderReadContext;
     this.profileWorkService = profileWorkService;
-    this.policyStore = policyStore;
   }
 
   @Override
@@ -90,7 +81,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
 
     router.get(ApiPathConstants.BACKEND_GET_POLICIES_GIVEN_APPID).handler(this::handleGetPoliciesGivenAppId);
 
-    router.get(ApiPathConstants.BACKEND_GET_POLICIES_GIVEN_APPID_CLUSTERID).handler(this::handleGetPoliciesGivenAppIdClusterId);
+//    router.get(ApiPathConstants.BACKEND_GET_POLICIES_GIVEN_APPID_CLUSTERID).handler(this::handleGetPoliciesGivenAppIdClusterId);
     return router;
   }
 
@@ -154,26 +145,19 @@ public class BackendHttpVerticle extends AbstractVerticle {
   }
 
   private void handleGetPoliciesGivenAppId(RoutingContext routingContext) {
-    final String appId = routingContext.request().getParam("appId");
-    Future<List<PolicyWithAppId>> future = Future.future();
-    future.setHandler(event -> setResponse(event, routingContext));
-    policyStore.getAssociatedPolicies(Recorder.ProcessGroup.newBuilder().setAppId(appId).build()).whenComplete((policyDetails, throwable) -> {
-      List<PolicyWithAppId> policyWithAppIds = new ArrayList<>();
-      policyDetails.forEach(policyDetail -> policyWithAppIds.add(new PolicyWithAppId(appId, policyDetail)));
-      future.complete(policyWithAppIds);
-    });
+
   }
 
-  private void handleGetPoliciesGivenAppIdClusterId(RoutingContext routingContext) {
-    final String appId = routingContext.request().getParam("appId");
-    final String clusterId = routingContext.request().getParam("clusterId");
-    Future<List<PolicyWithAppIdClusterId>> future = Future.future();
-    policyStore.getAssociatedPolicies(Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).build()).whenComplete((policyDetails, throwable) -> {
-      List<PolicyWithAppIdClusterId> policyWithAppIdClusterIds = new ArrayList<>();
-      policyDetails.forEach(policyDetail -> policyWithAppIdClusterIds.add(new PolicyWithAppIdClusterId(appId, clusterId, policyDetail)));
-      future.complete(policyWithAppIdClusterIds);
-    });
-  }
+//  private void handleGetPoliciesGivenAppIdClusterId(RoutingContext routingContext) {
+//    final String appId = routingContext.request().getParam("appId");
+//    final String clusterId = routingContext.request().getParam("clusterId");
+//    Future<List<PolicyWithAppIdClusterId>> future = Future.future();
+//    policyStore.getAssociatedPolicies(Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).build()).whenComplete((policyDetails, throwable) -> {
+//      List<PolicyWithAppIdClusterId> policyWithAppIdClusterIds = new ArrayList<>();
+//      policyDetails.forEach(policyDetail -> policyWithAppIdClusterIds.add(new PolicyWithAppIdClusterId(appId, clusterId, policyDetail)));
+//      future.complete(policyWithAppIdClusterIds);
+//    });
+//  }
 
   private String verifyLeaderAvailabilityOrFail(HttpServerResponse response) {
     if (leaderReadContext.isLeader()) {
@@ -199,21 +183,5 @@ public class BackendHttpVerticle extends AbstractVerticle {
         payloadAsBuffer);
   }
 
-  private <T> void setResponse(AsyncResult<T> result, RoutingContext routingContext) {
-    if (routingContext.response().ended()) {
-      return;
-    }
-    if (result.failed()) {
-      if (result.cause() instanceof FileNotFoundException) {
-        routingContext.response().setStatusCode(404).end();
-      } else if (result.cause() instanceof IllegalArgumentException) {
-        routingContext.response().setStatusCode(400).setStatusMessage(result.cause().getMessage()).end();
-      } else {
-        routingContext.response().setStatusCode(500).setStatusMessage(result.cause().getMessage()).end();
-      }
-    } else {
-      String response = Json.encode(result.result());
-      routingContext.response().putHeader("content-type", "application/json").end(response);
-    }
-  }
+
 }

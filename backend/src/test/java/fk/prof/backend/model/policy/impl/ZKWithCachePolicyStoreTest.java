@@ -100,7 +100,7 @@ public class ZKWithCachePolicyStoreTest {
 
       //TESTS
       for (Map.Entry<String, Map<Object, Object>> testPair : appIdTestPairs.entrySet()) {
-        Map<Recorder.ProcessGroup, PolicyDetails> got = policyStore.getAssociatedPolicies(testPair.getKey());
+        Map<String, Map<String, Map<String, PolicyDetails>>> got = policyStore.getAssociatedPolicies(testPair.getKey());
         context.assertTrue(got.equals(testPair.getValue()));
       }
       async.complete();
@@ -132,7 +132,7 @@ public class ZKWithCachePolicyStoreTest {
 
       //TESTS
       for (Map.Entry<List<String>, Map<Object, Object>> testPair : appIdTestPairs.entrySet()) {
-        Map<Recorder.ProcessGroup, PolicyDetails> got = policyStore.getAssociatedPolicies(testPair.getKey().get(0), testPair.getKey().get(1));
+        Map<String, Map<String, Map<String, PolicyDetails>>> got = policyStore.getAssociatedPolicies(testPair.getKey().get(0), testPair.getKey().get(1));
         context.assertTrue(got.equals(testPair.getValue()));
       }
       async.complete();
@@ -163,7 +163,7 @@ public class ZKWithCachePolicyStoreTest {
 
       //TESTS
       for (Map.Entry<List<String>, Map<Object, Object>> testPair : appIdTestPairs.entrySet()) {
-        Map<Recorder.ProcessGroup, PolicyDetails> got = policyStore.getAssociatedPolicies(testPair.getKey().get(0), testPair.getKey().get(1), testPair.getKey().get(2));
+        Map<String, Map<String, Map<String, PolicyDetails>>> got = policyStore.getAssociatedPolicies(testPair.getKey().get(0), testPair.getKey().get(1), testPair.getKey().get(2));
         context.assertTrue(got.equals(testPair.getValue()));
       }
       async.complete();

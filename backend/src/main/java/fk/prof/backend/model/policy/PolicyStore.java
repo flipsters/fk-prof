@@ -13,11 +13,11 @@ import java.util.concurrent.CompletableFuture;
 public interface PolicyStore {
   PolicyDetails getAssociatedPolicy(Recorder.ProcessGroup processGroup);
 
-  Map<Recorder.ProcessGroup, PolicyDetails> getAssociatedPolicies(String appId);
+  Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId);
 
-  Map<Recorder.ProcessGroup, PolicyDetails> getAssociatedPolicies(String appId, String clusterId);
+  Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId, String clusterId);
 
-  Map<Recorder.ProcessGroup, PolicyDetails> getAssociatedPolicies(String appId, String clusterId, String process);
+  Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId, String clusterId, String process);
 
   CompletableFuture<Void> setPolicy(Recorder.ProcessGroup processGroup, PolicyDetails policyDetails);
 }

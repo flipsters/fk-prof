@@ -3,6 +3,8 @@ package fk.prof.backend.http;
 import fk.prof.backend.ConfigManager;
 import fk.prof.backend.exception.HttpFailure;
 import fk.prof.backend.model.association.BackendAssociationStore;
+import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.model.policy.json.PolicyProtobufSerializers;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.util.ProtoUtil;
 import io.vertx.core.AbstractVerticle;
@@ -10,10 +12,12 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.Json;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
+import policy.PolicyDetails;
 import recording.Recorder;
 
 import java.io.IOException;
@@ -21,16 +25,21 @@ import java.io.IOException;
 public class LeaderHttpVerticle extends AbstractVerticle {
   private final ConfigManager configManager;
   private final BackendAssociationStore backendAssociationStore;
+  private final PolicyStore policyStore;
 
   public LeaderHttpVerticle(ConfigManager configManager,
-                            BackendAssociationStore backendAssociationStore) {
+                            BackendAssociationStore backendAssociationStore,
+                            PolicyStore policyStore) {
     this.configManager = configManager;
     this.backendAssociationStore = backendAssociationStore;
+    this.policyStore = policyStore;
   }
 
   @Override
   public void start(Future<Void> fut) {
     Router router = setupRouting();
+    PolicyProtobufSerializers.registerSerializer(Json.mapper);
+    PolicyProtobufSerializers.registerSerializer(Json.prettyMapper);
     vertx.createHttpServer(HttpHelper.getHttpServerOptions(configManager.getLeaderHttpServerConfig()))
         .requestHandler(router::accept)
         .listen(configManager.getLeaderHttpPort(),
@@ -50,6 +59,11 @@ public class LeaderHttpVerticle extends AbstractVerticle {
         .handler(BodyHandler.create().setBodyLimit(1024 * 10));
     router.post(ApiPathConstants.LEADER_PUT_ASSOCIATION)
         .handler(this::handlePutAssociation);
+
+    router.get(ApiPathConstants.LEADER_GET_POLICIES_GIVEN_APPID).handler(this::handleGetPolicyGivenAppId);
+
+    router.put(ApiPathConstants.LEADER_PUT_POLICY).handler(BodyHandler.create().setBodyLimit(1024));
+    router.put(ApiPathConstants.LEADER_PUT_POLICY).handler(this::handlePutPolicy);
 
     return router;
   }
@@ -99,6 +113,33 @@ public class LeaderHttpVerticle extends AbstractVerticle {
           }
         } else {
           HttpFailure httpFailure = HttpFailure.failure(ar.cause());
+          HttpHelper.handleFailure(context, httpFailure);
+        }
+      });
+    } catch (Exception ex) {
+      HttpFailure httpFailure = HttpFailure.failure(ex);
+      HttpHelper.handleFailure(context, httpFailure);
+    }
+  }
+
+  private void handleGetPolicyGivenAppId(RoutingContext context) {
+    final String appId = context.request().getParam("appId");
+    String response = Json.encode(policyStore.getAssociatedPolicies(appId));
+    context.response().putHeader("content-type", "application/json").end(response);
+  }
+
+  private void handlePutPolicy(RoutingContext context) {
+    final String appId = context.request().getParam("appId");
+    final String clusterId = context.request().getParam("clusterId");
+    final String process = context.request().getParam("process");
+    try {
+      Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).setProcName(process).build();
+      PolicyDetails policyDetails = PolicyDetails.parseFrom(context.getBody().getBytes());
+      policyStore.setPolicy(processGroup, policyDetails).whenComplete((aVoid, throwable) -> {
+        if (throwable == null) {
+          context.response().setStatusCode(200).end();
+        } else {
+          HttpFailure httpFailure = HttpFailure.failure(throwable);
           HttpHelper.handleFailure(context, httpFailure);
         }
       });

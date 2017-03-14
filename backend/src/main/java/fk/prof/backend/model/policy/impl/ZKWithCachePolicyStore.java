@@ -24,7 +24,7 @@ public class ZKWithCachePolicyStore implements PolicyStore {
   private String policyPath;
   private CachedPolicyStore cachedPolicies;
 
-  ZKWithCachePolicyStore(CuratorFramework curatorClient, String policyPath) {
+  public ZKWithCachePolicyStore(CuratorFramework curatorClient, String policyPath) {
     if (curatorClient == null) {
       throw new IllegalStateException("Curator client is required");
     }
@@ -41,26 +41,30 @@ public class ZKWithCachePolicyStore implements PolicyStore {
   }
 
   @Override
-  public Map<Recorder.ProcessGroup, PolicyDetails> getAssociatedPolicies(String appId) {
+  public Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId) {
     if (appId == null) return new HashMap<>();
     return cachedPolicies.get(appId);
   }
 
   @Override
-  public Map<Recorder.ProcessGroup, PolicyDetails> getAssociatedPolicies(String appId, String clusterId) {
+  public Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId, String clusterId) {
     if (appId == null || clusterId == null) return new HashMap<>();
     return cachedPolicies.get(appId, clusterId);
   }
 
   @Override
-  public Map<Recorder.ProcessGroup, PolicyDetails> getAssociatedPolicies(String appId, String clusterId, String process) {
+  public Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId, String clusterId, String process) {
     if (appId == null || clusterId == null || process == null) return new HashMap<>();
     return cachedPolicies.get(appId, clusterId, process);
   }
 
   @Override
   public PolicyDetails getAssociatedPolicy(Recorder.ProcessGroup processGroup) {
-    return getAssociatedPolicies(processGroup.getAppId(), processGroup.getCluster(), processGroup.getProcName()).get(processGroup);
+    Map<String, Map<String, Map<String, PolicyDetails>>> policies = getAssociatedPolicies(processGroup.getAppId(), processGroup.getCluster(), processGroup.getProcName());
+    if (!policies.isEmpty()) {
+      return policies.get(processGroup.getAppId()).get(processGroup.getCluster()).get(processGroup.getProcName());
+    }
+    return null;
   }
 
   @Override
