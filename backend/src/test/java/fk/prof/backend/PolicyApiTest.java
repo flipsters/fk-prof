@@ -135,7 +135,6 @@ public class PolicyApiTest {
 
   @After
   public void tearDown(TestContext context) throws Exception {
-    System.out.println("Tearing down");
     client.close();
     vertx.close(result -> {
       System.out.println("Vertx shutdown");
@@ -147,8 +146,7 @@ public class PolicyApiTest {
       }
       if (result.failed()) {
         context.fail(result.cause());
-      }
+      } 
     });
-
   }
 }

@@ -87,9 +87,21 @@ public class ZKWithCachePolicyStoreTest {
         put(mockProcessGroups.get(0).getAppId(),
             new HashMap<Object, Object>() {
               {
-                put(mockProcessGroups.get(0), mockPolicies.get(0));
-                put(mockProcessGroups.get(1), mockPolicies.get(1));
-                put(mockProcessGroups.get(2), mockPolicies.get(2));
+                put(mockProcessGroups.get(0).getAppId(), new HashMap<Object, Object>() {
+                  {
+                    put(mockProcessGroups.get(0).getCluster(), new HashMap<Object, Object>() {
+                      {
+                        put(mockProcessGroups.get(0).getProcName(), mockPolicies.get(0));
+                        put(mockProcessGroups.get(1).getProcName(), mockPolicies.get(1));
+                      }
+                    });
+                    put(mockProcessGroups.get(2).getCluster(), new HashMap<Object, Object>() {
+                      {
+                        put(mockProcessGroups.get(2).getProcName(), mockPolicies.get(2));
+                      }
+                    });
+                  }
+                });
               }
             });
         put("", new HashMap<>());
@@ -120,8 +132,16 @@ public class ZKWithCachePolicyStoreTest {
         put(Arrays.asList(mockProcessGroups.get(0).getAppId(), mockProcessGroups.get(0).getCluster()),
             new HashMap<Object, Object>() {
               {
-                put(mockProcessGroups.get(0), mockPolicies.get(0));
-                put(mockProcessGroups.get(1), mockPolicies.get(1));
+                put(mockProcessGroups.get(0).getAppId(), new HashMap<Object, Object>() {
+                  {
+                    put(mockProcessGroups.get(0).getCluster(), new HashMap<Object, Object>() {
+                      {
+                        put(mockProcessGroups.get(0).getProcName(), mockPolicies.get(0));
+                        put(mockProcessGroups.get(1).getProcName(), mockPolicies.get(1));
+                      }
+                    });
+                  }
+                });
               }
             });
         put(Arrays.asList("", ""), new HashMap<>());
@@ -152,7 +172,15 @@ public class ZKWithCachePolicyStoreTest {
         put(Arrays.asList(mockProcessGroups.get(0).getAppId(), mockProcessGroups.get(0).getCluster(), mockProcessGroups.get(0).getProcName()),
             new HashMap<Object, Object>() {
               {
-                put(mockProcessGroups.get(0), mockPolicies.get(0));
+                put(mockProcessGroups.get(0).getAppId(), new HashMap<Object, Object>() {
+                  {
+                    put(mockProcessGroups.get(0).getCluster(), new HashMap<Object, Object>() {
+                      {
+                        put(mockProcessGroups.get(0).getProcName(), mockPolicies.get(0));
+                      }
+                    });
+                  }
+                });
               }
             });
         put(Arrays.asList("", "", ""), new HashMap<>());
