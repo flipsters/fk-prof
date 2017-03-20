@@ -20,4 +20,6 @@ public interface PolicyStore {
   Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId, String clusterId, String process);
 
   CompletableFuture<Void> setPolicy(Recorder.ProcessGroup processGroup, PolicyDetails policyDetails);
+
+  CompletableFuture<Void> removePolicy(Recorder.ProcessGroup processGroup, String admin);
 }

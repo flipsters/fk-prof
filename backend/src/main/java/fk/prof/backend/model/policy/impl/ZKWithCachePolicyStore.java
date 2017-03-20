@@ -69,7 +69,13 @@ public class ZKWithCachePolicyStore implements PolicyStore {
 
   @Override
   public CompletableFuture<Void> setPolicy(Recorder.ProcessGroup processGroup, PolicyDetails policyDetails) {
+    //TODO: Add proper checks for policyDetails
     CompletableFuture<Void> future;
+    if (policyDetails == null) {
+      future = new CompletableFuture<>();
+      future.completeExceptionally(new Exception("Policy Details is null"));
+      return future;
+    }
     String zNodePath = policyPath + DELIMITER + encode(processGroup.getAppId()) + DELIMITER + encode(processGroup.getCluster()) + DELIMITER + encode(processGroup.getProcName());
     if (getAssociatedPolicy(processGroup) == null) {
       future = ZookeeperUtil.writeZNodeAsync(curatorClient, zNodePath, policyDetails.toByteArray(), true).whenComplete((result, ex) -> {
@@ -83,6 +89,34 @@ public class ZKWithCachePolicyStore implements PolicyStore {
           cachedPolicies.set(processGroup, policyDetails);
         }
       });
+    }
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> removePolicy(Recorder.ProcessGroup processGroup, String admin) {
+    //TODO: Add logic for proper verification of the admin
+    CompletableFuture<Void> future;
+    if (admin == null || admin.isEmpty()) {
+      future = new CompletableFuture<>();
+      future.completeExceptionally(new Exception("Admin is null or empty"));
+      return future;
+    }
+    String zNodePath = policyPath + DELIMITER + encode(processGroup.getAppId()) + DELIMITER + encode(processGroup.getCluster()) + DELIMITER + encode(processGroup.getProcName());
+    if (getAssociatedPolicy(processGroup) != null) {
+      if (getAssociatedPolicy(processGroup).getAdministrator().equals(admin)) {
+        future = ZookeeperUtil.deleteZNodeAsync(curatorClient, zNodePath).whenComplete((result, ex) -> {
+          if (ex == null) {
+            cachedPolicies.remove(processGroup);
+          }
+        });
+      } else {
+        future = new CompletableFuture<>();
+        future.completeExceptionally(new Exception("Admin mismatch for removing the policy"));
+      }
+    } else {
+      future = new CompletableFuture<>();
+      future.completeExceptionally(new Exception("Not present in store"));
     }
     return future;
   }

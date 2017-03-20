@@ -12,9 +12,14 @@ public final class ApiPathConstants {
   public static final String BACKEND_GET_POLICIES_GIVEN_APPID = "/policies/:appId";
 
   public static final String LEADER_GET_POLICIES_GIVEN_APPID = "/leader/policies/:appId";
-  public static final String LEADER_PUT_POLICY = "/leader/:appId/:clusterId/:process";
 
-//  public static final String BACKEND_GET_POLICIES_GIVEN_APPID_CLUSTERID = "/policies/:appId/:clusterId";
+  public static final String LEADER_GET_POLICIES_GIVEN_APPID_CLUSTERID = "/leader/policies/:appId/:clusterId";
+
+  public static final String LEADER_GET_POLICIES_GIVEN_APPID_CLUSTERID_PROCESS = "/leader/policies/:appId/:clusterId/:process";
+
+  public static final String LEADER_PUT_POLICY = "/leader/policies/:appId/:clusterId/:process";
+
+  public static final String LEADER_DELETE_POLICY = "/leader/policies/:appId/:clusterId/:process";
 
   private ApiPathConstants() {
   }

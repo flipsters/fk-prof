@@ -10,6 +10,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -30,6 +31,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Mockito.mock;
@@ -41,6 +43,8 @@ import static org.mockito.Mockito.when;
  */
 @RunWith(VertxUnitRunner.class)
 public class PolicyApiTest {
+  private static final String NOT_PRESENT = "np";
+  private static final String DELIMITER = "/";
   private final String backendAssociationPath = "/assoc";
   private final String policyPath = "/policy";
   private Vertx vertx;
@@ -92,6 +96,18 @@ public class PolicyApiTest {
     backendAssociationStore = new ZookeeperBasedBackendAssociationStore(vertx, curatorClient, "/assoc", 1, 1, configManager.getBackendHttpPort(), new ProcessGroupCountBasedBackendComparator());
 
     policyStore = mock(PolicyStore.class);
+
+    client = vertx.createHttpClient();
+    VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore, policyStore);
+    leaderHttpVerticleDeployer.deploy();
+    //Wait for some time for deployment to complete
+    Thread.sleep(1000);
+  }
+
+  @Test
+  public void testGetPolicyGivenAppId(TestContext context) throws Exception {
+    final Async async = context.async();
+
     when(policyStore.getAssociatedPolicies(mockProcessGroups.get(0).getAppId())).thenAnswer(invocation -> new HashMap<Object, Object>() {
       {
         put(mockProcessGroups.get(0).getAppId(), new HashMap<Object, Object>() {
@@ -112,32 +128,187 @@ public class PolicyApiTest {
       }
     });
 
-    client = vertx.createHttpClient();
-    VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore, policyStore);
-    leaderHttpVerticleDeployer.deploy();
-    //Wait for some time for deployment to complete
-    Thread.sleep(1000);
-  }
+    when(policyStore.getAssociatedPolicies(NOT_PRESENT)).thenAnswer(invocation -> new HashMap<>());
 
-  @Test
-  public void testGetPolicyGivenAppId(TestContext context) throws Exception {
-    final Async async = context.async();
+    CompletableFuture<Void> f1 = new CompletableFuture<>();
+    CompletableFuture<Void> f2 = new CompletableFuture<>();
+
     client.getNow(leaderPort, "localhost", "/leader/policies/" + mockProcessGroups.get(0).getAppId(), httpClientResponse -> {
       context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
       httpClientResponse.bodyHandler(buffer -> {
-//        System.out.println(buffer.toString());
         context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getAppId()));
         context.assertTrue(buffer.toJsonArray().size() == 3);
-        async.complete();
+        f1.complete(null);
       });
     });
+    client.getNow(leaderPort, "localhost", "/leader/policies/" + NOT_PRESENT, httpClientResponse -> {
+      context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
+      httpClientResponse.bodyHandler(buffer -> {
+        context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getAppId()));
+        context.assertTrue(buffer.toJsonArray().size() == 0);
+        f2.complete(null);
+      });
+    });
+    CompletableFuture.allOf(f1, f2).whenComplete((aVoid, throwable) -> async.complete());
+  }
+
+  @Test
+  public void testGetPolicyGivenAppIdClusterId(TestContext context) throws Exception {
+    final Async async = context.async();
+    when(policyStore.getAssociatedPolicies(mockProcessGroups.get(0).getAppId(), mockProcessGroups.get(0).getCluster())).thenAnswer(invocation -> new HashMap<Object, Object>() {
+      {
+        put(mockProcessGroups.get(0).getAppId(), new HashMap<Object, Object>() {
+          {
+            put(mockProcessGroups.get(0).getCluster(), new HashMap<Object, Object>() {
+              {
+                put(mockProcessGroups.get(0).getProcName(), mockPolicies.get(0));
+                put(mockProcessGroups.get(1).getProcName(), mockPolicies.get(1));
+              }
+            });
+          }
+        });
+      }
+    });
+
+    when(policyStore.getAssociatedPolicies(NOT_PRESENT, NOT_PRESENT)).thenAnswer(invocation -> new HashMap<>());
+
+    CompletableFuture<Void> f1 = new CompletableFuture<>();
+    CompletableFuture<Void> f2 = new CompletableFuture<>();
+
+    client.getNow(leaderPort, "localhost", "/leader/policies/" + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster(), httpClientResponse -> {
+      context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
+      httpClientResponse.bodyHandler(buffer -> {
+        context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getAppId()));
+        context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getCluster()));
+        context.assertTrue(buffer.toJsonArray().size() == 2);
+        f1.complete(null);
+      });
+    });
+    client.getNow(leaderPort, "localhost", "/leader/policies/" + NOT_PRESENT + DELIMITER + NOT_PRESENT, httpClientResponse -> {
+      context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
+      httpClientResponse.bodyHandler(buffer -> {
+        context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getAppId()));
+        context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getCluster()));
+        context.assertTrue(buffer.toJsonArray().size() == 0);
+        f2.complete(null);
+      });
+    });
+    CompletableFuture.allOf(f1, f2).whenComplete((aVoid, throwable) -> async.complete());
+  }
+
+  @Test
+  public void testGetPolicyGivenAppIdClusterIdProcess(TestContext context) throws Exception {
+    final Async async = context.async();
+    when(policyStore.getAssociatedPolicies(mockProcessGroups.get(0).getAppId(), mockProcessGroups.get(0).getCluster(), mockProcessGroups.get(0).getProcName())).thenAnswer(invocation -> new HashMap<Object, Object>() {
+      {
+        put(mockProcessGroups.get(0).getAppId(), new HashMap<Object, Object>() {
+          {
+            put(mockProcessGroups.get(0).getCluster(), new HashMap<Object, Object>() {
+              {
+                put(mockProcessGroups.get(0).getProcName(), mockPolicies.get(0));
+              }
+            });
+          }
+        });
+      }
+    });
+
+    when(policyStore.getAssociatedPolicies(NOT_PRESENT, NOT_PRESENT, NOT_PRESENT)).thenAnswer(invocation -> new HashMap<>());
+
+    CompletableFuture<Void> f1 = new CompletableFuture<>();
+    CompletableFuture<Void> f2 = new CompletableFuture<>();
+
+    client.getNow(leaderPort, "localhost", "/leader/policies/" + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+      context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
+      httpClientResponse.bodyHandler(buffer -> {
+        context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getAppId()));
+        context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getCluster()));
+        context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getProcName()));
+        context.assertTrue(buffer.toJsonObject().containsKey("created_at"));
+        f1.complete(null);
+      });
+    });
+    client.getNow(leaderPort, "localhost", "/leader/policies/" + NOT_PRESENT + DELIMITER + NOT_PRESENT + DELIMITER + NOT_PRESENT, httpClientResponse -> {
+      context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
+      httpClientResponse.bodyHandler(buffer -> {
+        context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getAppId()));
+        context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getCluster()));
+        context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getProcName()));
+        context.assertTrue(buffer.toJsonArray().isEmpty());
+        f2.complete(null);
+      });
+    });
+    CompletableFuture.allOf(f1, f2).whenComplete((aVoid, throwable) -> async.complete());
+  }
+
+  @Test
+  public void testPutPolicy(TestContext context) throws Exception {
+    final Async async = context.async();
+    when(policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0))).thenAnswer(invocation -> CompletableFuture.completedFuture(null));
+
+    when(policyStore.setPolicy(mockProcessGroups.get(0), null)).thenAnswer(invocation -> {
+      CompletableFuture future = new CompletableFuture<>();
+      future.completeExceptionally(new Exception("Policy Details is null"));
+      return future;
+    });
+
+    CompletableFuture<Void> f1 = new CompletableFuture<>();
+    CompletableFuture<Void> f2 = new CompletableFuture<>();
+
+    client.put(leaderPort, "localhost", "/leader/policies/" + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+      context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
+      httpClientResponse.bodyHandler(buffer -> {
+        context.assertFalse(buffer.toString().contains("error"));
+        f1.complete(null);
+      });
+    }).end(mockPolicies.get(0).toByteString().toStringUtf8());
+
+    client.put(leaderPort, "localhost", "/leader/policies/" + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+      context.assertNotEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
+      httpClientResponse.bodyHandler(buffer -> {
+        context.assertTrue(buffer.toString().contains("error"));
+        f2.complete(null);
+      });
+    }).end();
+    CompletableFuture.allOf(f1, f2).whenComplete((aVoid, throwable) -> async.complete());
+  }
+
+  @Test
+  public void testDeletePolicy(TestContext context) throws Exception {
+    final Async async = context.async();
+    when(policyStore.removePolicy(mockProcessGroups.get(0), mockPolicies.get(0).getAdministrator())).thenAnswer(invocation -> CompletableFuture.completedFuture(null));
+
+    when(policyStore.removePolicy(mockProcessGroups.get(0), null)).thenAnswer(invocation -> {
+      CompletableFuture future = new CompletableFuture<>();
+      future.completeExceptionally(new Exception("Admin is null or empty"));
+      return future;
+    });
+
+    CompletableFuture<Void> f1 = new CompletableFuture<>();
+    CompletableFuture<Void> f2 = new CompletableFuture<>();
+
+    client.delete(leaderPort, "localhost", "/leader/policies/" + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+      context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
+      httpClientResponse.bodyHandler(buffer -> {
+        context.assertFalse(buffer.toString().contains("error"));
+        f1.complete(null);
+      });
+    }).end(new JsonObject().put("administrator", mockPolicies.get(0).getAdministrator()).toString());
+
+    client.delete(leaderPort, "localhost", "/leader/policies/" + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+      context.assertNotEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
+      httpClientResponse.bodyHandler(buffer -> {
+        context.assertTrue(buffer.toString().contains("error"));
+        f2.complete(null);
+      });
+    }).end();
+    CompletableFuture.allOf(f1, f2).whenComplete((aVoid, throwable) -> async.complete());
   }
 
   @After
   public void tearDown(TestContext context) throws Exception {
     client.close();
     vertx.close(result -> {
-      System.out.println("Vertx shutdown");
       curatorClient.close();
       try {
         testingServer.close();
@@ -146,7 +317,7 @@ public class PolicyApiTest {
       }
       if (result.failed()) {
         context.fail(result.cause());
-      } 
+      }
     });
   }
 }

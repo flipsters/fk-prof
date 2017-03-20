@@ -63,6 +63,16 @@ public class ZookeeperUtil {
     return future;
   }
 
+  public static CompletableFuture<Void> deleteZNodeAsync(CuratorFramework curatorClient, String zNodePath) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    try {
+      curatorClient.delete().inBackground((client, event) -> completeFuture(event, null, future)).forPath(zNodePath);
+    } catch (Exception e) {
+      future.completeExceptionally(new RuntimeException("Error writing data to Zookeeper znode."));
+    }
+    return future;
+  }
+
   private static <T> void completeFuture(CuratorEvent event, T result, CompletableFuture<T> future) {
     if (KeeperException.Code.OK.intValue() == event.getResultCode()) {
       future.complete(result);

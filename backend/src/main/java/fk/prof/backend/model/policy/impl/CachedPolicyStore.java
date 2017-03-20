@@ -21,7 +21,6 @@ class CachedPolicyStore {
     if (clusterIdProcToPolicyLookup != null) {
       policies.put(appId, clusterIdProcToPolicyLookup);
     }
-
     return policies;
   }
 
@@ -47,8 +46,7 @@ class CachedPolicyStore {
       if (procToPolicyLookup != null) {
         if (procToPolicyLookup.containsKey(process)) {
           policies.put(appId, new HashMap<String, Map<String, PolicyDetails>>() {{
-            put(clusterId,
-                new HashMap<String, PolicyDetails>() {{
+            put(clusterId, new HashMap<String, PolicyDetails>() {{
                   put(process, procToPolicyLookup.get(process));
                 }}
             );
@@ -78,6 +76,27 @@ class CachedPolicyStore {
       if (procToPolicyLookup != null) {
         if (procToPolicyLookup.containsKey(process)) {
           procToPolicyLookup.put(process, policyDetails);
+        }
+      }
+    }
+  }
+
+  public void remove(Recorder.ProcessGroup processGroup) {
+    String appId = processGroup.getAppId();
+    String clusterId = processGroup.getCluster();
+    String process = processGroup.getProcName();
+    Map<String, Map<String, PolicyDetails>> clusterIdProcToPolicyLookup = processGroupAsTreeToPolicyLookup.get(appId);
+    if (clusterIdProcToPolicyLookup != null) {
+      Map<String, PolicyDetails> procToPolicyLookup = clusterIdProcToPolicyLookup.get(clusterId);
+      if (procToPolicyLookup != null) {
+        if (procToPolicyLookup.containsKey(process)) {
+          procToPolicyLookup.remove(process);
+        }
+        if (procToPolicyLookup.isEmpty()) {
+          clusterIdProcToPolicyLookup.remove(clusterId);
+        }
+        if (clusterIdProcToPolicyLookup.isEmpty()) {
+          processGroupAsTreeToPolicyLookup.remove(appId);
         }
       }
     }

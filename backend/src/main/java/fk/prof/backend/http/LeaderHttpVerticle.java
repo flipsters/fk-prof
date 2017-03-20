@@ -4,6 +4,7 @@ import fk.prof.backend.ConfigManager;
 import fk.prof.backend.exception.HttpFailure;
 import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.model.policy.impl.PolicyAPIResponse;
 import fk.prof.backend.model.policy.json.PolicyProtobufSerializers;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.util.ProtoUtil;
@@ -62,8 +63,15 @@ public class LeaderHttpVerticle extends AbstractVerticle {
 
     router.get(ApiPathConstants.LEADER_GET_POLICIES_GIVEN_APPID).handler(this::handleGetPolicyGivenAppId);
 
+    router.get(ApiPathConstants.LEADER_GET_POLICIES_GIVEN_APPID_CLUSTERID).handler(this::handleGetPolicyGivenAppIdClusterId);
+
+    router.get(ApiPathConstants.LEADER_GET_POLICIES_GIVEN_APPID_CLUSTERID_PROCESS).handler(this::handleGetPolicyGivenAppIdClusterIdProcess);
+
     router.put(ApiPathConstants.LEADER_PUT_POLICY).handler(BodyHandler.create().setBodyLimit(1024));
     router.put(ApiPathConstants.LEADER_PUT_POLICY).handler(this::handlePutPolicy);
+
+    router.delete(ApiPathConstants.LEADER_PUT_POLICY).handler(BodyHandler.create().setBodyLimit(1024));
+    router.delete(ApiPathConstants.LEADER_DELETE_POLICY).handler(this::handleDeletePolicy);
 
     return router;
   }
@@ -124,7 +132,22 @@ public class LeaderHttpVerticle extends AbstractVerticle {
 
   private void handleGetPolicyGivenAppId(RoutingContext context) {
     final String appId = context.request().getParam("appId");
-    String response = Json.encode(policyStore.getAssociatedPolicies(appId));
+    String response = Json.encode(PolicyAPIResponse.getNewInstance(policyStore.getAssociatedPolicies(appId)));
+    context.response().putHeader("content-type", "application/json").end(response);
+  }
+
+  private void handleGetPolicyGivenAppIdClusterId(RoutingContext context) {
+    final String appId = context.request().getParam("appId");
+    final String clusterId = context.request().getParam("clusterId");
+    String response = Json.encode(PolicyAPIResponse.getNewInstance(policyStore.getAssociatedPolicies(appId, clusterId)));
+    context.response().putHeader("content-type", "application/json").end(response);
+  }
+
+  private void handleGetPolicyGivenAppIdClusterIdProcess(RoutingContext context) {
+    final String appId = context.request().getParam("appId");
+    final String clusterId = context.request().getParam("clusterId");
+    final String process = context.request().getParam("process");
+    String response = Json.encode(PolicyAPIResponse.getNewInstance(policyStore.getAssociatedPolicies(appId, clusterId, process)));
     context.response().putHeader("content-type", "application/json").end(response);
   }
 
@@ -148,5 +171,27 @@ public class LeaderHttpVerticle extends AbstractVerticle {
       HttpHelper.handleFailure(context, httpFailure);
     }
   }
+
+  private void handleDeletePolicy(RoutingContext context) {
+    final String appId = context.request().getParam("appId");
+    final String clusterId = context.request().getParam("clusterId");
+    final String process = context.request().getParam("process");
+    try {
+      Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).setProcName(process).build();
+      String admin = context.getBodyAsJson().getString("administrator");
+      policyStore.removePolicy(processGroup, admin).whenComplete((aVoid, throwable) -> {
+        if (throwable == null) {
+          context.response().setStatusCode(200).end();
+        } else {
+          HttpFailure httpFailure = HttpFailure.failure(throwable);
+          HttpHelper.handleFailure(context, httpFailure);
+        }
+      });
+    } catch (Exception ex) {
+      HttpFailure httpFailure = HttpFailure.failure(ex);
+      HttpHelper.handleFailure(context, httpFailure);
+    }
+  }
+
 
 }
