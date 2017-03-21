@@ -5,14 +5,14 @@ import fk.prof.backend.ConfigManager;
 import fk.prof.backend.aggregator.AggregationWindow;
 import fk.prof.backend.exception.BadRequestException;
 import fk.prof.backend.exception.HttpFailure;
+import fk.prof.backend.http.handler.RecordedProfileRequestHandler;
+import fk.prof.backend.model.aggregation.AggregationWindowDiscoveryContext;
 import fk.prof.backend.model.assignment.ProcessGroupContextForPolling;
 import fk.prof.backend.model.assignment.ProcessGroupDiscoveryContext;
 import fk.prof.backend.model.election.LeaderReadContext;
 import fk.prof.backend.request.CompositeByteBufInputStream;
 import fk.prof.backend.request.profile.RecordedProfileProcessor;
 import fk.prof.backend.request.profile.impl.SharedMapBasedSingleProcessingOfProfileGate;
-import fk.prof.backend.model.aggregation.AggregationWindowDiscoveryContext;
-import fk.prof.backend.http.handler.RecordedProfileRequestHandler;
 import fk.prof.backend.util.ProtoUtil;
 import fk.prof.backend.util.proto.RecorderProtoUtil;
 import io.vertx.core.AbstractVerticle;
@@ -28,6 +28,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
+import policy.PolicyDetails;
 import recording.Recorder;
 
 import java.io.IOException;
@@ -88,6 +89,14 @@ public class BackendHttpVerticle extends AbstractVerticle {
 
     HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.BACKEND_POST_POLL,
         BodyHandler.create().setBodyLimit(1024 * 100), this::handlePostPoll);
+
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_POLICIES_GIVEN_APPID, this::handleGetPoliciesGivenAppId);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_POLICIES_GIVEN_APPID_CLUSTERID, this::handleGetPoliciesGivenAppIdClusterId);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_POLICIES_GIVEN_APPID_CLUSTERID_PROCESS, this::handleGetPolicyGivenAppIdClusterIdProcess);
+
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT, ApiPathConstants.BACKEND_PUT_POLICY_GIVEN_APPID_CLUSTERID_PROCESS, BodyHandler.create().setBodyLimit(1024), this::handlePutPolicy);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.DELETE, ApiPathConstants.BACKEND_DELETE_POLICY_GIVEN_APPID_CLUSTERID_PROCESS, BodyHandler.create().setBodyLimit(1024), this::handleDeletePolicy);
+
 
     return router;
   }
@@ -193,6 +202,127 @@ public class BackendHttpVerticle extends AbstractVerticle {
     }
   }
 
+  private void handleGetPoliciesGivenAppId(RoutingContext context) {
+    String leaderIPAddress = verifyLeaderAvailabilityOrFail(context.response());
+    if (leaderIPAddress != null) {
+      final String appId = context.request().getParam("appId");
+      try {
+        makeRequestGetPolicyGivenAppId(leaderIPAddress, appId).setHandler(ar -> {
+          if (ar.succeeded()) {
+            context.response().setStatusCode(ar.result().getStatusCode());
+            context.response().end(ar.result().getResponse());
+          } else {
+            HttpFailure httpFailure = HttpFailure.failure(ar.cause());
+            HttpHelper.handleFailure(context, httpFailure);
+          }
+        });
+      } catch (Exception ex) {
+        HttpFailure httpFailure = HttpFailure.failure(ex);
+        HttpHelper.handleFailure(context, httpFailure);
+      }
+    }
+  }
+
+  private void handleGetPoliciesGivenAppIdClusterId(RoutingContext context) {
+    String leaderIPAddress = verifyLeaderAvailabilityOrFail(context.response());
+    if (leaderIPAddress != null) {
+      final String appId = context.request().getParam("appId");
+      final String clusterId = context.request().getParam("clusterId");
+      try {
+        makeRequestGetPolicyGivenAppIdClusterId(leaderIPAddress, appId, clusterId).setHandler(ar -> {
+          if (ar.succeeded()) {
+            context.response().setStatusCode(ar.result().getStatusCode());
+            context.response().end(ar.result().getResponse());
+          } else {
+            HttpFailure httpFailure = HttpFailure.failure(ar.cause());
+            HttpHelper.handleFailure(context, httpFailure);
+          }
+        });
+      } catch (Exception ex) {
+        HttpFailure httpFailure = HttpFailure.failure(ex);
+        HttpHelper.handleFailure(context, httpFailure);
+      }
+    }
+  }
+
+  private void handleGetPolicyGivenAppIdClusterIdProcess(RoutingContext context) {
+    String leaderIPAddress = verifyLeaderAvailabilityOrFail(context.response());
+    if (leaderIPAddress != null) {
+      final String appId = context.request().getParam("appId");
+      final String clusterId = context.request().getParam("clusterId");
+      final String process = context.request().getParam("process");
+      try {
+        makeRequestGetPolicyGivenAppIdClusterIdProcess(leaderIPAddress, appId, clusterId, process).setHandler(ar -> {
+          if (ar.succeeded()) {
+            context.response().setStatusCode(ar.result().getStatusCode());
+            context.response().end(ar.result().getResponse());
+          } else {
+            HttpFailure httpFailure = HttpFailure.failure(ar.cause());
+            HttpHelper.handleFailure(context, httpFailure);
+          }
+        });
+      } catch (Exception ex) {
+        HttpFailure httpFailure = HttpFailure.failure(ex);
+        HttpHelper.handleFailure(context, httpFailure);
+      }
+    }
+  }
+
+  private void handlePutPolicy(RoutingContext context) {
+    String leaderIPAddress = verifyLeaderAvailabilityOrFail(context.response());
+    if (leaderIPAddress != null) {
+      try {
+        final String appId = context.request().getParam("appId");
+        final String clusterId = context.request().getParam("clusterId");
+        final String process = context.request().getParam("process");
+
+        //Deserialize to proto message to catch payload related errors early
+        Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).setProcName(process).build();
+        PolicyDetails policyDetails = PolicyDetails.parseFrom(context.getBody().getBytes());
+        makeRequestPutPolicy(leaderIPAddress, processGroup, policyDetails).setHandler(ar -> {
+          if (ar.succeeded()) {
+            context.response().setStatusCode(ar.result().getStatusCode());
+            context.response().end(ar.result().getResponse());
+          } else {
+            HttpFailure httpFailure = HttpFailure.failure(ar.cause());
+            HttpHelper.handleFailure(context, httpFailure);
+          }
+        });
+      } catch (Exception ex) {
+        HttpFailure httpFailure = HttpFailure.failure(ex);
+        HttpHelper.handleFailure(context, httpFailure);
+      }
+    }
+  }
+
+  private void handleDeletePolicy(RoutingContext context) {
+    String leaderIPAddress = verifyLeaderAvailabilityOrFail(context.response());
+    if (leaderIPAddress != null) {
+      try {
+        final String appId = context.request().getParam("appId");
+        final String clusterId = context.request().getParam("clusterId");
+        final String process = context.request().getParam("process");
+
+        //Deserialize to proto message to catch payload related errors early
+        Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).setProcName(process).build();
+        JsonObject policyAdminJson = context.getBodyAsJson();
+        makeRequestDeletePolicy(leaderIPAddress, processGroup, policyAdminJson).setHandler(ar -> {
+          if (ar.succeeded()) {
+            context.response().setStatusCode(ar.result().getStatusCode());
+            context.response().end(ar.result().getResponse());
+          } else {
+            HttpFailure httpFailure = HttpFailure.failure(ar.cause());
+            HttpHelper.handleFailure(context, httpFailure);
+          }
+        });
+      } catch (Exception ex) {
+        HttpFailure httpFailure = HttpFailure.failure(ex);
+        HttpHelper.handleFailure(context, httpFailure);
+      }
+    }
+  }
+
+
   private String verifyLeaderAvailabilityOrFail(HttpServerResponse response) {
     if (leaderReadContext.isLeader()) {
       response.setStatusCode(400).end("Leader refuses to respond to this request");
@@ -212,8 +342,51 @@ public class BackendHttpVerticle extends AbstractVerticle {
       throws IOException {
     Buffer payloadAsBuffer = ProtoUtil.buildBufferFromProto(payload);
     return httpClient.requestAsyncWithRetry(
-        HttpMethod.PUT,
+        HttpMethod.POST,
         leaderIPAddress, leaderHttpPort, ApiPathConstants.LEADER_PUT_ASSOCIATION,
+        payloadAsBuffer);
+  }
+
+  private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestGetPolicyGivenAppId(String leaderIPAddress, String appId)
+      throws IOException {
+
+    return httpClient.requestAsyncWithRetry(
+        HttpMethod.GET,
+        leaderIPAddress, leaderHttpPort,
+        ApiPathConstants.LEADER_POLICIES + ApiPathConstants.DELIMITER + appId, null);
+  }
+
+  private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestGetPolicyGivenAppIdClusterId(String leaderIPAddress, String appId, String clusterId)
+      throws IOException {
+    return httpClient.requestAsyncWithRetry(
+        HttpMethod.GET,
+        leaderIPAddress, leaderHttpPort,
+        ApiPathConstants.LEADER_POLICIES + ApiPathConstants.DELIMITER + appId + ApiPathConstants.DELIMITER + clusterId, null);
+  }
+
+  private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestGetPolicyGivenAppIdClusterIdProcess(String leaderIPAddress, String appId, String clusterId, String process)
+      throws IOException {
+    return httpClient.requestAsyncWithRetry(
+        HttpMethod.GET,
+        leaderIPAddress, leaderHttpPort,
+        ApiPathConstants.LEADER_POLICIES + ApiPathConstants.DELIMITER + appId + ApiPathConstants.DELIMITER + clusterId + ApiPathConstants.DELIMITER + process, null);
+  }
+
+  private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestPutPolicy(String leaderIPAddress, Recorder.ProcessGroup processGroup, PolicyDetails policyDetails)
+      throws IOException {
+    Buffer payloadAsBuffer = ProtoUtil.buildBufferFromProto(policyDetails);
+    return httpClient.requestAsyncWithRetry(
+        HttpMethod.PUT,
+        leaderIPAddress, leaderHttpPort, ApiPathConstants.LEADER_POLICIES + ApiPathConstants.DELIMITER + processGroup.getAppId() + ApiPathConstants.DELIMITER + processGroup.getCluster() + ApiPathConstants.DELIMITER + processGroup.getProcName(),
+        payloadAsBuffer);
+  }
+
+  private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestDeletePolicy(String leaderIPAddress, Recorder.ProcessGroup processGroup, JsonObject policyAdminJson)
+      throws IOException {
+    Buffer payloadAsBuffer = Buffer.buffer(policyAdminJson.toString());
+    return httpClient.requestAsyncWithRetry(
+        HttpMethod.DELETE,
+        leaderIPAddress, leaderHttpPort, ApiPathConstants.LEADER_POLICIES + ApiPathConstants.DELIMITER + processGroup.getAppId() + ApiPathConstants.DELIMITER + processGroup.getCluster() + ApiPathConstants.DELIMITER + processGroup.getProcName(),
         payloadAsBuffer);
   }
 }

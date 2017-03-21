@@ -5,16 +5,20 @@ import fk.prof.backend.deployer.VerticleDeployer;
 import fk.prof.backend.deployer.impl.*;
 import fk.prof.backend.leader.election.LeaderElectedTask;
 import fk.prof.backend.model.aggregation.ActiveAggregationWindows;
+import fk.prof.backend.model.aggregation.impl.ActiveAggregationWindowsImpl;
 import fk.prof.backend.model.assignment.AssociatedProcessGroups;
 import fk.prof.backend.model.assignment.impl.AssociatedProcessGroupsImpl;
-import fk.prof.backend.model.slot.WorkSlotPool;
 import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator;
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
-import fk.prof.backend.model.aggregation.impl.ActiveAggregationWindowsImpl;
 import fk.prof.backend.model.policy.PolicyStore;
-import io.vertx.core.*;
+import fk.prof.backend.model.policy.impl.ZKWithCachePolicyStore;
+import fk.prof.backend.model.slot.WorkSlotPool;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -95,7 +99,7 @@ public class BackendManager {
               .collect(Collectors.toList());
 
           BackendAssociationStore backendAssociationStore = createBackendAssociationStore(vertx, curatorClient);
-          PolicyStore policyStore = new PolicyStore();
+          PolicyStore policyStore = createPolicyStore(curatorClient);
           VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore, policyStore);
           Runnable leaderElectedTask = createLeaderElectedTask(vertx, leaderHttpVerticleDeployer, backendDeployments);
 
@@ -106,7 +110,7 @@ public class BackendManager {
           CompositeFuture leaderDeployFuture = CompositeFuture.all(
               leaderElectionParticipatorVerticleDeployer.deploy(), leaderElectionWatcherVerticleDeployer.deploy());
           leaderDeployFuture.setHandler(leaderDeployResult -> {
-            if(leaderDeployResult.succeeded()) {
+            if (leaderDeployResult.succeeded()) {
               result.complete();
             } else {
               result.fail(leaderDeployResult.cause());
@@ -121,6 +125,12 @@ public class BackendManager {
     });
 
     return result;
+  }
+
+  private PolicyStore createPolicyStore(CuratorFramework curatorClient) {
+    JsonObject policyConfig = configManager.getPolicyConfig();
+    String policyPath = policyConfig.getString("policy.path", "/policy");
+    return new ZKWithCachePolicyStore(curatorClient, policyPath);
   }
 
 

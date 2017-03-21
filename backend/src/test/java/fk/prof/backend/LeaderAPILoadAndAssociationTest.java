@@ -31,6 +31,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static org.mockito.Mockito.mock;
+
 @RunWith(VertxUnitRunner.class)
 public class LeaderAPILoadAndAssociationTest {
   private Vertx vertx;
@@ -63,13 +65,14 @@ public class LeaderAPILoadAndAssociationTest {
     JsonObject leaderHttpConfig = configManager.getLeaderHttpDeploymentConfig();
     String backendAssociationPath = leaderHttpConfig.getString("backend.association.path", "/assoc");
     curatorClient.create().forPath(backendAssociationPath);
+    PolicyStore policyStore = mock(PolicyStore.class);
 
     BackendAssociationStore backendAssociationStore = new ZookeeperBasedBackendAssociationStore(
         vertx, curatorClient, backendAssociationPath,
         configManager.getLoadReportIntervalInSeconds(),
         leaderHttpConfig.getInteger("load.miss.tolerance", 1), configManager.getBackendHttpPort(),
         new ProcessGroupCountBasedBackendComparator());
-    PolicyStore policyStore = new PolicyStore();
+
 
     VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore, policyStore);
     leaderHttpDeployer.deploy();

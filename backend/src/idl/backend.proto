@@ -24,10 +24,10 @@ enum WorkType {
 }
 
 message Work {
-    required WorkType w_type = 1;
+    required WorkType work_type = 1;
     optional CpuSampleWork cpu_sample = 2;
-    optional ThreadSampleWork thd_sample = 3;
-    optional MonitorContentionWork monitor_block = 4;
+    optional ThreadSampleWork thread_sample = 3;
+    optional MonitorContentionWork monitor_contention = 4;
     optional MonitorWaitWork monitor_wait = 5;
 }
 

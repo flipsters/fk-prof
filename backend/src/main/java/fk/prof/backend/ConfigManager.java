@@ -33,6 +33,7 @@ public class ConfigManager {
   private static final String BACKEND_DAEMON_OPTIONS_KEY = "daemonOptions";
   private static final String LOGFACTORY_SYSTEM_PROPERTY_KEY = "vertx.logger-delegate-factory-class-name";
   private static final String LOGFACTORY_SYSTEM_PROPERTY_DEFAULT_VALUE = "io.vertx.core.logging.SLF4JLogDelegateFactory";
+  private static final String POLICY_OPTIONS_KEY = "policyOptions";
 
   public static final String METRIC_REGISTRY = "vertx-registry";
 
@@ -122,6 +123,10 @@ public class ConfigManager {
       deploymentConfig.put("config", new JsonObject());
     }
     return deploymentConfig;
+  }
+
+  public JsonObject getPolicyConfig() {
+    return config.getJsonObject(POLICY_OPTIONS_KEY, new JsonObject());
   }
 
   public static void setDefaultSystemProperties() {

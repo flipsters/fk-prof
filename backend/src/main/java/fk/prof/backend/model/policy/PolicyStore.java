@@ -1,22 +1,25 @@
 package fk.prof.backend.model.policy;
 
-import fk.prof.backend.proto.BackendDTO;
+import policy.PolicyDetails;
 import recording.Recorder;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
- * TODO: Liable for refactoring. Dummy impl for now
+ * Interface for accessing the store containing policy information
+ * Created by rohit.patiyal on 07/03/17.
  */
-public class PolicyStore {
-  private final Map<Recorder.ProcessGroup, BackendDTO.RecordingPolicy> store = new HashMap<>();
+public interface PolicyStore {
+  PolicyDetails getAssociatedPolicy(Recorder.ProcessGroup processGroup);
 
-  public void put(Recorder.ProcessGroup processGroup, BackendDTO.RecordingPolicy recordingPolicy) {
-    this.store.put(processGroup, recordingPolicy);
-  }
+  Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId);
 
-  public BackendDTO.RecordingPolicy get(Recorder.ProcessGroup processGroup) {
-    return this.store.get(processGroup);
-  }
+  Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId, String clusterId);
+
+  Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId, String clusterId, String process);
+
+  CompletableFuture<Void> setPolicy(Recorder.ProcessGroup processGroup, PolicyDetails policyDetails);
+
+  CompletableFuture<Void> removePolicy(Recorder.ProcessGroup processGroup, String admin);
 }

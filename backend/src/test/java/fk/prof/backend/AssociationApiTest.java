@@ -5,7 +5,9 @@ import fk.prof.backend.deployer.impl.BackendHttpVerticleDeployer;
 import fk.prof.backend.deployer.impl.LeaderElectionParticipatorVerticleDeployer;
 import fk.prof.backend.deployer.impl.LeaderElectionWatcherVerticleDeployer;
 import fk.prof.backend.deployer.impl.LeaderHttpVerticleDeployer;
+import fk.prof.backend.http.ProfHttpClient;
 import fk.prof.backend.leader.election.LeaderElectedTask;
+import fk.prof.backend.model.aggregation.impl.ActiveAggregationWindowsImpl;
 import fk.prof.backend.model.assignment.AssociatedProcessGroups;
 import fk.prof.backend.model.assignment.impl.AssociatedProcessGroupsImpl;
 import fk.prof.backend.model.association.BackendAssociationStore;
@@ -14,10 +16,11 @@ import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationSt
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
 import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.proto.BackendDTO;
-import fk.prof.backend.model.aggregation.impl.ActiveAggregationWindowsImpl;
-import fk.prof.backend.http.ProfHttpClient;
 import fk.prof.backend.util.ProtoUtil;
-import io.vertx.core.*;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -36,11 +39,12 @@ import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @RunWith(VertxUnitRunner.class)
 public class AssociationApiTest {
+  private final String backendAssociationPath = "/assoc";
+  private static final String policyPath = "/policy";
   private Vertx vertx;
   private Integer port;
   private int leaderPort;
@@ -52,8 +56,6 @@ public class AssociationApiTest {
   private InMemoryLeaderStore inMemoryLeaderStore;
   private ConfigManager configManager;
 
-  private final String backendAssociationPath = "/assoc";
-
   @Before
   public void setBefore() throws Exception {
     ConfigManager.setDefaultSystemProperties();
@@ -63,7 +65,7 @@ public class AssociationApiTest {
     curatorClient.start();
     curatorClient.blockUntilConnected(10, TimeUnit.SECONDS);
     curatorClient.create().forPath(backendAssociationPath);
-
+    curatorClient.create().forPath(policyPath);
     configManager = new ConfigManager(AssociationApiTest.class.getClassLoader().getResource("config.json").getFile());
     vertx = Vertx.vertx(new VertxOptions(configManager.getVertxConfig()));
     port = configManager.getBackendHttpPort();
@@ -72,7 +74,7 @@ public class AssociationApiTest {
     backendAssociationStore = new ZookeeperBasedBackendAssociationStore(vertx, curatorClient, "/assoc", 1, 1, configManager.getBackendHttpPort(), new ProcessGroupCountBasedBackendComparator());
     inMemoryLeaderStore = spy(new InMemoryLeaderStore(configManager.getIPAddress()));
     associatedProcessGroups = new AssociatedProcessGroupsImpl(configManager.getRecorderDefunctThresholdInSeconds());
-    policyStore = new PolicyStore();
+    policyStore = mock(PolicyStore.class);
 
     VerticleDeployer backendHttpVerticleDeployer = new BackendHttpVerticleDeployer(vertx, configManager, inMemoryLeaderStore, new ActiveAggregationWindowsImpl(), associatedProcessGroups);
     backendHttpVerticleDeployer.deploy();
@@ -100,7 +102,7 @@ public class AssociationApiTest {
     final Async async = context.async();
     Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId("a").setCluster("c").setProcName("p1").build();
     makeRequestGetAssociation(processGroup).setHandler(ar -> {
-      if(ar.succeeded()) {
+      if (ar.succeeded()) {
         context.assertEquals(503, ar.result().getStatusCode());
         async.complete();
       } else {
@@ -121,7 +123,7 @@ public class AssociationApiTest {
     VerticleDeployer leaderWatcherDeployer = new LeaderElectionWatcherVerticleDeployer(vertx, configManager, curatorClient, inMemoryLeaderStore);
 
     CompositeFuture.all(leaderParticipatorDeployer.deploy(), leaderWatcherDeployer.deploy()).setHandler(deployResult -> {
-      if(deployResult.succeeded()) {
+      if (deployResult.succeeded()) {
         try {
           boolean released = latch.await(10, TimeUnit.SECONDS);
           if (!released) {
@@ -170,7 +172,7 @@ public class AssociationApiTest {
     VerticleDeployer leaderWatcherDeployer = new LeaderElectionWatcherVerticleDeployer(vertx, configManager, curatorClient, inMemoryLeaderStore);
 
     CompositeFuture.all(leaderParticipatorDeployer.deploy(), leaderWatcherDeployer.deploy()).setHandler(deployResult -> {
-      if(deployResult.succeeded()) {
+      if (deployResult.succeeded()) {
         try {
           //This sleep should be enough for leader store to get updated with the new leader and leader elected task to be executed
           Thread.sleep(5000);
@@ -218,14 +220,14 @@ public class AssociationApiTest {
   }
 
   private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestGetAssociation(Recorder.ProcessGroup payload)
-    throws IOException {
+      throws IOException {
     Future<ProfHttpClient.ResponseWithStatusTuple> future = Future.future();
     HttpClientRequest request = vertx.createHttpClient()
-          .put(port, "localhost", "/association")
+        .put(port, "localhost", "/association")
         .handler(response -> {
           response.bodyHandler(buffer -> {
             try {
-              future.complete(ProfHttpClient.ResponseWithStatusTuple.of(response.statusCode(),buffer));
+              future.complete(ProfHttpClient.ResponseWithStatusTuple.of(response.statusCode(), buffer));
             } catch (Exception ex) {
               future.fail(ex);
             }
