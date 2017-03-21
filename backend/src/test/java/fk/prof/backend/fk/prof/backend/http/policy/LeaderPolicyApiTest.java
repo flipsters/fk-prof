@@ -1,11 +1,15 @@
-package fk.prof.backend;
+package fk.prof.backend.fk.prof.backend.http.policy;
 
+import fk.prof.backend.AssociationApiTest;
+import fk.prof.backend.ConfigManager;
 import fk.prof.backend.deployer.VerticleDeployer;
 import fk.prof.backend.deployer.impl.LeaderHttpVerticleDeployer;
+import fk.prof.backend.http.ApiPathConstants;
 import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator;
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.util.ProtoUtil;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
@@ -42,23 +46,19 @@ import static org.mockito.Mockito.when;
  * Created by rohit.patiyal on 14/03/17.
  */
 @RunWith(VertxUnitRunner.class)
-public class PolicyApiTest {
+public class LeaderPolicyApiTest {
   private static final String NOT_PRESENT = "np";
   private static final String DELIMITER = "/";
-  private final String backendAssociationPath = "/assoc";
-  private final String policyPath = "/policy";
+
   private Vertx vertx;
-  private Integer port;
   private int leaderPort;
   private TestingServer testingServer;
   private CuratorFramework curatorClient;
-  private ConfigManager configManager;
   private PolicyStore policyStore;
 
   private static List<Recorder.ProcessGroup> mockProcessGroups;
   private static List<PolicyDetails> mockPolicies;
   private HttpClient client;
-  private BackendAssociationStore backendAssociationStore;
 
   @BeforeClass
   public static void setBeforeClass()
@@ -86,15 +86,14 @@ public class PolicyApiTest {
     curatorClient = CuratorFrameworkFactory.newClient(testingServer.getConnectString(), timing.session(), timing.connection(), new RetryOneTime(1));
     curatorClient.start();
     curatorClient.blockUntilConnected(10, TimeUnit.SECONDS);
-    curatorClient.create().forPath(policyPath);
-    curatorClient.create().forPath(backendAssociationPath);
+    curatorClient.create().forPath("/policy");
+    curatorClient.create().forPath("/assoc");
 
-    configManager = new ConfigManager(AssociationApiTest.class.getClassLoader().getResource("config.json").getFile());
+    ConfigManager configManager = new ConfigManager(AssociationApiTest.class.getClassLoader().getResource("config.json").getFile());
     vertx = Vertx.vertx(new VertxOptions(configManager.getVertxConfig()));
-    port = configManager.getBackendHttpPort();
     leaderPort = configManager.getLeaderHttpPort();
-    backendAssociationStore = new ZookeeperBasedBackendAssociationStore(vertx, curatorClient, "/assoc", 1, 1, configManager.getBackendHttpPort(), new ProcessGroupCountBasedBackendComparator());
 
+    BackendAssociationStore backendAssociationStore = new ZookeeperBasedBackendAssociationStore(vertx, curatorClient, "/assoc", 1, 1, configManager.getBackendHttpPort(), new ProcessGroupCountBasedBackendComparator());
     policyStore = mock(PolicyStore.class);
 
     client = vertx.createHttpClient();
@@ -133,7 +132,7 @@ public class PolicyApiTest {
     CompletableFuture<Void> f1 = new CompletableFuture<>();
     CompletableFuture<Void> f2 = new CompletableFuture<>();
 
-    client.getNow(leaderPort, "localhost", "/leader/policies/" + mockProcessGroups.get(0).getAppId(), httpClientResponse -> {
+    client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER_POLICIES + mockProcessGroups.get(0).getAppId(), httpClientResponse -> {
       context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
       httpClientResponse.bodyHandler(buffer -> {
         context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getAppId()));
@@ -141,7 +140,7 @@ public class PolicyApiTest {
         f1.complete(null);
       });
     });
-    client.getNow(leaderPort, "localhost", "/leader/policies/" + NOT_PRESENT, httpClientResponse -> {
+    client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER_POLICIES + NOT_PRESENT, httpClientResponse -> {
       context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
       httpClientResponse.bodyHandler(buffer -> {
         context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getAppId()));
@@ -175,7 +174,7 @@ public class PolicyApiTest {
     CompletableFuture<Void> f1 = new CompletableFuture<>();
     CompletableFuture<Void> f2 = new CompletableFuture<>();
 
-    client.getNow(leaderPort, "localhost", "/leader/policies/" + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster(), httpClientResponse -> {
+    client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER_POLICIES + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster(), httpClientResponse -> {
       context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
       httpClientResponse.bodyHandler(buffer -> {
         context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getAppId()));
@@ -184,7 +183,7 @@ public class PolicyApiTest {
         f1.complete(null);
       });
     });
-    client.getNow(leaderPort, "localhost", "/leader/policies/" + NOT_PRESENT + DELIMITER + NOT_PRESENT, httpClientResponse -> {
+    client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER_POLICIES + NOT_PRESENT + DELIMITER + NOT_PRESENT, httpClientResponse -> {
       context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
       httpClientResponse.bodyHandler(buffer -> {
         context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getAppId()));
@@ -218,7 +217,7 @@ public class PolicyApiTest {
     CompletableFuture<Void> f1 = new CompletableFuture<>();
     CompletableFuture<Void> f2 = new CompletableFuture<>();
 
-    client.getNow(leaderPort, "localhost", "/leader/policies/" + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+    client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER_POLICIES + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
       context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
       httpClientResponse.bodyHandler(buffer -> {
         context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getAppId()));
@@ -228,7 +227,7 @@ public class PolicyApiTest {
         f1.complete(null);
       });
     });
-    client.getNow(leaderPort, "localhost", "/leader/policies/" + NOT_PRESENT + DELIMITER + NOT_PRESENT + DELIMITER + NOT_PRESENT, httpClientResponse -> {
+    client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER_POLICIES + NOT_PRESENT + DELIMITER + NOT_PRESENT + DELIMITER + NOT_PRESENT, httpClientResponse -> {
       context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
       httpClientResponse.bodyHandler(buffer -> {
         context.assertFalse(buffer.toString().contains(mockProcessGroups.get(0).getAppId()));
@@ -255,15 +254,15 @@ public class PolicyApiTest {
     CompletableFuture<Void> f1 = new CompletableFuture<>();
     CompletableFuture<Void> f2 = new CompletableFuture<>();
 
-    client.put(leaderPort, "localhost", "/leader/policies/" + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+    client.put(leaderPort, "localhost", ApiPathConstants.LEADER_POLICIES + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
       context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
       httpClientResponse.bodyHandler(buffer -> {
         context.assertFalse(buffer.toString().contains("error"));
         f1.complete(null);
       });
-    }).end(mockPolicies.get(0).toByteString().toStringUtf8());
+    }).end(ProtoUtil.buildBufferFromProto(mockPolicies.get(0)));
 
-    client.put(leaderPort, "localhost", "/leader/policies/" + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+    client.put(leaderPort, "localhost", ApiPathConstants.LEADER_POLICIES + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
       context.assertNotEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
       httpClientResponse.bodyHandler(buffer -> {
         context.assertTrue(buffer.toString().contains("error"));
@@ -287,7 +286,7 @@ public class PolicyApiTest {
     CompletableFuture<Void> f1 = new CompletableFuture<>();
     CompletableFuture<Void> f2 = new CompletableFuture<>();
 
-    client.delete(leaderPort, "localhost", "/leader/policies/" + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+    client.delete(leaderPort, "localhost", ApiPathConstants.LEADER_POLICIES + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
       context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
       httpClientResponse.bodyHandler(buffer -> {
         context.assertFalse(buffer.toString().contains("error"));
@@ -295,7 +294,7 @@ public class PolicyApiTest {
       });
     }).end(new JsonObject().put("administrator", mockPolicies.get(0).getAdministrator()).toString());
 
-    client.delete(leaderPort, "localhost", "/leader/policies/" + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+    client.delete(leaderPort, "localhost", ApiPathConstants.LEADER_POLICIES + mockProcessGroups.get(0).getAppId() + DELIMITER + mockProcessGroups.get(0).getCluster() + DELIMITER + mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
       context.assertNotEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
       httpClientResponse.bodyHandler(buffer -> {
         context.assertTrue(buffer.toString().contains("error"));
@@ -307,8 +306,10 @@ public class PolicyApiTest {
 
   @After
   public void tearDown(TestContext context) throws Exception {
+    System.out.println("Tearing down");
     client.close();
     vertx.close(result -> {
+      System.out.println("Vertx shutdown");
       curatorClient.close();
       try {
         testingServer.close();

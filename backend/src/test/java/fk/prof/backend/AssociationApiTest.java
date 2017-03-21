@@ -11,6 +11,8 @@ import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator;
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
+import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.model.policy.impl.ZKWithCachePolicyStore;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.service.ProfileWorkService;
 import fk.prof.backend.util.ProtoUtil;
@@ -42,6 +44,7 @@ import static org.mockito.Mockito.when;
 @RunWith(VertxUnitRunner.class)
 public class AssociationApiTest {
   private final String backendAssociationPath = "/assoc";
+  private static final String policyPath = "/policy";
   private Vertx vertx;
   private Integer port;
   private int leaderPort;
@@ -50,6 +53,7 @@ public class AssociationApiTest {
   private BackendAssociationStore backendAssociationStore;
   private InMemoryLeaderStore inMemoryLeaderStore;
   private ConfigManager configManager;
+  private PolicyStore policyStore;
 
   @Before
   public void setBefore() throws Exception {
@@ -60,7 +64,7 @@ public class AssociationApiTest {
     curatorClient.start();
     curatorClient.blockUntilConnected(10, TimeUnit.SECONDS);
     curatorClient.create().forPath(backendAssociationPath);
-
+    curatorClient.create().forPath(policyPath);
     configManager = new ConfigManager(AssociationApiTest.class.getClassLoader().getResource("config.json").getFile());
     vertx = Vertx.vertx(new VertxOptions(configManager.getVertxConfig()));
     port = configManager.getBackendHttpPort();
@@ -68,9 +72,11 @@ public class AssociationApiTest {
 
     backendAssociationStore = new ZookeeperBasedBackendAssociationStore(vertx, curatorClient, "/assoc", 1, 1, configManager.getBackendHttpPort(), new ProcessGroupCountBasedBackendComparator());
 
+    policyStore = new ZKWithCachePolicyStore(curatorClient, policyPath);
+
     inMemoryLeaderStore = spy(new InMemoryLeaderStore(configManager.getIPAddress()));
 
-    VerticleDeployer backendHttpVerticleDeployer = new BackendHttpVerticleDeployer(vertx, configManager, inMemoryLeaderStore, new ProfileWorkService(), null);
+    VerticleDeployer backendHttpVerticleDeployer = new BackendHttpVerticleDeployer(vertx, configManager, inMemoryLeaderStore, new ProfileWorkService(), policyStore);
     backendHttpVerticleDeployer.deploy();
     //Wait for some time for deployment to complete
     Thread.sleep(1000);
@@ -162,7 +168,7 @@ public class AssociationApiTest {
   public void getAssociationProxiedToLeader(TestContext context) throws InterruptedException, IOException {
     final Async async = context.async();
     CountDownLatch latch = new CountDownLatch(1);
-    VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore, null);
+    VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore, policyStore);
     Runnable leaderElectedTask = LeaderElectedTask.newBuilder().build(vertx, leaderHttpDeployer);
 
     VerticleDeployer leaderParticipatorDeployer = new LeaderElectionParticipatorVerticleDeployer(vertx, configManager, curatorClient, leaderElectedTask);

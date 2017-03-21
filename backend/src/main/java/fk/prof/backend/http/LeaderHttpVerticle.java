@@ -67,11 +67,11 @@ public class LeaderHttpVerticle extends AbstractVerticle {
 
     router.get(ApiPathConstants.LEADER_GET_POLICIES_GIVEN_APPID_CLUSTERID_PROCESS).handler(this::handleGetPolicyGivenAppIdClusterIdProcess);
 
-    router.put(ApiPathConstants.LEADER_PUT_POLICY).handler(BodyHandler.create().setBodyLimit(1024));
-    router.put(ApiPathConstants.LEADER_PUT_POLICY).handler(this::handlePutPolicy);
+    router.put(ApiPathConstants.LEADER_PUT_POLICY_GIVEN_APPID_CLUSTERID_PROCESS).handler(BodyHandler.create().setBodyLimit(1024));
+    router.put(ApiPathConstants.LEADER_PUT_POLICY_GIVEN_APPID_CLUSTERID_PROCESS).handler(this::handlePutPolicy);
 
-    router.delete(ApiPathConstants.LEADER_PUT_POLICY).handler(BodyHandler.create().setBodyLimit(1024));
-    router.delete(ApiPathConstants.LEADER_DELETE_POLICY).handler(this::handleDeletePolicy);
+    router.delete(ApiPathConstants.LEADER_PUT_POLICY_GIVEN_APPID_CLUSTERID_PROCESS).handler(BodyHandler.create().setBodyLimit(1024));
+    router.delete(ApiPathConstants.LEADER_DELETE_POLICY_GIVEN_APPID_CLUSTERID_PROCESS).handler(this::handleDeletePolicy);
 
     return router;
   }
