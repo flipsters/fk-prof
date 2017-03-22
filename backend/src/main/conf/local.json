@@ -63,5 +63,8 @@
       "scheduling.buffer.secs": 30,
       "work.assignment.max.delay.secs": 120
     }
+  },
+  "policyOptions": {
+    "policy.path": "/policy"
   }
 }

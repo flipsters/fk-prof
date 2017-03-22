@@ -342,7 +342,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
       throws IOException {
     Buffer payloadAsBuffer = ProtoUtil.buildBufferFromProto(payload);
     return httpClient.requestAsyncWithRetry(
-        HttpMethod.POST,
+        HttpMethod.PUT,
         leaderIPAddress, leaderHttpPort, ApiPathConstants.LEADER_PUT_ASSOCIATION,
         payloadAsBuffer);
   }

@@ -143,7 +143,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
         //TODO: Use compact repr of assigned backend below, method added in e2e-fixes branch
         context.response().end("Calling backend=" + callingBackend + " not assigned to process_group=" + RecorderProtoUtil.processGroupCompactRepr(processGroup));
       } else {
-        BackendDTO.RecordingPolicy recordingPolicy = this.policyStore.getAssociatedPolicy(processGroup);
+        BackendDTO.RecordingPolicy recordingPolicy = this.policyStore.getRecordingPolicy(processGroup);
         if (recordingPolicy == null) {
           context.response().setStatusCode(400);
           context.response().end("Policy not found for process_group" + RecorderProtoUtil.processGroupCompactRepr(processGroup));

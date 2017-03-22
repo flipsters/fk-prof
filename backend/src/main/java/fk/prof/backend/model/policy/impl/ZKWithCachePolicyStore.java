@@ -3,6 +3,7 @@ package fk.prof.backend.model.policy.impl;
 import com.google.common.io.BaseEncoding;
 import com.google.protobuf.InvalidProtocolBufferException;
 import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.util.ZookeeperUtil;
 import org.apache.curator.framework.CuratorFramework;
 import policy.PolicyDetails;
@@ -23,6 +24,7 @@ public class ZKWithCachePolicyStore implements PolicyStore {
   private final CuratorFramework curatorClient;
   private String policyPath;
   private CachedPolicyStore cachedPolicies;
+  private final Map<Recorder.ProcessGroup, BackendDTO.RecordingPolicy> recordingPolicyStore = new HashMap<>();
 
   public ZKWithCachePolicyStore(CuratorFramework curatorClient, String policyPath) {
     if (curatorClient == null) {
@@ -119,6 +121,16 @@ public class ZKWithCachePolicyStore implements PolicyStore {
       future.completeExceptionally(new Exception("Not present in store"));
     }
     return future;
+  }
+
+  @Override
+  public BackendDTO.RecordingPolicy getRecordingPolicy(Recorder.ProcessGroup processGroup) {
+    return recordingPolicyStore.get(processGroup);
+  }
+
+  @Override
+  public void putRecordingPolicy(Recorder.ProcessGroup processGroup, BackendDTO.RecordingPolicy recordingPolicy) {
+    recordingPolicyStore.put(processGroup, recordingPolicy);
   }
 
   private CachedPolicyStore populateCacheFromZK() {

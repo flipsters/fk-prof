@@ -1,5 +1,6 @@
 package fk.prof.backend.model.policy;
 
+import fk.prof.backend.proto.BackendDTO;
 import policy.PolicyDetails;
 import recording.Recorder;
 
@@ -22,4 +23,8 @@ public interface PolicyStore {
   CompletableFuture<Void> setPolicy(Recorder.ProcessGroup processGroup, PolicyDetails policyDetails);
 
   CompletableFuture<Void> removePolicy(Recorder.ProcessGroup processGroup, String admin);
+
+  BackendDTO.RecordingPolicy getRecordingPolicy(Recorder.ProcessGroup processGroup);
+
+  void putRecordingPolicy(Recorder.ProcessGroup processGroup, BackendDTO.RecordingPolicy recordingPolicy);
 }

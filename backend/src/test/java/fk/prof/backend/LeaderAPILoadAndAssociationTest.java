@@ -65,14 +65,13 @@ public class LeaderAPILoadAndAssociationTest {
     JsonObject leaderHttpConfig = configManager.getLeaderHttpDeploymentConfig();
     String backendAssociationPath = leaderHttpConfig.getString("backend.association.path", "/assoc");
     curatorClient.create().forPath(backendAssociationPath);
-    PolicyStore policyStore = mock(PolicyStore.class);
 
     BackendAssociationStore backendAssociationStore = new ZookeeperBasedBackendAssociationStore(
         vertx, curatorClient, backendAssociationPath,
         configManager.getLoadReportIntervalInSeconds(),
         leaderHttpConfig.getInteger("load.miss.tolerance", 1), configManager.getBackendHttpPort(),
         new ProcessGroupCountBasedBackendComparator());
-
+    PolicyStore policyStore = mock(PolicyStore.class);
 
     VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore, policyStore);
     leaderHttpDeployer.deploy();
