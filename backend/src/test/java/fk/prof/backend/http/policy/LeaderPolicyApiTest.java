@@ -107,7 +107,7 @@ public class LeaderPolicyApiTest {
   public void testGetPolicyGivenAppId(TestContext context) throws Exception {
     final Async async = context.async();
 
-    when(policyStore.getAssociatedPolicies(mockProcessGroups.get(0).getAppId())).thenAnswer(invocation -> new HashMap<Object, Object>() {
+    when(policyStore.getUserPolicies(mockProcessGroups.get(0).getAppId())).thenAnswer(invocation -> new HashMap<Object, Object>() {
       {
         put(mockProcessGroups.get(0).getAppId(), new HashMap<Object, Object>() {
           {
@@ -127,7 +127,7 @@ public class LeaderPolicyApiTest {
       }
     });
 
-    when(policyStore.getAssociatedPolicies(NOT_PRESENT)).thenAnswer(invocation -> new HashMap<>());
+    when(policyStore.getUserPolicies(NOT_PRESENT)).thenAnswer(invocation -> new HashMap<>());
 
     CompletableFuture<Void> f1 = new CompletableFuture<>();
     CompletableFuture<Void> f2 = new CompletableFuture<>();
@@ -154,7 +154,7 @@ public class LeaderPolicyApiTest {
   @Test
   public void testGetPolicyGivenAppIdClusterId(TestContext context) throws Exception {
     final Async async = context.async();
-    when(policyStore.getAssociatedPolicies(mockProcessGroups.get(0).getAppId(), mockProcessGroups.get(0).getCluster())).thenAnswer(invocation -> new HashMap<Object, Object>() {
+    when(policyStore.getUserPolicies(mockProcessGroups.get(0).getAppId(), mockProcessGroups.get(0).getCluster())).thenAnswer(invocation -> new HashMap<Object, Object>() {
       {
         put(mockProcessGroups.get(0).getAppId(), new HashMap<Object, Object>() {
           {
@@ -169,7 +169,7 @@ public class LeaderPolicyApiTest {
       }
     });
 
-    when(policyStore.getAssociatedPolicies(NOT_PRESENT, NOT_PRESENT)).thenAnswer(invocation -> new HashMap<>());
+    when(policyStore.getUserPolicies(NOT_PRESENT, NOT_PRESENT)).thenAnswer(invocation -> new HashMap<>());
 
     CompletableFuture<Void> f1 = new CompletableFuture<>();
     CompletableFuture<Void> f2 = new CompletableFuture<>();
@@ -198,7 +198,7 @@ public class LeaderPolicyApiTest {
   @Test
   public void testGetPolicyGivenAppIdClusterIdProcess(TestContext context) throws Exception {
     final Async async = context.async();
-    when(policyStore.getAssociatedPolicies(mockProcessGroups.get(0).getAppId(), mockProcessGroups.get(0).getCluster(), mockProcessGroups.get(0).getProcName())).thenAnswer(invocation -> new HashMap<Object, Object>() {
+    when(policyStore.getUserPolicies(mockProcessGroups.get(0).getAppId(), mockProcessGroups.get(0).getCluster(), mockProcessGroups.get(0).getProcName())).thenAnswer(invocation -> new HashMap<Object, Object>() {
       {
         put(mockProcessGroups.get(0).getAppId(), new HashMap<Object, Object>() {
           {
@@ -212,7 +212,7 @@ public class LeaderPolicyApiTest {
       }
     });
 
-    when(policyStore.getAssociatedPolicies(NOT_PRESENT, NOT_PRESENT, NOT_PRESENT)).thenAnswer(invocation -> new HashMap<>());
+    when(policyStore.getUserPolicies(NOT_PRESENT, NOT_PRESENT, NOT_PRESENT)).thenAnswer(invocation -> new HashMap<>());
 
     CompletableFuture<Void> f1 = new CompletableFuture<>();
     CompletableFuture<Void> f2 = new CompletableFuture<>();
@@ -243,9 +243,9 @@ public class LeaderPolicyApiTest {
   @Test
   public void testPutPolicy(TestContext context) throws Exception {
     final Async async = context.async();
-    when(policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0))).thenAnswer(invocation -> CompletableFuture.completedFuture(null));
+    when(policyStore.setUserPolicy(mockProcessGroups.get(0), mockPolicies.get(0))).thenAnswer(invocation -> CompletableFuture.completedFuture(null));
 
-    when(policyStore.setPolicy(mockProcessGroups.get(0), null)).thenAnswer(invocation -> {
+    when(policyStore.setUserPolicy(mockProcessGroups.get(0), null)).thenAnswer(invocation -> {
       CompletableFuture future = new CompletableFuture<>();
       future.completeExceptionally(new Exception("Policy Details is null"));
       return future;
@@ -275,9 +275,9 @@ public class LeaderPolicyApiTest {
   @Test
   public void testDeletePolicy(TestContext context) throws Exception {
     final Async async = context.async();
-    when(policyStore.removePolicy(mockProcessGroups.get(0), mockPolicies.get(0).getAdministrator())).thenAnswer(invocation -> CompletableFuture.completedFuture(null));
+    when(policyStore.removeUserPolicy(mockProcessGroups.get(0), mockPolicies.get(0).getAdministrator())).thenAnswer(invocation -> CompletableFuture.completedFuture(null));
 
-    when(policyStore.removePolicy(mockProcessGroups.get(0), null)).thenAnswer(invocation -> {
+    when(policyStore.removeUserPolicy(mockProcessGroups.get(0), null)).thenAnswer(invocation -> {
       CompletableFuture future = new CompletableFuture<>();
       future.completeExceptionally(new Exception("Admin is null or empty"));
       return future;

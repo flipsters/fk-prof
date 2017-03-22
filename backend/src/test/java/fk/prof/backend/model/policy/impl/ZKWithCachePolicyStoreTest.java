@@ -78,9 +78,9 @@ public class ZKWithCachePolicyStoreTest {
     final Async async = context.async();
 
     // PRE
-    CompletableFuture f1 = policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0));
-    CompletableFuture f2 = policyStore.setPolicy(mockProcessGroups.get(1), mockPolicies.get(1));
-    CompletableFuture f3 = policyStore.setPolicy(mockProcessGroups.get(2), mockPolicies.get(2));
+    CompletableFuture f1 = policyStore.setUserPolicy(mockProcessGroups.get(0), mockPolicies.get(0));
+    CompletableFuture f2 = policyStore.setUserPolicy(mockProcessGroups.get(1), mockPolicies.get(1));
+    CompletableFuture f3 = policyStore.setUserPolicy(mockProcessGroups.get(2), mockPolicies.get(2));
 
     Map<String, Map<Object, Object>> appIdTestPairs = new HashMap<String, Map<Object, Object>>() {
       {
@@ -112,7 +112,7 @@ public class ZKWithCachePolicyStoreTest {
 
       //TESTS
       for (Map.Entry<String, Map<Object, Object>> testPair : appIdTestPairs.entrySet()) {
-        Map<String, Map<String, Map<String, PolicyDetails>>> got = policyStore.getAssociatedPolicies(testPair.getKey());
+        Map<String, Map<String, Map<String, PolicyDetails>>> got = policyStore.getUserPolicies(testPair.getKey());
         context.assertTrue(got.equals(testPair.getValue()));
       }
       async.complete();
@@ -123,9 +123,9 @@ public class ZKWithCachePolicyStoreTest {
   public void testGetAssociatedPoliciesGivenAppIdClusterId(TestContext context) throws Exception {
     final Async async = context.async();
     // PRE
-    CompletableFuture f1 = policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0));
-    CompletableFuture f2 = policyStore.setPolicy(mockProcessGroups.get(1), mockPolicies.get(1));
-    CompletableFuture f3 = policyStore.setPolicy(mockProcessGroups.get(2), mockPolicies.get(2));
+    CompletableFuture f1 = policyStore.setUserPolicy(mockProcessGroups.get(0), mockPolicies.get(0));
+    CompletableFuture f2 = policyStore.setUserPolicy(mockProcessGroups.get(1), mockPolicies.get(1));
+    CompletableFuture f3 = policyStore.setUserPolicy(mockProcessGroups.get(2), mockPolicies.get(2));
 
     Map<List<String>, Map<Object, Object>> appIdTestPairs = new HashMap<List<String>, Map<Object, Object>>() {
       {
@@ -152,7 +152,7 @@ public class ZKWithCachePolicyStoreTest {
 
       //TESTS
       for (Map.Entry<List<String>, Map<Object, Object>> testPair : appIdTestPairs.entrySet()) {
-        Map<String, Map<String, Map<String, PolicyDetails>>> got = policyStore.getAssociatedPolicies(testPair.getKey().get(0), testPair.getKey().get(1));
+        Map<String, Map<String, Map<String, PolicyDetails>>> got = policyStore.getUserPolicies(testPair.getKey().get(0), testPair.getKey().get(1));
         context.assertTrue(got.equals(testPair.getValue()));
       }
       async.complete();
@@ -163,9 +163,9 @@ public class ZKWithCachePolicyStoreTest {
   public void testGetAssociatedPoliciesGivenAppIdClusterIdProcess(TestContext context) throws Exception {
     final Async async = context.async();
     // PRE
-    CompletableFuture f1 = policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0));
-    CompletableFuture f2 = policyStore.setPolicy(mockProcessGroups.get(1), mockPolicies.get(1));
-    CompletableFuture f3 = policyStore.setPolicy(mockProcessGroups.get(2), mockPolicies.get(2));
+    CompletableFuture f1 = policyStore.setUserPolicy(mockProcessGroups.get(0), mockPolicies.get(0));
+    CompletableFuture f2 = policyStore.setUserPolicy(mockProcessGroups.get(1), mockPolicies.get(1));
+    CompletableFuture f3 = policyStore.setUserPolicy(mockProcessGroups.get(2), mockPolicies.get(2));
 
     Map<List<String>, Map<Object, Object>> appIdTestPairs = new HashMap<List<String>, Map<Object, Object>>() {
       {
@@ -191,7 +191,7 @@ public class ZKWithCachePolicyStoreTest {
 
       //TESTS
       for (Map.Entry<List<String>, Map<Object, Object>> testPair : appIdTestPairs.entrySet()) {
-        Map<String, Map<String, Map<String, PolicyDetails>>> got = policyStore.getAssociatedPolicies(testPair.getKey().get(0), testPair.getKey().get(1), testPair.getKey().get(2));
+        Map<String, Map<String, Map<String, PolicyDetails>>> got = policyStore.getUserPolicies(testPair.getKey().get(0), testPair.getKey().get(1), testPair.getKey().get(2));
         context.assertTrue(got.equals(testPair.getValue()));
       }
       async.complete();
@@ -203,10 +203,10 @@ public class ZKWithCachePolicyStoreTest {
     final Async async = context.async();
 
     //PRE
-    policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0)).whenComplete((aVoid, throwable) -> {
+    policyStore.setUserPolicy(mockProcessGroups.get(0), mockPolicies.get(0)).whenComplete((aVoid, throwable) -> {
       if (throwable == null) {
         //TEST
-        context.assertTrue(policyStore.getAssociatedPolicy(mockProcessGroups.get(0)) == mockPolicies.get(0));
+        context.assertTrue(policyStore.getUserPolicy(mockProcessGroups.get(0)) == mockPolicies.get(0));
       }
       async.complete();
     });
@@ -220,13 +220,13 @@ public class ZKWithCachePolicyStoreTest {
     CompletableFuture<Void> f2 = new CompletableFuture<>();
 
     //TEST
-    policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0)).whenComplete((aVoid, throwable) -> {
+    policyStore.setUserPolicy(mockProcessGroups.get(0), mockPolicies.get(0)).whenComplete((aVoid, throwable) -> {
       context.assertTrue(throwable == null);
       f1.complete(null);
     });
 
     //TEST
-    policyStore.setPolicy(mockProcessGroups.get(0), null).whenComplete((aVoid, throwable) -> {
+    policyStore.setUserPolicy(mockProcessGroups.get(0), null).whenComplete((aVoid, throwable) -> {
       context.assertTrue(throwable != null);
       f2.complete(null);
     });
@@ -241,27 +241,27 @@ public class ZKWithCachePolicyStoreTest {
     CompletableFuture<Void> f2 = new CompletableFuture<>();
     CompletableFuture<Void> f3 = new CompletableFuture<>();
     //PRE
-    policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0)).whenComplete((aVoid, throwable) -> {
+    policyStore.setUserPolicy(mockProcessGroups.get(0), mockPolicies.get(0)).whenComplete((aVoid, throwable) -> {
       if (throwable == null) {
         //TEST
-        policyStore.removePolicy(mockProcessGroups.get(0), mockPolicies.get(0).getAdministrator()).whenComplete((aVoid1, throwable1) -> {
+        policyStore.removeUserPolicy(mockProcessGroups.get(0), mockPolicies.get(0).getAdministrator()).whenComplete((aVoid1, throwable1) -> {
           context.assertTrue(throwable1 == null);
-          context.assertTrue(policyStore.getAssociatedPolicy(mockProcessGroups.get(0)) == null);
+          context.assertTrue(policyStore.getUserPolicy(mockProcessGroups.get(0)) == null);
           f1.complete(null);
 
           //PRE2
-          policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0)).whenComplete((aVoid2, throwable2) -> {
+          policyStore.setUserPolicy(mockProcessGroups.get(0), mockPolicies.get(0)).whenComplete((aVoid2, throwable2) -> {
             if (throwable2 == null) {
               //TEST2
-              policyStore.removePolicy(mockProcessGroups.get(0), mockPolicies.get(2).getAdministrator()).whenComplete((aVoid3, throwable3) -> {
+              policyStore.removeUserPolicy(mockProcessGroups.get(0), mockPolicies.get(2).getAdministrator()).whenComplete((aVoid3, throwable3) -> {
                 context.assertFalse(throwable3 == null);
-                context.assertFalse(policyStore.getAssociatedPolicy(mockProcessGroups.get(0)) == null);
+                context.assertFalse(policyStore.getUserPolicy(mockProcessGroups.get(0)) == null);
                 f2.complete(null);
 
                 //TEST3
-                policyStore.removePolicy(mockProcessGroups.get(1), mockPolicies.get(1).getAdministrator()).whenComplete((aVoid5, throwable5) -> {
+                policyStore.removeUserPolicy(mockProcessGroups.get(1), mockPolicies.get(1).getAdministrator()).whenComplete((aVoid5, throwable5) -> {
                   context.assertFalse(throwable5 == null);
-                  context.assertFalse(policyStore.getAssociatedPolicy(mockProcessGroups.get(0)) == null);
+                  context.assertFalse(policyStore.getUserPolicy(mockProcessGroups.get(0)) == null);
                   f3.complete(null);
                 });
               });
@@ -283,9 +283,9 @@ public class ZKWithCachePolicyStoreTest {
     final Async async = context.async();
 
     // PRE
-    CompletableFuture f1 = policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0));
-    CompletableFuture f2 = policyStore.setPolicy(mockProcessGroups.get(1), mockPolicies.get(1));
-    CompletableFuture f3 = policyStore.setPolicy(mockProcessGroups.get(2), mockPolicies.get(2));
+    CompletableFuture f1 = policyStore.setUserPolicy(mockProcessGroups.get(0), mockPolicies.get(0));
+    CompletableFuture f2 = policyStore.setUserPolicy(mockProcessGroups.get(1), mockPolicies.get(1));
+    CompletableFuture f3 = policyStore.setUserPolicy(mockProcessGroups.get(2), mockPolicies.get(2));
 
     CompletableFuture.allOf(f1, f2, f3).whenCompleteAsync((aVoid, throwable) -> {
       ZKWithCachePolicyStore anotherPolicyStore = new ZKWithCachePolicyStore(curatorClient, policyPath);
@@ -297,7 +297,7 @@ public class ZKWithCachePolicyStoreTest {
       }
       int processGroupNum = 0;
       for (PolicyDetails expectedPolicy : mockPolicies) {
-        context.assertTrue(anotherPolicyStore.getAssociatedPolicy(mockProcessGroups.get(processGroupNum++)).equals(expectedPolicy));
+        context.assertTrue(anotherPolicyStore.getUserPolicy(mockProcessGroups.get(processGroupNum++)).equals(expectedPolicy));
       }
       async.complete();
     });

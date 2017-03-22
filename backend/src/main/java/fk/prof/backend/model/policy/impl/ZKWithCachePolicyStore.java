@@ -43,26 +43,26 @@ public class ZKWithCachePolicyStore implements PolicyStore {
   }
 
   @Override
-  public Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId) {
+  public Map<String, Map<String, Map<String, PolicyDetails>>> getUserPolicies(String appId) {
     if (appId == null) return new HashMap<>();
     return cachedPolicies.get(appId);
   }
 
   @Override
-  public Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId, String clusterId) {
+  public Map<String, Map<String, Map<String, PolicyDetails>>> getUserPolicies(String appId, String clusterId) {
     if (appId == null || clusterId == null) return new HashMap<>();
     return cachedPolicies.get(appId, clusterId);
   }
 
   @Override
-  public Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId, String clusterId, String process) {
+  public Map<String, Map<String, Map<String, PolicyDetails>>> getUserPolicies(String appId, String clusterId, String process) {
     if (appId == null || clusterId == null || process == null) return new HashMap<>();
     return cachedPolicies.get(appId, clusterId, process);
   }
 
   @Override
-  public PolicyDetails getAssociatedPolicy(Recorder.ProcessGroup processGroup) {
-    Map<String, Map<String, Map<String, PolicyDetails>>> policies = getAssociatedPolicies(processGroup.getAppId(), processGroup.getCluster(), processGroup.getProcName());
+  public PolicyDetails getUserPolicy(Recorder.ProcessGroup processGroup) {
+    Map<String, Map<String, Map<String, PolicyDetails>>> policies = getUserPolicies(processGroup.getAppId(), processGroup.getCluster(), processGroup.getProcName());
     if (!policies.isEmpty()) {
       return policies.get(processGroup.getAppId()).get(processGroup.getCluster()).get(processGroup.getProcName());
     }
@@ -70,7 +70,7 @@ public class ZKWithCachePolicyStore implements PolicyStore {
   }
 
   @Override
-  public CompletableFuture<Void> setPolicy(Recorder.ProcessGroup processGroup, PolicyDetails policyDetails) {
+  public CompletableFuture<Void> setUserPolicy(Recorder.ProcessGroup processGroup, PolicyDetails policyDetails) {
     //TODO: Add proper checks for policyDetails
     CompletableFuture<Void> future;
     if (policyDetails == null) {
@@ -79,7 +79,7 @@ public class ZKWithCachePolicyStore implements PolicyStore {
       return future;
     }
     String zNodePath = policyPath + DELIMITER + encode(processGroup.getAppId()) + DELIMITER + encode(processGroup.getCluster()) + DELIMITER + encode(processGroup.getProcName());
-    if (getAssociatedPolicy(processGroup) == null) {
+    if (getUserPolicy(processGroup) == null) {
       future = ZookeeperUtil.writeZNodeAsync(curatorClient, zNodePath, policyDetails.toByteArray(), true).whenComplete((result, ex) -> {
         if (ex == null) {
           cachedPolicies.put(processGroup, policyDetails);
@@ -96,7 +96,7 @@ public class ZKWithCachePolicyStore implements PolicyStore {
   }
 
   @Override
-  public CompletableFuture<Void> removePolicy(Recorder.ProcessGroup processGroup, String admin) {
+  public CompletableFuture<Void> removeUserPolicy(Recorder.ProcessGroup processGroup, String admin) {
     //TODO: Add logic for proper verification of the admin
     CompletableFuture<Void> future;
     if (admin == null || admin.isEmpty()) {
@@ -105,8 +105,8 @@ public class ZKWithCachePolicyStore implements PolicyStore {
       return future;
     }
     String zNodePath = policyPath + DELIMITER + encode(processGroup.getAppId()) + DELIMITER + encode(processGroup.getCluster()) + DELIMITER + encode(processGroup.getProcName());
-    if (getAssociatedPolicy(processGroup) != null) {
-      if (getAssociatedPolicy(processGroup).getAdministrator().equals(admin)) {
+    if (getUserPolicy(processGroup) != null) {
+      if (getUserPolicy(processGroup).getAdministrator().equals(admin)) {
         future = ZookeeperUtil.deleteZNodeAsync(curatorClient, zNodePath).whenComplete((result, ex) -> {
           if (ex == null) {
             cachedPolicies.remove(processGroup);

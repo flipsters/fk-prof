@@ -12,17 +12,17 @@ import java.util.concurrent.CompletableFuture;
  * Created by rohit.patiyal on 07/03/17.
  */
 public interface PolicyStore {
-  PolicyDetails getAssociatedPolicy(Recorder.ProcessGroup processGroup);
+  PolicyDetails getUserPolicy(Recorder.ProcessGroup processGroup);
 
-  Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId);
+  Map<String, Map<String, Map<String, PolicyDetails>>> getUserPolicies(String appId);
 
-  Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId, String clusterId);
+  Map<String, Map<String, Map<String, PolicyDetails>>> getUserPolicies(String appId, String clusterId);
 
-  Map<String, Map<String, Map<String, PolicyDetails>>> getAssociatedPolicies(String appId, String clusterId, String process);
+  Map<String, Map<String, Map<String, PolicyDetails>>> getUserPolicies(String appId, String clusterId, String process);
 
-  CompletableFuture<Void> setPolicy(Recorder.ProcessGroup processGroup, PolicyDetails policyDetails);
+  CompletableFuture<Void> setUserPolicy(Recorder.ProcessGroup processGroup, PolicyDetails policyDetails);
 
-  CompletableFuture<Void> removePolicy(Recorder.ProcessGroup processGroup, String admin);
+  CompletableFuture<Void> removeUserPolicy(Recorder.ProcessGroup processGroup, String admin);
 
   BackendDTO.RecordingPolicy getRecordingPolicy(Recorder.ProcessGroup processGroup);
 

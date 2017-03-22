@@ -159,14 +159,14 @@ public class LeaderHttpVerticle extends AbstractVerticle {
 
   private void handleGetPoliciesGivenAppId(RoutingContext context) {
     final String appId = context.request().getParam("appId");
-    String response = Json.encode(PolicyApiResponse.getNewInstance(policyStore.getAssociatedPolicies(appId)));
+    String response = Json.encode(PolicyApiResponse.getNewInstance(policyStore.getUserPolicies(appId)));
     context.response().putHeader("content-type", "application/json").end(response);
   }
 
   private void handleGetPoliciesGivenAppIdClusterId(RoutingContext context) {
     final String appId = context.request().getParam("appId");
     final String clusterId = context.request().getParam("clusterId");
-    String response = Json.encode(PolicyApiResponse.getNewInstance(policyStore.getAssociatedPolicies(appId, clusterId)));
+    String response = Json.encode(PolicyApiResponse.getNewInstance(policyStore.getUserPolicies(appId, clusterId)));
     context.response().putHeader("content-type", "application/json").end(response);
   }
 
@@ -174,7 +174,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     final String appId = context.request().getParam("appId");
     final String clusterId = context.request().getParam("clusterId");
     final String process = context.request().getParam("process");
-    String response = Json.encode(PolicyApiResponse.getNewInstance(policyStore.getAssociatedPolicies(appId, clusterId, process)));
+    String response = Json.encode(PolicyApiResponse.getNewInstance(policyStore.getUserPolicies(appId, clusterId, process)));
     context.response().putHeader("content-type", "application/json").end(response);
   }
 
@@ -185,7 +185,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     try {
       Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).setProcName(process).build();
       PolicyDetails policyDetails = PolicyDetails.parseFrom(context.getBody().getBytes());
-      policyStore.setPolicy(processGroup, policyDetails).whenComplete((aVoid, throwable) -> {
+      policyStore.setUserPolicy(processGroup, policyDetails).whenComplete((aVoid, throwable) -> {
         if (throwable == null) {
           context.response().setStatusCode(200).end();
         } else {
@@ -206,7 +206,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     try {
       Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).setProcName(process).build();
       String admin = context.getBodyAsJson().getString("administrator");
-      policyStore.removePolicy(processGroup, admin).whenComplete((aVoid, throwable) -> {
+      policyStore.removeUserPolicy(processGroup, admin).whenComplete((aVoid, throwable) -> {
         if (throwable == null) {
           context.response().setStatusCode(200).end();
         } else {
