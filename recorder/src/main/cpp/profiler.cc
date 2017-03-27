@@ -3,103 +3,62 @@
 ASGCTType Asgct::asgct_;
 IsGCActiveType Asgct::is_gc_active_;
 
-TRACE_DEFINE_BEGIN(Profiler, kTraceProfilerTotal)
-    TRACE_DEFINE("start failed")
-    TRACE_DEFINE("start succeeded")
-    TRACE_DEFINE("set sampling interval failed")
-    TRACE_DEFINE("set sampling interval succeeded")
-    TRACE_DEFINE("set stack frames to capture failed")
-    TRACE_DEFINE("set stack frames to capture succeeded")
-    TRACE_DEFINE("set new file failed")
-    TRACE_DEFINE("set new file succeeded")
-    TRACE_DEFINE("stop failed")
-    TRACE_DEFINE("stop succeeded")
-TRACE_DEFINE_END(Profiler, kTraceProfilerTotal);
-
-
-bool Profiler::lookup_frame_information(const JVMPI_CallFrame &frame, jvmtiEnv *jvmti, MethodListener &logWriter) {
-    jint error;
-    JvmtiScopedPtr<char> methodName(jvmti);
-
-    error = jvmti->GetMethodName(frame.method_id, methodName.GetRef(), NULL, NULL);
-    if (error != JVMTI_ERROR_NONE) {
-        methodName.AbandonBecauseOfError();
-        if (error == JVMTI_ERROR_INVALID_METHODID) {
-            static int once = 0;
-            if (!once) {
-                once = 1;
-                logError("One of your monitoring interfaces "
-                         "is having trouble resolving its stack traces.  "
-                         "GetMethodName on a jmethodID involved in a stacktrace "
-                         "resulted in an INVALID_METHODID error which usually "
-                         "indicates its declaring class has been unloaded.\n");
-                logError("Unexpected JVMTI error %d in GetMethodName\n", error);
-            }
-        }
-        return false;
-    }
-
-    // Get class name, put it in signature_ptr
-    jclass declaring_class;
-    JVMTI_ERROR_RET(
-        jvmti->GetMethodDeclaringClass(frame.method_id, &declaring_class), false);
-
-    JvmtiScopedPtr<char> signature_ptr2(jvmti);
-    JVMTI_ERROR_CLEANUP_RET(
-        jvmti->GetClassSignature(declaring_class, signature_ptr2.GetRef(), NULL),
-        false, signature_ptr2.AbandonBecauseOfError());
-
-    // Get source file, put it in source_name_ptr
-    char *fileName;
-    JvmtiScopedPtr<char> source_name_ptr(jvmti);
-    static char file_unknown[] = "UnknownFile";
-    if (JVMTI_ERROR_NONE !=
-            jvmti->GetSourceFileName(declaring_class, source_name_ptr.GetRef())) {
-        source_name_ptr.AbandonBecauseOfError();
-        fileName = file_unknown;
-    } else {
-        fileName = source_name_ptr.Get();
-    }
-
-    logWriter.recordNewMethod((method_id) frame.method_id, fileName,
-                              signature_ptr2.Get(), methodName.Get());
-
-    return true;
-}
-
 static void handle_profiling_signal(int signum, siginfo_t *info, void *context) {
-    if (GlobalCtx::recording.on.load(std::memory_order_acquire)) {
-        GlobalCtx::recording.profiler->handle(signum, info, context);
-    } else {
+    std::shared_ptr<Profiler> cpu_profiler = GlobalCtx::recording.cpu_profiler;
+    if (cpu_profiler.get() == nullptr) {
         logger->warn("Received profiling signal while recording is off! Something wrong?");
+    } else {
+        cpu_profiler->handle(signum, info, context);
     }
 }
 
 void Profiler::handle(int signum, siginfo_t *info, void *context) {
     IMPLICITLY_USE(signum);//TODO: make this reenterant or implement try_lock+backoff
-    IMPLICITLY_USE(info);
+    IMPLICITLY_USE(info);//TODO: put a timer here after perf-tuning medida heavily, we'd dearly love a timer here, but the overhead makes it a no-go as of now.
+    s_c_cpu_samp_total.inc();
+    JNIEnv *jniEnv = getJNIEnv(jvm);
+    ThreadBucket *thread_info = nullptr;
+    PerfCtx::ThreadTracker* ctx_tracker = nullptr;
+    auto current_sampling_attempt = sampling_attempts.fetch_add(1, std::memory_order_relaxed);
+    if (jniEnv != nullptr) {
+        thread_info = thread_map.get(jniEnv);
+        bool do_record = true;
+        if (thread_info != nullptr) {//TODO: increment a counter here to monitor freq of this, it could be GC thd or compiler-broker etc
+            ctx_tracker = &(thread_info->ctx_tracker);
+            do_record = ctx_tracker->in_ctx() ? ctx_tracker->should_record() : prob_pct.on(current_sampling_attempt, noctx_cov_pct);
+        }
+        if (! do_record) {
+            SPDLOG_DEBUG(logger, "Ignoring the sampling opportunity");
+            return;
+        }
+    }
     SimpleSpinLockGuard<false> guard(ongoing_conf); // sync buffer
-    ThreadBucket *threadInfo;
 
     // sample data structure
     STATIC_ARRAY(frames, JVMPI_CallFrame, capture_stack_depth(), MAX_FRAMES_TO_CAPTURE);
 
     JVMPI_CallTrace trace;
     trace.frames = frames;
-    JNIEnv *jniEnv = getJNIEnv(jvm);
+    
     if (jniEnv == NULL) {
         IsGCActiveType is_gc_active = Asgct::GetIsGCActive();
-        trace.num_frames = ((is_gc_active != NULL) &&
-                            ((*is_gc_active)() == 1)) ? -2 : -3; // ticks_unknown_not_Java or GC
-        threadInfo = nullptr;
+        if ((is_gc_active != NULL) && ((*is_gc_active)() == 1)) {
+            trace.num_frames = -2;
+            s_c_cpu_samp_gc.inc();
+        } else {
+            trace.num_frames = -3;// ticks_unknown_not_Java or GC
+            s_c_cpu_samp_err_no_jni.inc();
+        }
     } else {
         trace.env_id = jniEnv;
         ASGCTType asgct = Asgct::GetAsgct();
         (*asgct)(&trace, capture_stack_depth(), context);
-        threadInfo = thread_map.get(jniEnv);
+        if (trace.num_frames <= 0) {
+            s_c_cpu_samp_err_unexpected.inc();
+        }
     }
     // log all samples, failures included, let the post processing sift through the data
-    buffer->push(trace, threadInfo);
+    buffer->push(trace, thread_info);
 }
 
 bool Profiler::start(JNIEnv *jniEnv) {
@@ -107,12 +66,10 @@ bool Profiler::start(JNIEnv *jniEnv) {
     /* within critical section */
 
     if (__is_running()) {
-        TRACE(Profiler, kTraceProfilerStartFailed);
         logError("WARN: Start called but sampling is already running\n");
         return true;
     }
 
-    TRACE(Profiler, kTraceProfilerStartOk);
 
     // reference back to Profiler::handle on the singleton
     // instance of Profiler
@@ -127,7 +84,6 @@ void Profiler::stop() {
     SimpleSpinLockGuard<true> guard(ongoing_conf);
 
     if (!__is_running()) {
-        TRACE(Profiler, kTraceProfilerStopFailed);
         return;
     }
 
@@ -143,26 +99,42 @@ bool Profiler::__is_running() {
 void Profiler::set_sampling_freq(std::uint32_t sampling_freq) {
     auto mean_sampling_itvl = 1000000 / sampling_freq;
     std::uint32_t itvl_10_pct = 0.1 * mean_sampling_itvl;
-    auto itvl_max = mean_sampling_itvl + itvl_10_pct;
-    auto itvl_min = mean_sampling_itvl - itvl_10_pct;
+    itvl_max = mean_sampling_itvl + itvl_10_pct;
+    itvl_min = mean_sampling_itvl - itvl_10_pct;
     itvl_min = itvl_min > 0 ? itvl_min : DEFAULT_SAMPLING_INTERVAL;
     itvl_max = itvl_max > 0 ? itvl_max : DEFAULT_SAMPLING_INTERVAL;
     logger->warn("Chose CPU sampling interval range [{0:06d}, {1:06d}) for requested sampling freq {2:d} Hz", itvl_min, itvl_max, sampling_freq);
 }
 
-void Profiler::set_max_stack_depth(int max_stack_depth) {
-    max_stack_depth = (max_stack_depth > 0 && max_stack_depth < (MAX_FRAMES_TO_CAPTURE - 1)) ?
-        max_stack_depth : DEFAULT_MAX_FRAMES_TO_CAPTURE;
+std::uint32_t Profiler::calculate_max_stack_depth(std::uint32_t _max_stack_depth) {
+    return (_max_stack_depth > 0 && _max_stack_depth < (MAX_FRAMES_TO_CAPTURE - 1)) ? _max_stack_depth : DEFAULT_MAX_FRAMES_TO_CAPTURE;
 }
 
 void Profiler::configure() {
-    serializer = new ProfileSerializer(writer);
+    serializer = new ProfileSerializingWriter(jvmti, *writer.get(), SiteResolver::method_info, SiteResolver::line_no, *GlobalCtx::ctx_reg, sft, tts, noctx_cov_pct);
     
     buffer = new CircularQueue(*serializer, capture_stack_depth());
 
     handler = new SignalHandler(itvl_min, itvl_max);
     int processor_interval = Size * itvl_min / 1000 / 2;
+    logger->debug("CpuSamplingProfiler is using processor-interval value: {}", processor_interval);
     processor = new Processor(jvmti, *buffer, *handler, processor_interval > 0 ? processor_interval : 1);
+}
+
+#define METRIC_TYPE "cpu_samples"
+
+Profiler::Profiler(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap &_thread_map, std::shared_ptr<ProfileWriter> _writer, std::uint32_t _max_stack_depth, std::uint32_t _sampling_freq, ProbPct& _prob_pct, std::uint8_t _noctx_cov_pct)
+    : jvm(_jvm), jvmti(_jvmti), thread_map(_thread_map), max_stack_depth(calculate_max_stack_depth(_max_stack_depth)), writer(_writer),
+      tts(max_stack_depth), ongoing_conf(false), prob_pct(_prob_pct), sampling_attempts(0), noctx_cov_pct(_noctx_cov_pct),
+
+      s_c_cpu_samp_total(GlobalCtx::metrics_registry->new_counter({METRICS_DOMAIN, METRIC_TYPE, "opportunities"})),
+
+      s_c_cpu_samp_err_no_jni(GlobalCtx::metrics_registry->new_counter({METRICS_DOMAIN, METRIC_TYPE, "err_no_jni"})),
+      s_c_cpu_samp_err_unexpected(GlobalCtx::metrics_registry->new_counter({METRICS_DOMAIN, METRIC_TYPE, "err_unexpected"})),
+      s_c_cpu_samp_gc(GlobalCtx::metrics_registry->new_counter({METRICS_DOMAIN, METRIC_TYPE, "err_in_gc"})) {
+
+    set_sampling_freq(_sampling_freq);
+    configure();
 }
 
 Profiler::~Profiler() {

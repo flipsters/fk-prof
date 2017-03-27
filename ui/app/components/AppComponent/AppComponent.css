@@ -1,0 +1,21 @@
+.label {
+  color: #666;
+  padding: 6px;
+}
+
+.date-time {
+  input {
+    width: 100%;
+    border-radius: 5px;
+    height: 34px;
+    border: 1px solid #ccc;
+    padding: 0px 10px;
+    box-sizing: border-box;
+  }
+}
+
+.ingrained {
+  color: #ADADAD;
+  text-align: center;
+  margin: 30px;
+}

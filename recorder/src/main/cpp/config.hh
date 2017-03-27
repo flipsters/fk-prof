@@ -1,6 +1,11 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#ifdef IN_TEST
+char *safe_copy_string(const char *value, const char *next);
+void safe_free_string(char *&value);
+#endif
+
 #include <cstdint>
 #include "globals.hh"
 
@@ -11,7 +16,9 @@ static const std::uint32_t DEFAULT_MAX_RETRIES = 3;
 static const std::uint32_t MIN_BACKOFF_START = 5;
 static const std::uint32_t DEFAULT_BACKOFF_MAX = 10 * 60;
 static const std::uint32_t DEFAULT_POLLING_INTERVAL = 60;
-    
+
+static const std::uint32_t DEFAULT_METRICS_DEST_PORT = 11514;
+
 struct ConfigurationOptions {
     char* service_endpoint;
     
@@ -34,6 +41,9 @@ struct ConfigurationOptions {
     std::uint32_t poll_itvl;
     
     spdlog::level::level_enum log_level;
+    std::uint16_t metrics_dst_port;
+
+    std::uint8_t noctx_cov_pct;
 
     ConfigurationOptions(const char* options) :
         service_endpoint(nullptr),
@@ -48,7 +58,8 @@ struct ConfigurationOptions {
         inst_typ(nullptr),
         backoff_start(MIN_BACKOFF_START), backoff_multiplier(DEFAULT_BACKOFF_MULTIPLIER), backoff_max(DEFAULT_BACKOFF_MAX), max_retries(DEFAULT_MAX_RETRIES),
         poll_itvl(DEFAULT_POLLING_INTERVAL),
-        log_level(spdlog::level::info) {
+        log_level(spdlog::level::info), metrics_dst_port(DEFAULT_METRICS_DEST_PORT),
+        noctx_cov_pct(0) {
         load(options);
     }
 

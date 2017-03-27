@@ -73,8 +73,8 @@ public class IOStreamTest {
         assertEquals(contentSize/partSize + 1, storage.writtenContent.size());
 
         // verify that we got the correct chunks
-        for(int i = 0; i < contentSize/partSize + 1; ++i) {
-            String contentPart = storage.writtenContent.get(fileName.getFileName(i + 1));
+        for(int i = 0; i < contentSize/partSize; ++i) {
+            String contentPart = storage.writtenContent.get(fileName.getFileName(i));
             assertNotNull(contentPart);
             assertEquals(content.substring(i * partSize, Math.min((i + 1) * partSize, contentSize)), contentPart);
         }
@@ -104,7 +104,7 @@ public class IOStreamTest {
         RuntimeException expectedEx = new ObjectNotFoundException("not found");
 
         // exception when getting 5th part
-        when(storage.fetch(fileName.getFileName(5))).thenThrow(expectedEx);
+        when(storage.fetch(fileName.getFileName(0))).thenThrow(expectedEx);
 
         byte[] bytes = new byte[contentSize];
         try {
@@ -113,6 +113,21 @@ public class IOStreamTest {
         } catch (IOException e) {
             assertEquals(FileNotFoundException.class, e.getClass());
         }
+    }
+
+    @Test
+    public void testInputStream_shouldNotThrowObjectNotFoundInCaseOfExtraBytesFetch() throws IOException {
+        // init the storage
+        initStorage();
+
+        // read some extra bytes. here 10 extra bytes
+        byte[] bytes = new byte[contentSize + 10];
+        int bytesRead = is.read(bytes);
+
+        assertEquals(contentSize, bytesRead);
+
+        bytesRead = is.read(bytes);
+        assertEquals(-1, bytesRead);
     }
 
     @Test
