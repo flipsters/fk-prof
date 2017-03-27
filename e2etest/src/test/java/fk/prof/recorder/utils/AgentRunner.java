@@ -21,6 +21,7 @@
  **/
 package fk.prof.recorder.utils;
 
+import com.amazonaws.util.StringUtils;
 import fk.prof.Platforms;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,7 @@ public class AgentRunner {
 
     private final String fqdn;
     private final String args;
+    private final String[] customCommand;
 
     private Process process;
     private int processId;
@@ -52,6 +54,13 @@ public class AgentRunner {
     public AgentRunner(final String fqdn, final String args) {
         this.fqdn = fqdn;
         this.args = args;
+        this.customCommand = null;
+    }
+
+    public AgentRunner(final String args, String[] command) {
+        this.fqdn = null;
+        this.args = args;
+        this.customCommand = command;
     }
 
     public static void run(final String className, final Consumer<AgentRunner> handler) throws IOException {
@@ -77,7 +86,15 @@ public class AgentRunner {
     }
 
     public void start() throws IOException {
-        startProcess();
+        if(fqdn == null && customCommand != null && customCommand.length > 0) {
+            startProcessWithCustomCommand();
+        }
+        else if(!StringUtils.isNullOrEmpty(fqdn) && customCommand == null) {
+            startProcess();
+        }
+        else {
+            throw new IllegalStateException("cannot start process as fqdn / command is invalid");
+        }
         //readProcessId();
     }
 
@@ -94,6 +111,25 @@ public class AgentRunner {
         populateEnvVars(pb);
         process = pb
                 .command("java", agentArg, "-cp", String.join(":", classpath), fqdn)
+                .redirectError(new File("/tmp/fkprof_stderr.log"))
+                .redirectOutput(new File("/tmp/fkprof_stdout.log"))
+                .start();
+    }
+
+    private void startProcessWithCustomCommand() throws IOException {
+        String java = System.getProperty("java.home") + "/bin/java";
+        String agentArg = "-agentpath:../recorder/build/libfkpagent" + Platforms.getDynamicLibraryExtension() + (args != null ? "=" + args : "");
+
+        ProcessBuilder pb = new ProcessBuilder();
+        populateEnvVars(pb);
+
+        String[] command = new String[customCommand.length + 2];
+        command[0] = "java";
+        command[1] = agentArg;
+        System.arraycopy(customCommand, 0, command, 2, customCommand.length);
+
+        process = pb
+                .command(command)
                 .redirectError(new File("/tmp/fkprof_stderr.log"))
                 .redirectOutput(new File("/tmp/fkprof_stdout.log"))
                 .start();

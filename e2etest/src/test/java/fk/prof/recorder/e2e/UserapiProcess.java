@@ -22,12 +22,22 @@ public class UserapiProcess {
 
     Path confPath;
     Process process;
+    String[] command;
 
     public UserapiProcess(Path confPath) {
         this.confPath = confPath;
+        buildCommand();
     }
 
     public void start() throws IOException {
+        process = new ProcessBuilder()
+                .command(command)
+                .redirectError(new File("/tmp/fkprof_userapi_stderr.log"))
+                .redirectOutput(new File("/tmp/fkprof_userapi_stdout.log"))
+                .start();
+    }
+
+    private void buildCommand() {
         String java = System.getProperty("java.home") + "/bin/java";
 
         Mutable<Boolean> isFatJar = new MutableBoolean();
@@ -35,7 +45,6 @@ public class UserapiProcess {
         String dir = "../userapi/target/";
         Path jarFile = FileResolver.jarFile("userapi", dir, "userapi-.*.jar", isFatJar);
 
-        String[] command;
         if(isFatJar.getValue()) {
             command = new String[] {java, "-jar", jarFile.toAbsolutePath().toString(), "--conf", confPath.toString()};
         }
@@ -43,12 +52,6 @@ public class UserapiProcess {
             List<String> classpath = Arrays.asList(jarFile.toAbsolutePath().toString(), dir + "lib/*");
             command = new String[] {java, "-cp", String.join(":", classpath), "io.vertx.core.Launcher", "--conf", confPath.toString()};
         }
-
-        process = new ProcessBuilder()
-                .command(command)
-                .redirectError(new File("/tmp/fkprof_userapi_stderr.log"))
-                .redirectOutput(new File("/tmp/fkprof_userapi_stdout.log"))
-                .start();
     }
 
     public void stop() {
@@ -58,5 +61,11 @@ public class UserapiProcess {
         } catch (InterruptedException e) {
             logger.info(e.getMessage(), e);
         }
+    }
+
+    public String[] getCommand() {
+        String[] javaParams = new String[command.length - 1];
+        System.arraycopy(command, 1, javaParams, 0, javaParams.length);
+        return javaParams;
     }
 }

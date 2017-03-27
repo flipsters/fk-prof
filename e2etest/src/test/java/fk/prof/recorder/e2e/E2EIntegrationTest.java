@@ -400,6 +400,34 @@ public class E2EIntegrationTest {
         }
     }
 
+    @Test(timeout = 5 * 60 * 1_000)
+    public void testE2EFlowWithUserapiOnRecorder() throws Exception {
+        // start all components
+        UserapiProcess userapiProcess = new UserapiProcess(FileResolver.resourceFile("/conf/userapi_1.json"));
+        BackendProcess leader = new BackendProcess(FileResolver.resourceFile("/conf/backend_1.json"));
+        BackendProcess backend = new BackendProcess(FileResolver.resourceFile("/conf/backend_2.json"));
+
+        String[] command = userapiProcess.getCommand();
+
+        AgentRunner recorder = new AgentRunner(argsMaptoStr(getRecorderArgs(1, 1)), command);
+
+        backends = new BackendProcess[]{leader, backend};
+        recorders = new AgentRunner[]{recorder};
+
+        leader.start();
+        waitForOpenPort("127.0.0.1", 2496);
+
+        backend.start();
+        waitForOpenPort("127.0.0.1", 2492);
+
+        recorder.start();
+        waitForOpenPort("127.0.0.1", 8082);
+
+        System.out.println("All components started, now waiting");
+
+        Thread.sleep(Integer.MAX_VALUE);
+    }
+
     private static void ensureS3BaseBucket() throws Exception {
         // init a bucket, if not present
         if(!client.listBuckets().stream().anyMatch(b -> b.getName().equals(baseS3Bucket))) {

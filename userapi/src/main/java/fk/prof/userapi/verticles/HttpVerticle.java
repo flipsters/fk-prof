@@ -1,5 +1,6 @@
 package fk.prof.userapi.verticles;
 
+import fk.prof.PerfCtx;
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
 import fk.prof.aggregation.proto.AggregatedProfileModel;
 import fk.prof.storage.StreamTransformer;
@@ -32,6 +33,8 @@ public class HttpVerticle extends AbstractVerticle {
     public int aggregationWindowDurationInSecs = 1800;
 
     private ProfileStoreAPI profileStoreAPI;
+
+    private final PerfCtx encodeAndSetResponsePCtx = new PerfCtx("encode-set-response", 100);
 
     HttpVerticle(ProfileStoreAPI profileStoreAPI) {
         this.profileStoreAPI = profileStoreAPI;
@@ -204,41 +207,42 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     private <T> void setResponse(AsyncResult<T> result, RoutingContext routingContext, boolean gzipped) {
-        if(routingContext.response().ended()) {
-            return;
-        }
-        if(result.failed()) {
-            if(result.cause() instanceof FileNotFoundException) {
-                routingContext.response().setStatusCode(404).end(result.cause().getMessage());
+        encodeAndSetResponsePCtx.begin();
+        try {
+            if (routingContext.response().ended()) {
+                return;
             }
-            else if(result.cause() instanceof IllegalArgumentException) {
-                routingContext.response().setStatusCode(400).end(result.cause().getMessage());
-            }
-            else {
-                routingContext.response().setStatusCode(500).end(result.cause().getMessage());
-            }
-        }
-        else {
-            String encodedResponse = Json.encode(result.result());
-            HttpServerResponse response = routingContext.response();
-
-            response.putHeader("content-type", "application/json");
-            if(gzipped && safeContains(routingContext.request().getHeader("Accept-Encoding"), "gzip")) {
-                Buffer compressedBuf;
-                try {
-                    compressedBuf = Buffer.buffer(StreamTransformer.compress(encodedResponse.getBytes(Charset.forName("utf-8"))));
+            if (result.failed()) {
+                if (result.cause() instanceof FileNotFoundException) {
+                    routingContext.response().setStatusCode(404).end(result.cause().getMessage());
+                } else if (result.cause() instanceof IllegalArgumentException) {
+                    routingContext.response().setStatusCode(400).end(result.cause().getMessage());
+                } else {
+                    routingContext.response().setStatusCode(500).end(result.cause().getMessage());
                 }
-                catch(IOException e) {
-                    setResponse(Future.failedFuture(e), routingContext, false);
-                    return;
-                }
+            } else {
+                String encodedResponse = Json.encode(result.result());
+                HttpServerResponse response = routingContext.response();
 
-                response.putHeader("Content-Encoding", "gzip");
-                response.end(compressedBuf);
+                response.putHeader("content-type", "application/json");
+                if (gzipped && safeContains(routingContext.request().getHeader("Accept-Encoding"), "gzip")) {
+                    Buffer compressedBuf;
+                    try {
+                        compressedBuf = Buffer.buffer(StreamTransformer.compress(encodedResponse.getBytes(Charset.forName("utf-8"))));
+                    } catch (IOException e) {
+                        setResponse(Future.failedFuture(e), routingContext, false);
+                        return;
+                    }
+
+                    response.putHeader("Content-Encoding", "gzip");
+                    response.end(compressedBuf);
+                } else {
+                    response.end(encodedResponse);
+                }
             }
-            else {
-                response.end(encodedResponse);
-            }
+        }
+        finally {
+            encodeAndSetResponsePCtx.end();
         }
     }
 

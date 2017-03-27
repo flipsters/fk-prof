@@ -17,6 +17,13 @@ public class PolicyStore {
   }
 
   public BackendDTO.RecordingPolicy get(Recorder.ProcessGroup processGroup) {
-    return this.store.get(processGroup);
+    // default policy
+    BackendDTO.RecordingPolicy policy = BackendDTO.RecordingPolicy.newBuilder()
+            .setCoveragePct(100)
+            .setDescription("cpu sampling")
+            .setDuration(30)
+            .addWork(BackendDTO.Work.newBuilder().setWType(BackendDTO.WorkType.cpu_sample_work).setCpuSample(BackendDTO.CpuSampleWork.newBuilder().setFrequency(50).setMaxFrames(128)))
+            .build();
+    return policy;
   }
 }

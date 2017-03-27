@@ -4,6 +4,7 @@ package fk.prof.userapi.api;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.io.BaseEncoding;
+import fk.prof.PerfCtx;
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
 import fk.prof.storage.AsyncStorage;
 import fk.prof.userapi.model.AggregatedProfileInfo;
@@ -45,6 +46,8 @@ public class ProfileStoreAPIImpl implements ProfileStoreAPI {
 
     private Cache<String, AggregatedProfileInfo> cache;
     private Cache<String, AggregationWindowSummary> summaryCache;
+
+    private final PerfCtx parseFilePCtx = new PerfCtx("load-file-parse", 100);
 
     /* stores all requested futures that are waiting on file to be loaded from S3. If a file loadFromInputStream
     * is in progress, this map will contain its corresponding key */
@@ -141,7 +144,15 @@ public class ProfileStoreAPIImpl implements ProfileStoreAPI {
             vertx.setTimer(loadTimeout, timerId -> timeoutRequestedFuture(fileNameKey, future));
 
             if(!fileLoadInProgress) {
-                workerExecutor.executeBlocking((Future<AggregatedProfileInfo> f) -> profileLoader.load(f, filename),
+                workerExecutor.executeBlocking((Future<AggregatedProfileInfo> f) -> {
+                            parseFilePCtx.begin();
+                            try {
+                                profileLoader.load(f, filename);
+                            }
+                            finally {
+                                parseFilePCtx.end();
+                            }
+                        },
                         true,
                         result -> completeAggregatedProfileLoading(cache, result, fileNameKey));
             }
@@ -170,7 +181,15 @@ public class ProfileStoreAPIImpl implements ProfileStoreAPI {
             vertx.setTimer(loadTimeout, timerId -> timeoutRequestedFuture(fileNameKey, future));
 
             if(!fileLoadInProgress) {
-                workerExecutor.executeBlocking((Future<AggregationWindowSummary> f) -> profileLoader.loadSummary(f, filename),
+                workerExecutor.executeBlocking((Future<AggregationWindowSummary> f) -> {
+                            parseFilePCtx.begin();
+                            try {
+                                profileLoader.loadSummary(f, filename);
+                            }
+                            finally {
+                                parseFilePCtx.end();
+                            }
+                        },
                         true,
                         result -> completeAggregatedProfileLoading(summaryCache, result, fileNameKey));
             }
@@ -202,7 +221,8 @@ public class ProfileStoreAPIImpl implements ProfileStoreAPI {
 
     synchronized private <T> void completeAggregatedProfileLoading(Cache<String, T> cache, AsyncResult<T> result, String filename) {
         if(result.succeeded()) {
-            cache.put(filename, result.result());
+            // disabling this for test
+//            cache.put(filename, result.result());
         }
 
         // complete all dependent futures
