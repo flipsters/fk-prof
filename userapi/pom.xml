@@ -78,31 +78,19 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>2.3</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <configuration>
-              <transformers>
-                <transformer
-                    implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <manifestEntries>
-                    <Main-Class>io.vertx.core.Launcher</Main-Class>
-                    <Main-Verticle>fk.prof.userapi.verticles.MainVerticle</Main-Verticle>
-                  </manifestEntries>
-                </transformer>
-              </transformers>
-              <artifactSet/>
-              <outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar
-              </outputFile>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifest>
+              <addClasspath>true</addClasspath>
+            </manifest>
+            <manifestEntries>
+              <Main-Class>io.vertx.core.Launcher</Main-Class>
+              <Main-Verticle>fk.prof.userapi.verticles.MainVerticle</Main-Verticle>
+            </manifestEntries>
+          </archive>
+        </configuration>
+        </plugin>
     </plugins>
   </build>
 </project>
