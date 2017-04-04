@@ -34,7 +34,7 @@ public class JsonGenerator {
     private void genFields(Map<String, Object> map, int size, int idx, float objProb, float arrayProb) {
 
         if(idx < size) {
-            map.put(randomString(32), genRndmObject(size - 1, objProb, arrayProb));
+            map.put(randomString(32), genRndmObject(size / 2, objProb, arrayProb));
             genFields(map, size, idx + 1, objProb, arrayProb);
         }
         return;
@@ -48,14 +48,14 @@ public class JsonGenerator {
         else if(rndFloat < arrayProb + objProb) {
             List<Object> list = new ArrayList<>();
             for(int i = 0; i < size; ++i) {
-                list.add(genRndmObject(size - 1, objProb, arrayProb));
+                list.add(genRndmObject(size / 2, objProb, arrayProb));
             }
             return list;
         }
         else {
             int rndmInt = rnd.nextInt(2);
             if(rndmInt == 0) {
-                return randomString(128);
+                return randomString(32);
             }
             else {
                 return ZonedDateTime.now(Clock.systemUTC());

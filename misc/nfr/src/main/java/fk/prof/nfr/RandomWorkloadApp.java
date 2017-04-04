@@ -20,11 +20,12 @@ public class RandomWorkloadApp {
 
     public static void main(String[] args) throws Exception {
 
-        if(args.length < 1) {
+        if(args.length < 2) {
             System.err.println("too few params");
             return;
         }
         int jsonSerDeThrdCount = Integer.parseInt(args[0]);
+        int multiplicationThrdCount = Integer.parseInt(args[1]);
 
         om.registerModule(new Jdk8Module());
         om.registerModule(new JavaTimeModule());
@@ -33,6 +34,7 @@ public class RandomWorkloadApp {
 
         // json workload
         startJsonSerDeWorkLoad(jsonSerDeThrdCount, execSvc);
+        startMultiplicationWorkLoad(multiplicationThrdCount, execSvc);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
@@ -55,7 +57,7 @@ public class RandomWorkloadApp {
         for(int i = 0; i < threadCount; ++i) {
             execSvc.submit(() -> {
                 while(true) {
-                    Map<String, Object> json = jsonGen.genJsonMap(6, 0.35f, 0.15f);
+                    Map<String, Object> json = jsonGen.genJsonMap(8, 0.35f, 0.15f);
                     try {
                         String str = om.writeValueAsString(json);
                         Map<String, Object> obj = om.readValue(str, Map.class);
@@ -66,6 +68,22 @@ public class RandomWorkloadApp {
                         }
                     } catch (Exception e) {
                         System.err.println("Error while ser/de using jackosn ObjectMapper: " + e.getMessage());
+                    }
+                }
+            });
+        }
+    }
+
+    private static void startMultiplicationWorkLoad(int threadCount, ExecutorService execSvc) {
+        for(int i = 0; i < threadCount; ++i) {
+            execSvc.submit(() -> {
+                MatrixMultiplicationLoad matMul = new MatrixMultiplicationLoad(64);
+                matMul.reset();
+                while(true) {
+                    matMul.multiply();
+
+                    if (Thread.currentThread().isInterrupted()) {
+                        return;
                     }
                 }
             });
