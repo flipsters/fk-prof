@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>fk.prof</groupId>
     <artifactId>nfr</artifactId>
-    <packaging>pom</packaging>
+    <packaging>jar</packaging>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -54,8 +54,6 @@
             <version>${jackson.version}</version>
         </dependency>
     </dependencies>
-
-
 
     <build>
         <plugins>
