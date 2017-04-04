@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Created by gaurav.ashok on 03/04/17.
  */
-public class RandomWorkloadApp {
+public class LoadGenApp {
 
     public  static final ObjectMapper om = new ObjectMapper();
 
