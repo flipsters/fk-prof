@@ -15,11 +15,9 @@ import fk.prof.backend.model.assignment.ProcessGroupContextForPolling;
 import fk.prof.backend.model.assignment.ProcessGroupDiscoveryContext;
 import fk.prof.backend.model.election.LeaderReadContext;
 import fk.prof.backend.proto.BackendDTO;
-import fk.prof.backend.request.CompositeByteBufInputStream;
 import fk.prof.backend.request.profile.RecordedProfileProcessor;
 import fk.prof.backend.request.profile.impl.SharedMapBasedSingleProcessingOfProfileGate;
 import fk.prof.backend.model.aggregation.AggregationWindowDiscoveryContext;
-import fk.prof.backend.http.handler.RecordedProfileRequestHandler;
 import fk.prof.backend.util.ProtoUtil;
 import fk.prof.backend.util.proto.RecorderProtoUtil;
 import io.vertx.core.AbstractVerticle;
@@ -101,6 +99,8 @@ public class BackendHttpVerticle extends AbstractVerticle {
     HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.BACKEND_POST_POLL,
         BodyHandler.create().setBodyLimit(1024 * 100), this::handlePostPoll);
 
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_HEALTHCHECK, this::handleGetHealthCheck);
+
     return router;
   }
 
@@ -113,8 +113,8 @@ public class BackendHttpVerticle extends AbstractVerticle {
   }
 
   private void handlePostProfile(RoutingContext context) {
-    CompositeByteBufInputStream inputStream = new CompositeByteBufInputStream();
     RecordedProfileProcessor profileProcessor = new RecordedProfileProcessor(
+        context,
         aggregationWindowDiscoveryContext,
         new SharedMapBasedSingleProcessingOfProfileGate(workIdsInPipeline),
         config().getJsonObject("parser").getInteger("recordingheader.max.bytes", 1024),
@@ -122,16 +122,14 @@ public class BackendHttpVerticle extends AbstractVerticle {
 
     context.response().endHandler(v -> {
       try {
-        inputStream.close();
         profileProcessor.close();
       } catch (Exception ex) {
         logger.error("Unexpected error when closing profile: {}", ex, profileProcessor);
       }
     });
 
-    RecordedProfileRequestHandler requestHandler = new RecordedProfileRequestHandler(context, inputStream, profileProcessor);
     context.request()
-        .handler(requestHandler)
+        .handler(profileProcessor)
         .exceptionHandler(th -> {
           HttpFailure httpFailure = HttpFailure.failure(th);
           HttpHelper.handleFailure(context, httpFailure);
@@ -257,5 +255,11 @@ public class BackendHttpVerticle extends AbstractVerticle {
         HttpMethod.POST,
         leaderDetail.getHost(), leaderDetail.getPort(), ApiPathConstants.LEADER_POST_ASSOCIATION,
         payloadAsBuffer);
+  }
+
+  private void handleGetHealthCheck(RoutingContext routingContext) {
+    JsonObject response = new JsonObject();
+    response.put("leader", leaderReadContext.getLeader().getHost() + ":" + leaderReadContext.getLeader().getPort());
+    routingContext.response().setStatusCode(200).end(response.encode());
   }
 }

@@ -35,6 +35,10 @@ public class RecorderIdentifier {
         recorderInfo.getZone(), recorderInfo.getInstanceType());
   }
 
+  public String metricTag() {
+    return "rt." + this.ip + '_' + this.procName;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (o == this) {
