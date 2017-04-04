@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import fk.prof.ClosablePerfCtx;
+import fk.prof.PerfCtx;
 
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -17,6 +19,9 @@ import java.util.concurrent.atomic.AtomicLong;
 public class RandomWorkloadApp {
 
     public  static final ObjectMapper om = new ObjectMapper();
+
+    static PerfCtx serdeCtx = new PerfCtx("json-ser-de-ctx", 20);
+    static PerfCtx multiplyCtx = new PerfCtx("matrix-mult-ctx", 20);
 
     public static void main(String[] args) throws Exception {
 
@@ -32,8 +37,10 @@ public class RandomWorkloadApp {
         om.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         ExecutorService execSvc = Executors.newCachedThreadPool();
 
-        // json workload
+        // json ser/de workload
         startJsonSerDeWorkLoad(jsonSerDeThrdCount, execSvc);
+
+        // matrix multiplication
         startMultiplicationWorkLoad(multiplicationThrdCount, execSvc);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -56,18 +63,20 @@ public class RandomWorkloadApp {
 
         for(int i = 0; i < threadCount; ++i) {
             execSvc.submit(() -> {
-                while(true) {
-                    Map<String, Object> json = jsonGen.genJsonMap(8, 0.35f, 0.15f);
-                    try {
-                        String str = om.writeValueAsString(json);
-                        Map<String, Object> obj = om.readValue(str, Map.class);
-                        counter.addAndGet(obj.size());
+                try(ClosablePerfCtx ctx = serdeCtx.open()) {
+                    while (true) {
+                        try {
+                            Map<String, Object> json = jsonGen.genJsonMap(8, 0.35f, 0.15f);
+                            String str = om.writeValueAsString(json);
+                            Map<String, Object> obj = om.readValue(str, Map.class);
+                            counter.addAndGet(obj.size());
 
-                        if (Thread.currentThread().isInterrupted()) {
-                            return;
+                            if (Thread.currentThread().isInterrupted()) {
+                                return;
+                            }
+                        } catch (Exception e) {
+                            System.err.println("Error while ser/de using jackosn ObjectMapper: " + e.getMessage());
                         }
-                    } catch (Exception e) {
-                        System.err.println("Error while ser/de using jackosn ObjectMapper: " + e.getMessage());
                     }
                 }
             });
@@ -77,13 +86,15 @@ public class RandomWorkloadApp {
     private static void startMultiplicationWorkLoad(int threadCount, ExecutorService execSvc) {
         for(int i = 0; i < threadCount; ++i) {
             execSvc.submit(() -> {
-                MatrixMultiplicationLoad matMul = new MatrixMultiplicationLoad(64);
-                matMul.reset();
-                while(true) {
-                    matMul.multiply();
+                try(ClosablePerfCtx ctx = multiplyCtx.open()) {
+                    MatrixMultiplicationLoad matMul = new MatrixMultiplicationLoad(64);
+                    matMul.reset();
+                    while (true) {
+                        matMul.multiply();
 
-                    if (Thread.currentThread().isInterrupted()) {
-                        return;
+                        if (Thread.currentThread().isInterrupted()) {
+                            return;
+                        }
                     }
                 }
             });
