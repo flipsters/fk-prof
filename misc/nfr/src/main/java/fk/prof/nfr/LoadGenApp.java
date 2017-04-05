@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import fk.prof.ClosablePerfCtx;
+import fk.prof.MergeSemantics;
 import fk.prof.PerfCtx;
 
 import java.util.Map;
@@ -21,8 +22,7 @@ public class LoadGenApp {
     public  static final ObjectMapper om = new ObjectMapper();
 
     static PerfCtx serdeCtx = new PerfCtx("json-ser-de-ctx", 20);
-    static PerfCtx multiplyCtx = new PerfCtx("matrix-mult-ctx", 20);
-
+    static PerfCtx multiplyCtx = new PerfCtx("calculations-ctx", 20);
     public static void main(String[] args) throws Exception {
 
         if(args.length < 2) {

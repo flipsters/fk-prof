@@ -1,5 +1,8 @@
 package fk.prof.nfr;
 
+import fk.prof.ClosablePerfCtx;
+import fk.prof.MergeSemantics;
+import fk.prof.PerfCtx;
 import org.apache.commons.lang3.RandomStringUtils;
 
 import java.time.Clock;
@@ -12,18 +15,21 @@ import java.util.*;
 public class JsonGenerator {
 
     private static Random rnd;
+    private static PerfCtx childCtx = new PerfCtx("hashmap-create-ctx", 20, MergeSemantics.PARENT_SCOPED);
 
     public JsonGenerator(long seed) {
         this.rnd = new Random(seed);
     }
 
     public Map<String, Object> genJsonMap(int size, float objProb, float arrayProb) {
-        Map<String, Object> map = new HashMap<>();
-        if(size == 0) {
+        try(ClosablePerfCtx ctx = childCtx.open()) {
+            Map<String, Object> map = new HashMap<>();
+            if (size == 0) {
+                return map;
+            }
+            genFields(map, size, 0, objProb, arrayProb);
             return map;
         }
-        genFields(map, size, 0, objProb, arrayProb);
-        return map;
     }
 
     private String randomString(int bound) {
