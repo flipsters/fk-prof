@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import fk.prof.ClosablePerfCtx;
-import fk.prof.MergeSemantics;
 import fk.prof.PerfCtx;
 
 import java.util.Map;
@@ -22,7 +21,7 @@ public class LoadGenApp {
     public  static final ObjectMapper om = new ObjectMapper();
 
     static PerfCtx serdeCtx = new PerfCtx("json-ser-de-ctx", 20);
-    static PerfCtx multiplyCtx = new PerfCtx("calculations-ctx", 20);
+    static PerfCtx multiplyCtx = new PerfCtx("matrix-mult-ctx", 20);
     public static void main(String[] args) throws Exception {
 
         if(args.length < 2) {
@@ -38,10 +37,12 @@ public class LoadGenApp {
         ExecutorService execSvc = Executors.newCachedThreadPool();
 
         // json ser/de workload
-        startJsonSerDeWorkLoad(jsonSerDeThrdCount, execSvc);
+        WorkCounter jsonWorkCounter = new WorkCounter("json ser/de");
+        startJsonSerDeWorkLoad(jsonSerDeThrdCount, execSvc, jsonWorkCounter);
 
         // matrix multiplication
-        startMultiplicationWorkLoad(multiplicationThrdCount, execSvc);
+        WorkCounter matrixMultCounter = new WorkCounter("matrix mult");
+        startMultiplicationWorkLoad(multiplicationThrdCount, execSvc, matrixMultCounter);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
@@ -49,6 +50,8 @@ public class LoadGenApp {
                 execSvc.shutdownNow();
                 execSvc.awaitTermination(5000, TimeUnit.MILLISECONDS);
                 System.out.println("Stopped");
+                System.out.println(jsonWorkCounter);
+                System.out.println(matrixMultCounter);
             }
             catch (Exception e) {
                 System.err.println("Issue in shutdown hook: " + e.getMessage());
@@ -57,9 +60,8 @@ public class LoadGenApp {
         }));
     }
 
-    private static void startJsonSerDeWorkLoad(int threadCount, ExecutorService execSvc) {
+    private static void startJsonSerDeWorkLoad(int threadCount, ExecutorService execSvc, WorkCounter counter) {
         final JsonGenerator jsonGen = new JsonGenerator(1000);
-        AtomicLong counter = new AtomicLong(0);
 
         for(int i = 0; i < threadCount; ++i) {
             execSvc.submit(() -> {
@@ -69,7 +71,7 @@ public class LoadGenApp {
                             Map<String, Object> json = jsonGen.genJsonMap(8, 0.35f, 0.15f);
                             String str = om.writeValueAsString(json);
                             Map<String, Object> obj = om.readValue(str, Map.class);
-                            counter.addAndGet(obj.size());
+                            counter.increment();
 
                             if (Thread.currentThread().isInterrupted()) {
                                 return;
@@ -83,21 +85,38 @@ public class LoadGenApp {
         }
     }
 
-    private static void startMultiplicationWorkLoad(int threadCount, ExecutorService execSvc) {
+    private static void startMultiplicationWorkLoad(int threadCount, ExecutorService execSvc, WorkCounter counter) {
         for(int i = 0; i < threadCount; ++i) {
             execSvc.submit(() -> {
                 try(ClosablePerfCtx ctx = multiplyCtx.open()) {
-                    MatrixMultiplicationLoad matMul = new MatrixMultiplicationLoad(64);
+                    MatrixMultiplicationLoad matMul = new MatrixMultiplicationLoad(512);
                     matMul.reset();
                     while (true) {
                         matMul.multiply();
-
+                        counter.increment();
                         if (Thread.currentThread().isInterrupted()) {
                             return;
                         }
                     }
                 }
             });
+        }
+    }
+
+    private static class WorkCounter {
+        final AtomicLong counter = new AtomicLong();
+        final String tag;
+        public WorkCounter(String tag) {
+            this.tag = tag;
+        }
+
+        @Override
+        public String toString() {
+            return "did " + tag + " " + counter + "times.";
+        }
+
+        public void increment() {
+            counter.incrementAndGet();
         }
     }
 }
