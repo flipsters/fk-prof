@@ -25,4 +25,4 @@ echo $VERSION
 find $DEB_DIR/DEBIAN -type f | xargs sed -i "s/_VERSION_/$VERSION/g"
 find $DEB_DIR/DEBIAN -type f | xargs sed -i "s/_PACKAGE_/$PACKAGE_NAME/g"
 
-dpkg -b load-gen-app.deb $DEB_DIR/
+dpkg -b $DEB_DIR/ load-gen-app.deb
