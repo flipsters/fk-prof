@@ -4,7 +4,7 @@ set -x
 CMD="$1"
 
 # Stop the service        
-svc -d /etc/sv/load-gen-app.svc
+svc -kx /etc/sv/load-gen-app.svc
 sleep 2
 
 rm -rf /var/log/load-gen-app
