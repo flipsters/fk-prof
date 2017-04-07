@@ -1,9 +1,0 @@
-#!/bin/bash
-
-PAC=load-gen-app
-CMD="$1"
-
-# Stop the service        
-
-
-exit 0

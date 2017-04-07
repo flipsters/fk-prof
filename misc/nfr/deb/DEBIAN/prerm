@@ -1,0 +1,11 @@
+#!/bin/bash
+set -x
+
+CMD="$1"
+
+# Stop the service        
+svd -d /etc/sv/load-gen-app.svc
+sleep 2
+
+rm -rf /var/log/load-gen-app
+rm -rf /etc/sv/load-gen-app.svc

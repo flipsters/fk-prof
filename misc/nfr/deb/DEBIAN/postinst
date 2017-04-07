@@ -4,11 +4,11 @@ set -x
 PAC=load-gen-app
 CMD="$1"
 
-USER=fk-prof
-GROUP=fk-prof-dev
+USER=fk-prof-nfr
+GROUP=fk-prof-nfr
 
-USER_ID=6015
-GID=6030
+USER_ID=9876
+GID=9876
 
 if [ "$1" == "configure" ] ; then
 
@@ -23,9 +23,12 @@ if [ "$1" == "configure" ] ; then
         $USER
     fi
 
-	echo "Starting $PAC service"
-	#start the svc
-  
+    #configure the app from ansible and then start
 fi
+
+// log folder
+mkdir -p /var/log/load-gen-app
+
+chown -R $USER:$GROUP /var/log/load-gen-app /etc/sv/load-gen-app.svc /etc/load-gen-app
 
 exit 0

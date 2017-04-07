@@ -1,11 +1,11 @@
 #!/bin/bash -e
 set -x
 
-DEB_DIR="./deb"
+DEB_DIR="./deb_dest"
 PACKAGE_NAME="load-gen-app"
 DEST_PATH="$DEB_DIR/usr/share/$PACKAGE_NAME"
 
-cp -r DEBIAN $DEB_DIR
+cp -r deb $DEB_DIR
 
 mkdir -p $DEST_PATH
 rm -rf $DEST_PATH/*
