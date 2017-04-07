@@ -7,4 +7,4 @@ source /etc/load-gen-app/config
 JMX_OPTS=" -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=11011"
 GC_OPTS=" -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/var/log/load-gen-app/gc.out"
 
-exec setuidgid fk-prof-nfr $JAVA_HOME/bin/java -server $GC_OPTS $JMX_OPTS $FK_PROF_REC_OPTS -jar /usr/share/load-gen-app/load-gen-app.jar $app_params >> /var/log/load-gen-app/app.log
+exec setuidgid fk-prof-nfr $JAVA_HOME/bin/java -server $GC_OPTS $JMX_OPTS $FK_PROF_REC_OPTS -jar /usr/share/load-gen-app/load-gen-app.jar $load_gen_app_params >> /var/log/load-gen-app/app.log
