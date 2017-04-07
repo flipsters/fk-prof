@@ -8,4 +8,5 @@ svc -kx /etc/sv/load-gen-app.svc
 sleep 2
 
 rm -rf /var/log/load-gen-app
+rm -rf /etc/service/load-gen-app.svc
 rm -rf /etc/sv/load-gen-app.svc
