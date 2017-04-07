@@ -1,2 +1,2 @@
 #java app params. can be updated by ansible.
-app_params=" 1 1"
+export load_gen_app_params=" 1 1"

@@ -29,6 +29,7 @@ fi
 # log folder
 mkdir -p /var/log/load-gen-app
 
+ln -s /etc/sv/load-gen-app.svc /etc/service/
 chown -R $USER:$GROUP /var/log/load-gen-app /etc/sv/load-gen-app.svc /etc/load-gen-app /usr/share/load-gen-app
 chmod 744 /usr/share/load-gen-app/*
 
