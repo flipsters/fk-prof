@@ -26,9 +26,10 @@ if [ "$1" == "configure" ] ; then
     #configure the app from ansible and then start
 fi
 
-// log folder
+# log folder
 mkdir -p /var/log/load-gen-app
 
-chown -R $USER:$GROUP /var/log/load-gen-app /etc/sv/load-gen-app.svc /etc/load-gen-app
+chown -R $USER:$GROUP /var/log/load-gen-app /etc/sv/load-gen-app.svc /etc/load-gen-app /usr/share/load-gen-app
+chmod 744 /usr/share/load-gen-app/*
 
 exit 0
