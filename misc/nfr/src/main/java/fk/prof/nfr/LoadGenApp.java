@@ -26,7 +26,7 @@ public class LoadGenApp {
 
     public static void main(String[] args) throws Exception {
 
-        if(args.length < 4) {
+        if(args.length < 5) {
             System.err.println("too few params");
             return;
         }
@@ -38,12 +38,14 @@ public class LoadGenApp {
         for(int i = 0; i < loadTypes; ++i) {
             loadShare[i] = Float.parseFloat(args[i + 1]);
         }
+        float factor = Float.parseFloat(args[4]);
 
         om.registerModule(new Jdk8Module());
         om.registerModule(new JavaTimeModule());
         om.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         long[] totalTimings = new long[loadTypes];
+
 
         for(int i = 0; i < 12; ++i) {
             long[] timings = findProportions();
@@ -59,7 +61,7 @@ public class LoadGenApp {
 
         int[] iterationCounts = new int[loadTypes];
         for(int i = 0; i < loadTypes; ++i) {
-            iterationCounts[i] = (int)(1000 * (loadShare[i] / (totalTimings[i] / 1000.0f / 10.0f)));
+            iterationCounts[i] = (int)(1000 * (factor * loadShare[i] / (totalTimings[i] / 1000.0f / 10.0f)));
         }
 
         System.out.println("iterations for each load: " + iterationCounts[0] + "\t" + iterationCounts[1] + "\t" + iterationCounts[2]);
