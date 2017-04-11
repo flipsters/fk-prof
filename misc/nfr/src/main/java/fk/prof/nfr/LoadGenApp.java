@@ -24,12 +24,6 @@ public class LoadGenApp {
 
     public  static final ObjectMapper om = new ObjectMapper();
 
-    static PerfCtx serdeCtx = new PerfCtx("json-ser-de-ctx", 20);
-    static PerfCtx multiplyCtx = new PerfCtx("matrix-mult-ctx", 20);
-    static PerfCtx sortingCtx = new PerfCtx("sort-and-find-ctx", 20);
-
-    static PerfCtx[] perfCtxs = new PerfCtx[] {serdeCtx, multiplyCtx, sortingCtx};
-
     public static void main(String[] args) throws Exception {
 
         if(args.length < 4) {
@@ -75,9 +69,11 @@ public class LoadGenApp {
         for(int i = 0; i < totalThreadCounts; ++i) {
             execSvc.submit(() -> {
                 Runnable[] work = getWork();
+                Inception inception = new Inception(iterationCounts, work);
+
                 while (true) {
-                    doSecondWorthWork(iterationCounts, work);
-                    if(Thread.currentThread().isInterrupted()) {
+                    inception.doWorkOnSomeLevel();
+                    if (Thread.currentThread().isInterrupted()) {
                         return;
                     }
                 }
@@ -96,16 +92,6 @@ public class LoadGenApp {
                 e.printStackTrace();
             }
         }));
-    }
-
-    private static void doSecondWorthWork(int[] iterationCounts, Runnable[] work) {
-        for(int i = 0; i < iterationCounts.length; ++i) {
-            try (ClosablePerfCtx ctx = perfCtxs[i].open()) {
-                for (int j = 0; j < iterationCounts[i]; ++j) {
-                    work[i].run();
-                }
-            }
-        }
     }
 
     private static Runnable[] getWork() {
