@@ -120,8 +120,8 @@ public class Inception {
 
     private void common(Param params) {
         System.out.print(" -> " + params.idx);
-        if(params.idx < 10) {
-            if(rndGen.check(0.15f)) {
+        if(params.idx < 12) {
+            if(rndGen.check((0.05f + (0.12f * params.idx/10.0f)))) {
                 params.transcend(params.skip());
             }
             else {
@@ -129,7 +129,7 @@ public class Inception {
             }
         }
         else {
-            if(params.idx == params.functions.length) {
+            if(params.idx >= params.functions.length) {
                 return;
             }
             else {
