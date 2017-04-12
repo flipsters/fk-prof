@@ -26,7 +26,7 @@ public class LoadGenApp {
 
     public static void main(String[] args) throws Exception {
 
-        if(args.length < 5) {
+        if(args.length < 7) {
             System.err.println("too few params");
             return;
         }
@@ -39,6 +39,17 @@ public class LoadGenApp {
             loadShare[i] = Float.parseFloat(args[i + 1]);
         }
         float factor = Float.parseFloat(args[4]);
+        int traceCopyFactor = Integer.parseInt(args[5]);
+        int codeCvrgForPerfCtx = Integer.parseInt(args[6]);
+
+        // generate trace names and corresponding perf ctx
+        PerfCtx[][] perfctxs = new PerfCtx[loadTypes][traceCopyFactor];
+        String[] traceBaseNames = new String[]{"json-ser-de-ctx", "matrix-mult-ctx", "sort-and-find-ctx"};
+        for(int i = 0; i < loadTypes; ++i) {
+            for(int j = 0; j < traceCopyFactor; ++j) {
+                perfctxs[i][j] = new PerfCtx(traceBaseNames[i] + "_" + j, codeCvrgForPerfCtx);
+            }
+        }
 
         om.registerModule(new Jdk8Module());
         om.registerModule(new JavaTimeModule());
@@ -57,11 +68,14 @@ public class LoadGenApp {
             System.out.println(timings[0] + "\t" + timings[1] + "\t" + timings[2]);
         }
 
-        System.out.println("averaged out over 10 runs: " + totalTimings[0]/10 + "\t" + totalTimings[1]/10 + "\t" + totalTimings[2]/10);
+        totalTimings[0] /= 10;
+        totalTimings[1] /= 10;
+        totalTimings[2] /= 10;
+        System.out.println("averaged out over 10 runs: " + totalTimings[0] + "\t" + totalTimings[1] + "\t" + totalTimings[2]);
 
         int[] iterationCounts = new int[loadTypes];
         for(int i = 0; i < loadTypes; ++i) {
-            iterationCounts[i] = (int)(1000 * (factor * loadShare[i] / (totalTimings[i] / 1000.0f / 10.0f)));
+            iterationCounts[i] = (int)(1000 * (factor * loadShare[i] / (traceCopyFactor) / (totalTimings[i] / 1000.0f)));
         }
 
         System.out.println("iterations for each load: " + iterationCounts[0] + "\t" + iterationCounts[1] + "\t" + iterationCounts[2]);
@@ -71,7 +85,7 @@ public class LoadGenApp {
         for(int i = 0; i < totalThreadCounts; ++i) {
             execSvc.submit(() -> {
                 Runnable[] work = getWork();
-                Inception inception = new Inception(iterationCounts, work);
+                Inception inception = new Inception(iterationCounts, work, perfctxs);
 
                 while (true) {
                     inception.doWorkOnSomeLevel();

@@ -12,21 +12,20 @@ import java.util.function.Consumer;
  */
 public class Inception {
 
-    static PerfCtx serdeCtx = new PerfCtx("json-ser-de-ctx", 20);
-    static PerfCtx multiplyCtx = new PerfCtx("matrix-mult-ctx", 20);
-    static PerfCtx sortingCtx = new PerfCtx("sort-and-find-ctx", 20);
-
-    static PerfCtx[] perfCtxs = new PerfCtx[] {serdeCtx, multiplyCtx, sortingCtx};
-
     int[] iterationCounts;
     Runnable[] work;
     RndGen rndGen = new RndGen();
 
     Consumer<Param>[] functions;
+    PerfCtx[][] perfctxs;
+    int perfCtxCount;
 
-    public Inception(int[] iterations, Runnable[] work) {
+    public Inception(int[] iterations, Runnable[] work, PerfCtx[][] perfctxs) {
         this.iterationCounts = iterations;
         this.work = work;
+
+        this.perfctxs = perfctxs;
+        this.perfCtxCount = perfctxs[0].length;
 
         functions = (Consumer<Param>[]) Array.newInstance(Consumer.class, 20);
 
@@ -53,7 +52,6 @@ public class Inception {
     }
 
     public void doWorkOnSomeLevel() {
-        System.out.println();
         common(new Param(functions, 0));
     }
 
@@ -119,7 +117,6 @@ public class Inception {
     }
 
     private void common(Param params) {
-        System.out.print(" -> " + params.idx);
         if(params.idx < 12) {
             if(rndGen.check((0.05f + (0.12f * params.idx/10.0f)))) {
                 params.transcend(params.skip());
@@ -144,9 +141,8 @@ public class Inception {
     }
 
     private void doSecondWorthOfWork() {
-        System.out.println(" -> work");
         for(int i = 0; i < iterationCounts.length; ++i) {
-            try (ClosablePerfCtx ctx = perfCtxs[i].open()) {
+            try (ClosablePerfCtx ctx = perfctxs[i][rndGen.getInt(perfCtxCount)].open()) {
                 for (int j = 0; j < iterationCounts[i]; ++j) {
                     work[i].run();
                 }
@@ -182,10 +178,7 @@ public class Inception {
         Random rnd = new Random();
 
         public boolean check(float prob) {
-            if(idx == bytes.length) {
-                rnd.nextBytes(bytes);
-                idx = 0;
-            }
+            ensureRndBytes();
 
             int limit = (int)(prob * 256.0f);
             int r = toInt(bytes[idx]);
@@ -193,6 +186,20 @@ public class Inception {
             idx++;
 
             return r < limit;
+        }
+
+        public int getInt(int bound) {
+            ensureRndBytes();
+
+            int r = toInt(bytes[idx]);
+            return bound * r / 256;
+        }
+
+        private void ensureRndBytes() {
+            if(idx == bytes.length) {
+                rnd.nextBytes(bytes);
+                idx = 0;
+            }
         }
     }
 
