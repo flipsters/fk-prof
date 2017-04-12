@@ -21,26 +21,20 @@ public class RndGen {
         }
     }
 
-    byte[] bytes = new byte[1024 * 16];
+    byte[] bytes = new byte[1024 * 32];
     int idx = bytes.length;
     Random rnd = new Random();
 
     public boolean check(float prob) {
-        ensureRndBytes();
-
-        int limit = (int)(prob * 256.0f);
-        int r = toInt(bytes[idx]);
-
-        idx++;
+        int limit = (int)(prob * 256.0f * 256.0f);
+        int r = getShort();
 
         return r < limit;
     }
 
     public int getInt(int bound) {
-        ensureRndBytes();
-
-        int r = toInt(bytes[idx]);
-        return bound * r / 256;
+        int r = getShort();
+        return bound * r / 256 / 256;
     }
 
     public String getString(int length) {
@@ -52,8 +46,8 @@ public class RndGen {
     }
 
     public float getFloat() {
-        float r = (float)toInt(bytes[idx]);
-        return r / 256.0f;
+        float r = (float)getShort();
+        return r / 256.0f / 256.0f;
     }
 
     private void ensureRndBytes() {
@@ -63,8 +57,13 @@ public class RndGen {
         }
     }
 
-    private int toInt(byte b) {
-        return ((int)b) & 0xff;
+    private int getShort() {
+        ensureRndBytes();
+        int s = bytes[idx];
+        s = (s & 0xff) << 8;
+        s = s | (bytes[idx + 1] & 0xff);
+        idx += 2;
+        return s;
     }
 }
 
