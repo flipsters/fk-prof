@@ -4,17 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import fk.prof.ClosablePerfCtx;
 import fk.prof.PerfCtx;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -84,8 +78,9 @@ public class LoadGenApp {
 
         for(int i = 0; i < totalThreadCounts; ++i) {
             execSvc.submit(() -> {
-                Runnable[] work = getWork();
-                Inception inception = new Inception(iterationCounts, work, perfctxs);
+                RndGen rndGen = new RndGen();
+                Runnable[] work = getWork(rndGen);
+                Inception inception = new Inception(iterationCounts, work, perfctxs, rndGen);
 
                 while (true) {
                     inception.doWorkOnSomeLevel();
@@ -110,20 +105,20 @@ public class LoadGenApp {
         }));
     }
 
-    private static Runnable[] getWork() {
-        final JsonGenerator jsonGen = new JsonGenerator(1000);
-        final MatrixMultiplicationLoad matMul = new MatrixMultiplicationLoad(128);
-        final SortingLoad sorting = new SortingLoad(512);
+    private static Runnable[] getWork(RndGen rndGen) {
+        final JsonGenerator jsonGen = new JsonGenerator(rndGen);
+        final MatrixMultiplicationLoad matMul = new MatrixMultiplicationLoad(80, rndGen);
+        final SortingLoad sorting = new SortingLoad(512, rndGen);
 
         return new Runnable[] {
-                () -> jsonGen.genJsonMap(8, 0.35f, 0.15f),
+                () -> jsonGen.genJsonMap(8, 0.5f, 0.25f),
                 () -> matMul.multiply(),
                 () -> sorting.doWork()
         };
     }
 
     private static long[] findProportions() throws Exception {
-        Runnable[] work = getWork();
+        Runnable[] work = getWork(new RndGen());
         return Stream.of(work).map(w -> findTimings(w, 1000)).mapToLong(l -> l).toArray();
     }
 

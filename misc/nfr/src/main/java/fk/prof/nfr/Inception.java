@@ -4,7 +4,6 @@ import fk.prof.ClosablePerfCtx;
 import fk.prof.PerfCtx;
 
 import java.lang.reflect.Array;
-import java.util.Random;
 import java.util.function.Consumer;
 
 /**
@@ -14,13 +13,13 @@ public class Inception {
 
     int[] iterationCounts;
     Runnable[] work;
-    RndGen rndGen = new RndGen();
+    RndGen rndGen;
 
     Consumer<Param>[] functions;
     PerfCtx[][] perfctxs;
     int perfCtxCount;
 
-    public Inception(int[] iterations, Runnable[] work, PerfCtx[][] perfctxs) {
+    public Inception(int[] iterations, Runnable[] work, PerfCtx[][] perfctxs, RndGen rndGen) {
         this.iterationCounts = iterations;
         this.work = work;
 
@@ -49,6 +48,8 @@ public class Inception {
         functions[17] = this::level18;
         functions[18] = this::level19;
         functions[19] = this::level20;
+
+        this.rndGen = rndGen;
     }
 
     public void doWorkOnSomeLevel() {
@@ -170,40 +171,5 @@ public class Inception {
         public void transcend(Param p) {
             functions[idx].accept(p);
         }
-    }
-
-    public class RndGen {
-        byte[] bytes = new byte[10240];
-        int idx = bytes.length;
-        Random rnd = new Random();
-
-        public boolean check(float prob) {
-            ensureRndBytes();
-
-            int limit = (int)(prob * 256.0f);
-            int r = toInt(bytes[idx]);
-
-            idx++;
-
-            return r < limit;
-        }
-
-        public int getInt(int bound) {
-            ensureRndBytes();
-
-            int r = toInt(bytes[idx]);
-            return bound * r / 256;
-        }
-
-        private void ensureRndBytes() {
-            if(idx == bytes.length) {
-                rnd.nextBytes(bytes);
-                idx = 0;
-            }
-        }
-    }
-
-    private int toInt(byte b) {
-        return ((int)b) & 0xff;
     }
 }

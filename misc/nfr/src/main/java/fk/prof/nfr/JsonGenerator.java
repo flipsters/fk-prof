@@ -3,7 +3,6 @@ package fk.prof.nfr;
 import fk.prof.ClosablePerfCtx;
 import fk.prof.MergeSemantics;
 import fk.prof.PerfCtx;
-import org.apache.commons.lang3.RandomStringUtils;
 
 import java.time.Clock;
 import java.time.ZonedDateTime;
@@ -14,11 +13,11 @@ import java.util.*;
  */
 public class JsonGenerator {
 
-    private static Random rnd;
+    private static RndGen rnd;
     private static PerfCtx childCtx = new PerfCtx("hashmap-create-ctx", 20, MergeSemantics.PARENT_SCOPED);
 
-    public JsonGenerator(long seed) {
-        this.rnd = new Random(seed);
+    public JsonGenerator(RndGen rndGen) {
+        this.rnd = rndGen;
     }
 
     public Map<String, Object> genJsonMap(int size, float objProb, float arrayProb) {
@@ -33,8 +32,8 @@ public class JsonGenerator {
     }
 
     private String randomString(int bound) {
-        int len = rnd.nextInt(bound);
-        return RandomStringUtils.randomAlphanumeric(len);
+        int len = rnd.getInt(bound);
+        return rnd.getString(len);
     }
 
     private void genFields(Map<String, Object> map, int size, int idx, float objProb, float arrayProb) {
@@ -47,7 +46,7 @@ public class JsonGenerator {
     }
 
     private Object genRndmObject(int size, float objProb, float arrayProb) {
-        float rndFloat = rnd.nextFloat();
+        float rndFloat = rnd.getFloat();
         if(rndFloat < objProb) {
             return genJsonMap(size, objProb, arrayProb);
         }
@@ -59,7 +58,7 @@ public class JsonGenerator {
             return list;
         }
         else {
-            int rndmInt = rnd.nextInt(2);
+            int rndmInt = rnd.getInt(2);
             if(rndmInt == 0) {
                 return randomString(32);
             }

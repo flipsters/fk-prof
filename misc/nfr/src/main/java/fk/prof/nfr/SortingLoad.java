@@ -1,7 +1,5 @@
 package fk.prof.nfr;
 
-import org.apache.commons.lang3.RandomStringUtils;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -13,16 +11,18 @@ public class SortingLoad {
 
     int size;
     List<String> list = new ArrayList<>();
+    RndGen rndGen;
 
-    public SortingLoad(int size) {
+    public SortingLoad(int size, RndGen rndGen) {
         this.size = size;
+        this.rndGen = rndGen;
     }
 
     public int doWork() {
         list.clear();
 
         for(int i = 0; i < size; ++i) {
-            list.add(RandomStringUtils.randomAlphanumeric(64));
+            list.add(rndGen.getString(64));
         }
 
         List<String> sortedList = list.stream().sorted().collect(Collectors.toList());

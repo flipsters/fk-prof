@@ -1,31 +1,29 @@
 package fk.prof.nfr;
 
-import java.util.Random;
-
 /**
  * Created by gaurav.ashok on 04/04/17.
  */
 public class MatrixMultiplicationLoad {
 
-    private Random rnd = new Random();
-
+    RndGen rnd;
     int size;
     float[][] matrix1, matrix2;
     float [][] mul;
 
-    public MatrixMultiplicationLoad(int size) {
+    public MatrixMultiplicationLoad(int size, RndGen rndGen) {
         this.size = size;
 
         this.matrix1 = new float[size][size];
         this.matrix2 = new float[size][size];
         this.mul = new float[size][size];
+        this.rnd = rndGen;
     }
 
     public void reset() {
         for(int i = 0; i < size; ++i) {
             for(int j = 0; j < size; ++j) {
-                matrix1[i][j] = rnd.nextFloat() + 1.0f;
-                matrix2[i][j] = rnd.nextFloat() + 1.0f;
+                matrix1[i][j] = rnd.getFloat() + 1.0f;
+                matrix2[i][j] = rnd.getFloat() + 1.0f;
             }
         }
     }
