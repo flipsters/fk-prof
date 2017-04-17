@@ -20,7 +20,7 @@ public class LoadGenApp {
 
     public static void main(String[] args) throws Exception {
 
-        if(args.length < 7) {
+        if(args.length < 8) {
             System.err.println("too few params");
             return;
         }
@@ -33,14 +33,15 @@ public class LoadGenApp {
             loadShare[i] = Float.parseFloat(args[i + 1]);
         }
         float factor = Float.parseFloat(args[4]);
-        int traceCopyFactor = Integer.parseInt(args[5]);
+        int traceDuplicatesFactor = Integer.parseInt(args[5]);
         int codeCvrgForPerfCtx = Integer.parseInt(args[6]);
+        int maxFanOut = Integer.parseInt(args[7]);
 
         // generate trace names and corresponding perf ctx
-        PerfCtx[][] perfctxs = new PerfCtx[loadTypes][traceCopyFactor];
+        PerfCtx[][] perfctxs = new PerfCtx[loadTypes][traceDuplicatesFactor];
         String[] traceBaseNames = new String[]{"json-ser-de-ctx", "matrix-mult-ctx", "sort-and-find-ctx"};
         for(int i = 0; i < loadTypes; ++i) {
-            for(int j = 0; j < traceCopyFactor; ++j) {
+            for(int j = 0; j < traceDuplicatesFactor; ++j) {
                 perfctxs[i][j] = new PerfCtx(traceBaseNames[i] + "_" + j, codeCvrgForPerfCtx);
             }
         }
@@ -69,7 +70,7 @@ public class LoadGenApp {
 
         int[] iterationCounts = new int[loadTypes];
         for(int i = 0; i < loadTypes; ++i) {
-            iterationCounts[i] = (int)(1000 * (factor * loadShare[i] / (traceCopyFactor) / (totalTimings[i] / 1000.0f)));
+            iterationCounts[i] = (int)(1000 * (factor * loadShare[i] / (traceDuplicatesFactor) / (totalTimings[i] / 1000.0f)));
         }
 
         System.out.println("iterations for each load: " + iterationCounts[0] + "\t" + iterationCounts[1] + "\t" + iterationCounts[2]);
@@ -80,7 +81,7 @@ public class LoadGenApp {
             execSvc.submit(() -> {
                 RndGen rndGen = new RndGen();
                 Runnable[] work = getWork(rndGen);
-                Inception inception = new Inception(iterationCounts, work, perfctxs, rndGen);
+                Inception inception = new Inception(iterationCounts, work, perfctxs, rndGen, maxFanOut);
 
                 while (true) {
                     inception.doWorkOnSomeLevel();

@@ -11,6 +11,7 @@ import java.util.function.Consumer;
  */
 public class Inception {
 
+    int maxFanOut;
     int[] iterationCounts;
     Runnable[] work;
     RndGen rndGen;
@@ -19,7 +20,9 @@ public class Inception {
     PerfCtx[][] perfctxs;
     int perfCtxCount;
 
-    public Inception(int[] iterations, Runnable[] work, PerfCtx[][] perfctxs, RndGen rndGen) {
+    public Inception(int[] iterations, Runnable[] work, PerfCtx[][] perfctxs, RndGen rndGen, int maxFanOut) {
+        assert maxFanOut <= 20 : "fanout cannot be no more than 20";
+        this.maxFanOut = maxFanOut;
         this.iterationCounts = iterations;
         this.work = work;
 
@@ -53,91 +56,79 @@ public class Inception {
     }
 
     public void doWorkOnSomeLevel() {
-        common(new Param(functions, 0));
+        System.out.println();
+        jumpAround(new Param(10 + rndGen.getInt(8), 0, 0));
     }
 
     private void level1(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level2(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level3(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level4(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level5(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level6(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level7(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level8(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level9(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level10(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level11(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level12(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level13(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level14(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level15(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level16(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level17(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level18(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level19(Param params) {
-        common(params);
+        jumpAround(params);
     }
     private void level20(Param params) {
-        common(params);
+        jumpAround(params);
     }
 
-    private void common(Param params) {
-        if(params.idx < 12) {
-            if(rndGen.check((0.05f + (0.12f * params.idx/10.0f)))) {
-                params.transcend(params.skip());
-            }
-            else {
-                params.transcend(params.next());
-            }
+    private void jumpAround(Param params) {
+        if(params.curDepth > params.maxDepth) {
+            doSecondWorthOfWork();
+            return;
         }
         else {
-            if(params.idx >= params.functions.length) {
-                return;
-            }
-            else {
-                if(rndGen.check(0.2f)) {
-                    doSecondWorthOfWork();
-                }
-                else {
-                    params.transcend(params.next());
-                }
-            }
+            Param next = params.next();
+            next.jump();
         }
     }
 
@@ -151,25 +142,25 @@ public class Inception {
         }
     }
 
-    private static class Param {
-        public Consumer<Param>[] functions;
+    private class Param {
         public int idx;
+        public int maxDepth;
+        public int curDepth;
 
-        public Param(Consumer<Param>[] functions, int idx) {
-            this.functions = functions;
+        public Param(int maxDepth, int curDepth, int idx) {
+            this.maxDepth = maxDepth;
+            this.curDepth = curDepth;
             this.idx = idx;
         }
 
-        public Param skip() {
-            return new Param(functions, idx + 2);
-        }
-
         public Param next() {
-            return new Param(functions, idx + 1);
+
+            return new Param(maxDepth, curDepth + 1, rndGen.getInt(1 + Math.min(curDepth, maxFanOut)));
         }
 
-        public void transcend(Param p) {
-            functions[idx].accept(p);
+        public void jump() {
+            System.out.print(idx + " -> ");
+            functions[idx].accept(this);
         }
     }
 }

@@ -15,20 +15,6 @@
         <maven.compiler.version>3.3</maven.compiler.version>
     </properties>
 
-    <!-- need to replace this with a public repo -->
-    <repositories>
-        <repository>
-            <id>libs-releases-local</id>
-            <name>artifactory-libs-release-local</name>
-            <url>http://artifactory.nm.flipkart.com:8081/artifactory/libs-releases-local</url>
-        </repository>
-        <repository>
-            <id>libs-snapshots-local</id>
-            <name>artifactory-libs-snapshots-local</name>
-            <url>http://artifactory.nm.flipkart.com:8081/artifactory/libs-snapshots-local</url>
-        </repository>
-    </repositories>
-
     <dependencies>
         <dependency>
             <groupId>fk.prof</groupId>
