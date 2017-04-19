@@ -20,7 +20,7 @@ public class LoadGenApp {
 
     public static void main(String[] args) throws Exception {
 
-        if(args.length < 8) {
+        if(args.length < 9) {
             System.err.println("too few params");
             return;
         }
@@ -36,6 +36,7 @@ public class LoadGenApp {
         int traceDuplicatesFactor = Integer.parseInt(args[5]);
         int codeCvrgForPerfCtx = Integer.parseInt(args[6]);
         int maxFanOut = Integer.parseInt(args[7]);
+        int stackLevelDepth = Integer.parseInt(args[8]);
 
         // generate trace names and corresponding perf ctx
         PerfCtx[][] perfctxs = new PerfCtx[loadTypes][traceDuplicatesFactor];
@@ -51,7 +52,6 @@ public class LoadGenApp {
         om.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         long[] totalTimings = new long[loadTypes];
-
 
         for(int i = 0; i < 12; ++i) {
             long[] timings = findProportions();
@@ -81,7 +81,7 @@ public class LoadGenApp {
             execSvc.submit(() -> {
                 RndGen rndGen = new RndGen();
                 Runnable[] work = getWork(rndGen);
-                Inception inception = new Inception(iterationCounts, work, perfctxs, rndGen, maxFanOut);
+                Inception inception = new Inception(iterationCounts, work, perfctxs, rndGen, maxFanOut, stackLevelDepth);
 
                 while (true) {
                     inception.doWorkOnSomeLevel();

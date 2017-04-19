@@ -19,8 +19,9 @@ public class Inception {
     Consumer<Param>[] functions;
     PerfCtx[][] perfctxs;
     int perfCtxCount;
+    int maxlevelDepth;
 
-    public Inception(int[] iterations, Runnable[] work, PerfCtx[][] perfctxs, RndGen rndGen, int maxFanOut) {
+    public Inception(int[] iterations, Runnable[] work, PerfCtx[][] perfctxs, RndGen rndGen, int maxFanOut, int maxlevelDepth) {
         assert maxFanOut <= 20 : "fanout cannot be no more than 20";
         this.maxFanOut = maxFanOut;
         this.iterationCounts = iterations;
@@ -28,6 +29,7 @@ public class Inception {
 
         this.perfctxs = perfctxs;
         this.perfCtxCount = perfctxs[0].length;
+        this.maxlevelDepth = Math.min(11, maxlevelDepth);
 
         functions = (Consumer<Param>[]) Array.newInstance(Consumer.class, 20);
 
@@ -57,7 +59,7 @@ public class Inception {
 
     public void doWorkOnSomeLevel() {
         System.out.println();
-        jumpAround(new Param(10 + rndGen.getInt(8), 0, 0));
+        jumpAround(new Param(10 + rndGen.getInt(maxlevelDepth - 10), 0, 0));
     }
 
     private void level1(Param params) {
