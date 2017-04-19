@@ -29,7 +29,7 @@ public class Inception {
 
         this.perfctxs = perfctxs;
         this.perfCtxCount = perfctxs[0].length;
-        this.maxlevelDepth = Math.min(11, maxlevelDepth);
+        this.maxlevelDepth = Math.max(11, maxlevelDepth);
 
         functions = (Consumer<Param>[]) Array.newInstance(Consumer.class, 20);
 
@@ -58,7 +58,7 @@ public class Inception {
     }
 
     public void doWorkOnSomeLevel() {
-        System.out.println();
+//        System.out.println();
         jumpAround(new Param(10 + rndGen.getInt(maxlevelDepth - 10), 0, 0));
     }
 
@@ -161,7 +161,7 @@ public class Inception {
         }
 
         public void jump() {
-            System.out.print(idx + " -> ");
+//            System.out.print(idx + " -> ");
             functions[idx].accept(this);
         }
     }
