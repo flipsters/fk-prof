@@ -59,7 +59,7 @@ public class Inception {
 
     public void doWorkOnSomeLevel() {
 //        System.out.println();
-        jumpAround(new Param(10 + rndGen.getInt(maxlevelDepth - 10), 0, 0));
+        jumpAround(new Param(maxlevelDepth, 0, 0));
     }
 
     private void level1(Param params) {
