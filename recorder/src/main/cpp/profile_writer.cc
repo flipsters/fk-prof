@@ -91,7 +91,10 @@ recording::StackSample::Error translate_forte_error(jint num_frames_error) {
           ticks_safepoint             = -10
         };
     **/
-    assert(num_frames_error <= 0);
+    if (num_frames_error > 0) {
+        logger->error("Found num-frames > 0 during error-translation, value was {}", num_frames_error);
+    }
+	assert(num_frames_error <= 0);
     return static_cast<recording::StackSample::Error>(-1 * num_frames_error);
 }
 
