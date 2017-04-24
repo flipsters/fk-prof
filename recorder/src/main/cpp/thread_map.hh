@@ -123,6 +123,9 @@ public:
 		ThreadBucket *info = ThreadBucket::acq_bucket((ThreadBucket*)map.get((map::KeyType)jni_env));
 		if (info != nullptr)
 			GCHelper::signalSafepoint(info->localEpoch);
+        if (info == nullptr) {
+            assert(jni_env == nullptr);
+        }
 		return info;
 	}
 

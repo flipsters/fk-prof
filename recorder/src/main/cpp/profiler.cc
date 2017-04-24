@@ -60,6 +60,9 @@ void Profiler::handle(int signum, siginfo_t *info, void *context) {
         }
     }
     // log all samples, failures included, let the post processing sift through the data
+    if (thread_info == nullptr) {
+        assert(trace.num_frames <= 0);
+    }
     buffer->push(trace, thread_info);
 }
 
