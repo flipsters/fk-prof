@@ -3,6 +3,8 @@
 set -e
 set -x
 
+ulimit -c unlimited
+
 JAVA_HOME=/usr/lib/jvm/jdk-8-oracle-x64
 FK_PROF_PROG=load-gen-app
 source /etc/default/fk-prof-rec
