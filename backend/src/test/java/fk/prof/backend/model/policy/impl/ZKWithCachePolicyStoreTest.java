@@ -1,5 +1,6 @@
 package fk.prof.backend.model.policy.impl;
 
+import fk.prof.backend.MockData;
 import fk.prof.backend.model.policy.PolicyStore;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -9,7 +10,9 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryOneTime;
 import org.apache.curator.test.TestingServer;
 import org.apache.curator.test.Timing;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import policy.PolicyDetails;
 import recording.Recorder;
@@ -29,32 +32,9 @@ import java.util.concurrent.TimeUnit;
 public class ZKWithCachePolicyStoreTest {
 
   private static final String policyPath = "/policy";
-  private static List<Recorder.ProcessGroup> mockProcessGroups;
-  private static List<PolicyDetails> mockPolicies;
-
   private TestingServer testingServer;
   private CuratorFramework curatorClient;
   private PolicyStore policyStore;
-
-  @BeforeClass
-  public static void setBeforeClass()
-      throws Exception {
-    mockProcessGroups = Arrays.asList(
-        Recorder.ProcessGroup.newBuilder().setAppId("a1").setCluster("c1").setProcName("p1").build(),
-        Recorder.ProcessGroup.newBuilder().setAppId("a1").setCluster("c1").setProcName("p2").build(),
-        Recorder.ProcessGroup.newBuilder().setAppId("a1").setCluster("c2").setProcName("p3").build(),
-        Recorder.ProcessGroup.newBuilder().setAppId("a2").setCluster("c1").setProcName("p1").build()
-    );
-    mockPolicies = Arrays.asList(
-        PolicyDetails.newBuilder().setAdministrator("admin1").setCreatedAt("3").setModifiedAt("3").setLastScheduled("3:20").build(),
-        PolicyDetails.newBuilder().setAdministrator("admin1").setCreatedAt("4").setModifiedAt("4").setLastScheduled("4:30").build(),
-        PolicyDetails.newBuilder().setAdministrator("admin2").setCreatedAt("5").setModifiedAt("5").setLastScheduled("5:40").build()
-    );
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() {
-  }
 
   @Before
   public void setUp() throws Exception {
@@ -78,18 +58,18 @@ public class ZKWithCachePolicyStoreTest {
     final Async async = context.async();
 
     // PRE
-    CompletableFuture f1 = policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0));
-    CompletableFuture f2 = policyStore.setPolicy(mockProcessGroups.get(1), mockPolicies.get(1));
-    CompletableFuture f3 = policyStore.setPolicy(mockProcessGroups.get(2), mockPolicies.get(2));
+    CompletableFuture f1 = policyStore.setPolicy(MockData.mockProcessGroups.get(0), MockData.mockPolicies.get(0));
+    CompletableFuture f2 = policyStore.setPolicy(MockData.mockProcessGroups.get(1), MockData.mockPolicies.get(1));
+    CompletableFuture f3 = policyStore.setPolicy(MockData.mockProcessGroups.get(2), MockData.mockPolicies.get(2));
 
-    Map<String, Map<Object, Object>> appIdTestPairs = new HashMap<String, Map<Object, Object>>() {
+    Map<String, Map<Object, Object>> testPairs = new HashMap<String, Map<Object, Object>>() {
       {
-        put(mockProcessGroups.get(0).getAppId(),
+        put(MockData.mockProcessGroups.get(0).getAppId(),
             new HashMap<Object, Object>() {
               {
-                put(mockProcessGroups.get(0), mockPolicies.get(0));
-                put(mockProcessGroups.get(1), mockPolicies.get(1));
-                put(mockProcessGroups.get(2), mockPolicies.get(2));
+                put(MockData.mockProcessGroups.get(0), MockData.mockPolicies.get(0));
+                put(MockData.mockProcessGroups.get(1), MockData.mockPolicies.get(1));
+                put(MockData.mockProcessGroups.get(2), MockData.mockPolicies.get(2));
               }
             });
         put("", new HashMap<>());
@@ -99,7 +79,7 @@ public class ZKWithCachePolicyStoreTest {
     CompletableFuture.allOf(f1, f2, f3).whenComplete((aVoid, throwable) -> {
 
       //TESTS
-      for (Map.Entry<String, Map<Object, Object>> testPair : appIdTestPairs.entrySet()) {
+      for (Map.Entry<String, Map<Object, Object>> testPair : testPairs.entrySet()) {
         Map<Recorder.ProcessGroup, PolicyDetails> got = policyStore.getAssociatedPolicies(testPair.getKey());
         context.assertTrue(got.equals(testPair.getValue()));
       }
@@ -111,17 +91,17 @@ public class ZKWithCachePolicyStoreTest {
   public void testGetAssociatedPoliciesGivenAppIdClusterId(TestContext context) throws Exception {
     final Async async = context.async();
     // PRE
-    CompletableFuture f1 = policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0));
-    CompletableFuture f2 = policyStore.setPolicy(mockProcessGroups.get(1), mockPolicies.get(1));
-    CompletableFuture f3 = policyStore.setPolicy(mockProcessGroups.get(2), mockPolicies.get(2));
+    CompletableFuture f1 = policyStore.setPolicy(MockData.mockProcessGroups.get(0), MockData.mockPolicies.get(0));
+    CompletableFuture f2 = policyStore.setPolicy(MockData.mockProcessGroups.get(1), MockData.mockPolicies.get(1));
+    CompletableFuture f3 = policyStore.setPolicy(MockData.mockProcessGroups.get(2), MockData.mockPolicies.get(2));
 
-    Map<List<String>, Map<Object, Object>> appIdTestPairs = new HashMap<List<String>, Map<Object, Object>>() {
+    Map<List<String>, Map<Object, Object>> testPairs = new HashMap<List<String>, Map<Object, Object>>() {
       {
-        put(Arrays.asList(mockProcessGroups.get(0).getAppId(), mockProcessGroups.get(0).getCluster()),
+        put(Arrays.asList(MockData.mockProcessGroups.get(0).getAppId(), MockData.mockProcessGroups.get(0).getCluster()),
             new HashMap<Object, Object>() {
               {
-                put(mockProcessGroups.get(0), mockPolicies.get(0));
-                put(mockProcessGroups.get(1), mockPolicies.get(1));
+                put(MockData.mockProcessGroups.get(0), MockData.mockPolicies.get(0));
+                put(MockData.mockProcessGroups.get(1), MockData.mockPolicies.get(1));
               }
             });
         put(Arrays.asList("", ""), new HashMap<>());
@@ -131,7 +111,7 @@ public class ZKWithCachePolicyStoreTest {
     CompletableFuture.allOf(f1, f2, f3).whenComplete((aVoid, throwable) -> {
 
       //TESTS
-      for (Map.Entry<List<String>, Map<Object, Object>> testPair : appIdTestPairs.entrySet()) {
+      for (Map.Entry<List<String>, Map<Object, Object>> testPair : testPairs.entrySet()) {
         Map<Recorder.ProcessGroup, PolicyDetails> got = policyStore.getAssociatedPolicies(testPair.getKey().get(0), testPair.getKey().get(1));
         context.assertTrue(got.equals(testPair.getValue()));
       }
@@ -143,16 +123,16 @@ public class ZKWithCachePolicyStoreTest {
   public void testGetAssociatedPoliciesGivenAppIdClusterIdProcess(TestContext context) throws Exception {
     final Async async = context.async();
     // PRE
-    CompletableFuture f1 = policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0));
-    CompletableFuture f2 = policyStore.setPolicy(mockProcessGroups.get(1), mockPolicies.get(1));
-    CompletableFuture f3 = policyStore.setPolicy(mockProcessGroups.get(2), mockPolicies.get(2));
+    CompletableFuture f1 = policyStore.setPolicy(MockData.mockProcessGroups.get(0), MockData.mockPolicies.get(0));
+    CompletableFuture f2 = policyStore.setPolicy(MockData.mockProcessGroups.get(1), MockData.mockPolicies.get(1));
+    CompletableFuture f3 = policyStore.setPolicy(MockData.mockProcessGroups.get(2), MockData.mockPolicies.get(2));
 
-    Map<List<String>, Map<Object, Object>> appIdTestPairs = new HashMap<List<String>, Map<Object, Object>>() {
+    Map<List<String>, Map<Object, Object>> testPairs = new HashMap<List<String>, Map<Object, Object>>() {
       {
-        put(Arrays.asList(mockProcessGroups.get(0).getAppId(), mockProcessGroups.get(0).getCluster(), mockProcessGroups.get(0).getProcName()),
+        put(Arrays.asList(MockData.mockProcessGroups.get(0).getAppId(), MockData.mockProcessGroups.get(0).getCluster(), MockData.mockProcessGroups.get(0).getProcName()),
             new HashMap<Object, Object>() {
               {
-                put(mockProcessGroups.get(0), mockPolicies.get(0));
+                put(MockData.mockProcessGroups.get(0), MockData.mockPolicies.get(0));
               }
             });
         put(Arrays.asList("", "", ""), new HashMap<>());
@@ -162,7 +142,7 @@ public class ZKWithCachePolicyStoreTest {
     CompletableFuture.allOf(f1, f2, f3).whenComplete((aVoid, throwable) -> {
 
       //TESTS
-      for (Map.Entry<List<String>, Map<Object, Object>> testPair : appIdTestPairs.entrySet()) {
+      for (Map.Entry<List<String>, Map<Object, Object>> testPair : testPairs.entrySet()) {
         Map<Recorder.ProcessGroup, PolicyDetails> got = policyStore.getAssociatedPolicies(testPair.getKey().get(0), testPair.getKey().get(1), testPair.getKey().get(2));
         context.assertTrue(got.equals(testPair.getValue()));
       }
@@ -175,10 +155,10 @@ public class ZKWithCachePolicyStoreTest {
     final Async async = context.async();
 
     //PRE
-    policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0)).whenComplete((aVoid, throwable) -> {
+    policyStore.setPolicy(MockData.mockProcessGroups.get(0), MockData.mockPolicies.get(0)).whenComplete((aVoid, throwable) -> {
 
       //TEST
-      context.assertTrue(policyStore.getAssociatedPolicy(mockProcessGroups.get(0)) == mockPolicies.get(0));
+      context.assertTrue(policyStore.getAssociatedPolicy(MockData.mockProcessGroups.get(0)) == MockData.mockPolicies.get(0));
       async.complete();
     });
   }
@@ -188,7 +168,7 @@ public class ZKWithCachePolicyStoreTest {
     final Async async = context.async();
 
     //TEST
-    policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0)).whenComplete((aVoid, throwable) -> {
+    policyStore.setPolicy(MockData.mockProcessGroups.get(0), MockData.mockPolicies.get(0)).whenComplete((aVoid, throwable) -> {
       context.assertTrue(throwable == null);
       async.complete();
     });
@@ -199,9 +179,9 @@ public class ZKWithCachePolicyStoreTest {
     final Async async = context.async();
 
     // PRE
-    CompletableFuture f1 = policyStore.setPolicy(mockProcessGroups.get(0), mockPolicies.get(0));
-    CompletableFuture f2 = policyStore.setPolicy(mockProcessGroups.get(1), mockPolicies.get(1));
-    CompletableFuture f3 = policyStore.setPolicy(mockProcessGroups.get(2), mockPolicies.get(2));
+    CompletableFuture f1 = policyStore.setPolicy(MockData.mockProcessGroups.get(0), MockData.mockPolicies.get(0));
+    CompletableFuture f2 = policyStore.setPolicy(MockData.mockProcessGroups.get(1), MockData.mockPolicies.get(1));
+    CompletableFuture f3 = policyStore.setPolicy(MockData.mockProcessGroups.get(2), MockData.mockPolicies.get(2));
 
     CompletableFuture.allOf(f1, f2, f3).whenCompleteAsync((aVoid, throwable) -> {
       ZKWithCachePolicyStore anotherPolicyStore = new ZKWithCachePolicyStore(curatorClient, policyPath);
@@ -212,8 +192,8 @@ public class ZKWithCachePolicyStoreTest {
         e.printStackTrace();
       }
       int processGroupNum = 0;
-      for (PolicyDetails expectedPolicy : mockPolicies) {
-        context.assertTrue(anotherPolicyStore.getAssociatedPolicy(mockProcessGroups.get(processGroupNum++)).equals(expectedPolicy));
+      for (PolicyDetails expectedPolicy : MockData.mockPolicies) {
+        context.assertTrue(anotherPolicyStore.getAssociatedPolicy(MockData.mockProcessGroups.get(processGroupNum++)).equals(expectedPolicy));
       }
       async.complete();
     });
