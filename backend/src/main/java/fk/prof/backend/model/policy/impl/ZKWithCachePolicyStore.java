@@ -4,6 +4,8 @@ import com.google.common.io.BaseEncoding;
 import com.google.protobuf.InvalidProtocolBufferException;
 import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.util.ZookeeperUtil;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
 import policy.PolicyDetails;
 import recording.Recorder;
@@ -18,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
  * Created by rohit.patiyal on 07/03/17.
  */
 public class ZKWithCachePolicyStore implements PolicyStore {
-
+    private static Logger logger = LoggerFactory.getLogger(ZKWithCachePolicyStore.class);
     private static final String DELIMITER = "/";
     private final CuratorFramework curatorClient;
     private String policyPath;
@@ -44,26 +46,26 @@ public class ZKWithCachePolicyStore implements PolicyStore {
     }
 
     @Override
-    public Map<Recorder.ProcessGroup, PolicyDetails> getAssociatedPolicies(String appId) {
+    public Map<Recorder.ProcessGroup, PolicyDetails> getPolicies(String appId) {
         if (appId == null) return new HashMap<>();
         return cachedPolicies.get(appId);
     }
 
     @Override
-    public Map<Recorder.ProcessGroup, PolicyDetails> getAssociatedPolicies(String appId, String clusterId) {
+    public Map<Recorder.ProcessGroup, PolicyDetails> getPolicies(String appId, String clusterId) {
         if (appId == null || clusterId == null) return new HashMap<>();
         return cachedPolicies.get(appId, clusterId);
     }
 
     @Override
-    public Map<Recorder.ProcessGroup, PolicyDetails> getAssociatedPolicies(String appId, String clusterId, String process) {
+    public Map<Recorder.ProcessGroup, PolicyDetails> getPolicies(String appId, String clusterId, String process) {
         if (appId == null || clusterId == null || process == null) return new HashMap<>();
         return cachedPolicies.get(appId, clusterId, process);
     }
 
     @Override
-    public PolicyDetails getAssociatedPolicy(Recorder.ProcessGroup processGroup) {
-        return getAssociatedPolicies(processGroup.getAppId(), processGroup.getCluster(), processGroup.getProcName()).get(processGroup);
+    public PolicyDetails getPolicy(Recorder.ProcessGroup processGroup) {
+        return getPolicies(processGroup.getAppId(), processGroup.getCluster(), processGroup.getProcName()).get(processGroup);
     }
 
     @Override
@@ -71,12 +73,14 @@ public class ZKWithCachePolicyStore implements PolicyStore {
         CompletableFuture<Void> future;
         String zNodePath = policyPath + DELIMITER + encode(processGroup.getAppId()) + DELIMITER + encode(processGroup.getCluster()) + DELIMITER + encode(processGroup.getProcName());
         boolean create = false;
-        if (getAssociatedPolicy(processGroup) == null) {
+        if (getPolicy(processGroup) == null) {
             create = true;
         }
         return ZookeeperUtil.writeZNodeAsync(curatorClient, zNodePath, policyDetails.toByteArray(), create).whenComplete((result, ex) -> {
             if (ex == null) {
                 cachedPolicies.put(processGroup, policyDetails);
+            }else{
+                logger.error("Set Policy failed with error = {}", ex);
             }
         });
     }
@@ -94,15 +98,15 @@ public class ZKWithCachePolicyStore implements PolicyStore {
 
                                 Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId(decode32(appId)).setCluster(decode32(clusterId)).setProcName(decode32(process)).build();
                                 cachedPolicies.put(processGroup, policyDetails);
-                            } catch (InvalidProtocolBufferException e) {
-                                e.printStackTrace();
+                            } catch (InvalidProtocolBufferException ex) {
+                                logger.error("PopulateCacheFromZK failed while parsing policyDetails with error = {}", ex);
                             }
                         });
                     }
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception ex) {
+            logger.error("PopulateCacheFromZK failed with error = {}", ex);
         }
         return cachedPolicies;
     }
