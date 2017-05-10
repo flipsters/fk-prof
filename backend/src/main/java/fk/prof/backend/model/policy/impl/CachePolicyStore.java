@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * In memory replica of the ZK Policy store
  * Created by rohit.patiyal on 09/03/17.
  */
-class CachedPolicyStore {
+class CachePolicyStore {
 
   private final Map<String, Map<String, Map<String, PolicyDetails>>> processGroupAsTreeToPolicyLookup = new ConcurrentHashMap<>();
 
@@ -63,23 +63,9 @@ class CachedPolicyStore {
     String process = processGroup.getProcName();
     processGroupAsTreeToPolicyLookup.putIfAbsent(appId, new ConcurrentHashMap<>());
     processGroupAsTreeToPolicyLookup.get(appId).putIfAbsent(clusterId, new ConcurrentHashMap<>());
-    processGroupAsTreeToPolicyLookup.get(appId).get(clusterId).putIfAbsent(process, policyDetails);
+    processGroupAsTreeToPolicyLookup.get(appId).get(clusterId).put(process, policyDetails);
   }
 
-  public void set(Recorder.ProcessGroup processGroup, PolicyDetails policyDetails) {
-    String appId = processGroup.getAppId();
-    String clusterId = processGroup.getCluster();
-    String process = processGroup.getProcName();
-    Map<String, Map<String, PolicyDetails>> clusterIdProcToPolicyLookup = processGroupAsTreeToPolicyLookup.get(appId);
-    if (clusterIdProcToPolicyLookup != null) {
-      Map<String, PolicyDetails> procToPolicyLookup = clusterIdProcToPolicyLookup.get(clusterId);
-      if (procToPolicyLookup != null) {
-        if (procToPolicyLookup.containsKey(process)) {
-          procToPolicyLookup.put(process, policyDetails);
-        }
-      }
-    }
-  }
 
   public void remove(Recorder.ProcessGroup processGroup) {
     String appId = processGroup.getAppId();

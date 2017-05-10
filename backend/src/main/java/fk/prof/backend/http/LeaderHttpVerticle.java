@@ -3,7 +3,6 @@ package fk.prof.backend.http;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
-import com.google.protobuf.util.JsonFormat;
 import fk.prof.backend.ConfigManager;
 import fk.prof.backend.exception.HttpFailure;
 import fk.prof.backend.model.association.BackendAssociationStore;
