@@ -6,23 +6,23 @@
 #include "signal_handler.hh"
 #include "circular_queue.hh"
 #include "ti_thd.hh"
-#include "trace.hh"
 
-const int kTraceProcessorTotal = 3;
+class Process {
+public:
+    Process() {}
+    virtual ~Process() {}
+    virtual void run() = 0;
+    virtual void stop() = 0;
+};
 
-const int kTraceProcessorStart = 0;
-const int kTraceProcessorStop = 1;
-const int kTraceProcessorRunning = 2;
-
-TRACE_DECLARE(Processor, kTraceProcessorTotal);
-
+typedef std::vector<Process*> Processes;
 
 class Processor {
 
 public:
-    explicit Processor(jvmtiEnv* jvmti, CircularQueue& buffer, SignalHandler& handler, int interval)
-        : jvmti_(jvmti), buffer_(buffer), isRunning_(false), handler_(handler), interval_(interval) {
-    }
+    explicit Processor(jvmtiEnv* _jvmti, Processes&& _tasks);
+
+    ~Processor();
 
     void start(JNIEnv *jniEnv);
 
@@ -30,20 +30,18 @@ public:
 
     void stop();
 
-    bool isRunning() const;
+    bool is_running() const;
 
 private:
-    jvmtiEnv* jvmti_;
+    jvmtiEnv* jvmti;
 
-    CircularQueue& buffer_;
+    std::atomic_bool running;
 
-    std::atomic_bool isRunning_;
-
-    SignalHandler& handler_;
-
-    int interval_;
+    Processes processes;
 
     ThdProcP thd_proc;
+
+    metrics::Timer& s_t_yield_tm;
 
     void startCallback(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *arg);
 

@@ -14,53 +14,91 @@ void quiesce_sigprof(const char* thd_name) {
     }
 }
 
+enum class State { pre_start, started, stopped };
+template <typename Formatter, typename Char>
+void format_arg(Formatter& f, const Char* buff, const State& s) {
+    switch (s) {
+    case State::pre_start:
+        buff = "pre_start";
+        break;
+    case State::started:
+        buff = "started";
+        break;
+    case State::stopped:
+        buff = "stopped";
+        break;
+    default:
+        assert(false);
+    }
+}
+
 struct ThreadTargetProc {
     void* arg;
     jvmtiStartFunction run_fn;
     std::string name;
-    bool running;
+    State state;
     std::mutex m;
     std::condition_variable v;
 
-    ThreadTargetProc(void* _arg, jvmtiStartFunction _run_fn, const char* _name) : arg(_arg), run_fn(_run_fn), name(_name), running(false) {
+    metrics::Ctr& s_c_thds;
+
+    ThreadTargetProc(void* _arg, jvmtiStartFunction _run_fn, const char* _name) :
+        arg(_arg), run_fn(_run_fn), name(_name), state(State::pre_start),
+
+        s_c_thds(get_metrics_registry().new_counter({METRICS_DOMAIN, "threads", "running"})) {
+
         logger->trace("ThreadTargetProc for '{}' created", name);
     }
 
     ~ThreadTargetProc() {
+        await_stop();
+        assert(state == State::stopped);
         logger->trace("ThreadTargetProc for '{}' destroyed", name);
     }
 
     void await_stop() {
         std::unique_lock<std::mutex> l(m);
-        logger->trace("Will now wait for thread '{}' to be stopped, running as of now: {}", name, running);
-        v.wait(l, [&] { return ! running; });
+        logger->trace("Will now wait for thread '{}' to be stopped, state as of now: {}", name, state);
+        v.wait(l, [&] { return state == State::stopped; });
     }
 
     void mark_stopped() {
         std::lock_guard<std::mutex> g(m);
-        assert(running);
-        running = false;
+        assert(state == State::started);
+        state = State::stopped;
         v.notify_all();
         logger->trace("Thread '{}' stopped", name);
-
+        s_c_thds.dec();
     }
 
     void mark_started() {
         std::lock_guard<std::mutex> g(m);
-        assert(! running);
-        running = true;
+        assert(state == State::pre_start);
+        state = State::started;
         logger->trace("Thread '{}' started", name);
+        s_c_thds.inc();
     }
 };
 
 typedef std::shared_ptr<ThreadTargetProc> ThdProcP;
 
+struct StartStopMarker {
+    ThreadTargetProc& ttp;
+
+    StartStopMarker(ThreadTargetProc& _ttp) : ttp(_ttp) {
+        ttp.mark_started();
+    }
+
+    ~StartStopMarker() {
+        ttp.mark_stopped();
+    }
+};
+
 static void thread_target_proc_wrapper(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *arg) {
     auto ttp = static_cast<ThreadTargetProc*>(arg);
     quiesce_sigprof(ttp->name.c_str());
-    ttp->mark_started();
+    StartStopMarker ssm(*ttp);
     ttp->run_fn(jvmti_env, jni_env, ttp->arg);
-    ttp->mark_stopped();
 }
 
 ThdProcP start_new_thd(JavaVM *jvm, jvmtiEnv *jvmti, const char* thd_name, jvmtiStartFunction run_fn, void *arg) {
@@ -72,7 +110,7 @@ ThdProcP start_new_thd(JNIEnv *env, jvmtiEnv *jvmti, const char* thd_name, jvmti
     jvmtiError result;
 
     if (env == NULL) {
-        logError("ERROR: Failed to obtain JNIEnv\n");
+        logger->error("Failed to obtain JNIEnv");
         return ThdProcP(nullptr);
     }
 

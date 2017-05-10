@@ -1,0 +1,22 @@
+.filterBox {
+  font-size: 14px;
+  width: 200px;
+}
+
+.filterBox input {
+  color: rgb(255,64,129);
+}
+
+.alert {
+  padding: 20px;
+  background: #fff;
+  color: #ef5350;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+input:focus {
+  border-radius: 0px;
+  outline-width: 1px;
+  outline-color: rgb(63,81,181);
+}

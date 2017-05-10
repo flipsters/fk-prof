@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
-project(honest_profiler)
+project(fk-prof)
 
 enable_testing()
 
@@ -12,6 +12,39 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "build")
 include(CheckLibraryExists)
 include(CheckSymbolExists)
 include(CheckFunctionExists)
+
+##########################################################
+# Version
+
+execute_process(
+  COMMAND git rev-parse --abbrev-ref HEAD
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE GIT_BRANCH
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(
+  COMMAND git log -1 --format=%H
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE GIT_COMMIT
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+set(CAPTURE_BUILD_ENV "No" CACHE STRING "Optionally capture the build-env info (basically it will base64 encode /etc/os-release file) and capture as a global variable 'const char* fkprec_build_env'. Defaults to no.")
+if (${CAPTURE_BUILD_ENV} MATCHES "y")
+  execute_process(
+    COMMAND bash "-c" "cat /etc/os-release | base64 -w0"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE BUILD_ENV
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
+
+set(fkp_version_major 1)
+set(fkp_version_minor 5)
+set(fkp_version_patch 0)
+
+add_definitions("-DGIT_COMMIT=${GIT_COMMIT}")
+add_definitions("-DGIT_BRANCH=${GIT_BRANCH}")
+add_definitions("-DFKP_VERSION=${fkp_version_major}.${fkp_version_minor}.${fkp_version_patch}")
+add_definitions("-DFKP_VERSION=${fkp_version_major}.${fkp_version_minor}.${fkp_version_patch}")
+add_definitions("-DBUILD_ENV='${BUILD_ENV}'")
 
 ##########################################################
 # Paths
@@ -43,6 +76,8 @@ include_directories(${JAVA_INCLUDE_PATH2})
 
 pkg_check_modules(ZLIB REQUIRED zlib)
 pkg_check_modules(CURL REQUIRED libcurl)
+pkg_check_modules(MEDIDA REQUIRED libmedida>=1.0.0)
+include_directories(${MEDIDA_INCLUDE_DIRS})
 
 if (DEFINED ENV{UNITTEST_INCLUDE_DIRS})
     message("User has configured " $ENV{UNITTEST_INCLUDE_DIRS} " as the unit test include directory")
@@ -75,6 +110,7 @@ set(SOURCE_FILES
     ${SRC}/common.hh
     ${SRC}/controller.cc
     ${SRC}/controller.hh
+    ${SRC}/metrics.hh
     ${SRC}/globals.hh
     ${SRC}/globals.cc
     ${SRC}/ti_thd.hh
@@ -106,7 +142,10 @@ set(SOURCE_FILES
     ${SRC}/perf_ctx.hh
     ${SRC}/perf_ctx.cc
     ${SRC}/prob_pct.hh
-    ${SRC}/prob_pct.cc)
+    ${SRC}/prob_pct.cc
+    ${SRC}/metric_formatter.hh
+    ${SRC}/metric_formatter.cc
+    ${SRC}/unique_readsafe_ptr.hh)
 
 set(TI_SRC_FILES
     ${SRC}/agent.cc)
@@ -120,7 +159,6 @@ set(TEST_FILES
     ${SRC_TEST}/test_cpu_sampling_profile_serialization.cc
     ${SRC_TEST}/test_config.cc
     ${SRC_TEST}/test.hh
-    ${SRC_TEST}/test_recording_serde.cc
     ${SRC_TEST}/test_checksum.cc
     ${SRC_TEST}/test_maps.cc
     ${SRC_TEST}/test_scheduler.cc
@@ -128,6 +166,8 @@ set(TEST_FILES
     ${SRC_TEST}/test_perf_ctx_registry.cc
     ${SRC_TEST}/test_prob_pct.cc
     ${SRC_TEST}/test_blocking_ring_buffer.cc
+    ${SRC_TEST}/test_syslog_tsdb_metric_formatter.cc
+    ${SRC_TEST}/test_unique_readsafe_ptr.cc
     ${SRC_TEST}/test.cc)
 
 set(TEST_UTIL_FILES
@@ -171,13 +211,14 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(GLOBAL_WARNINGS, "${GLOBAL_WARNINGS} -Wno-unknown-pragmas -Wno-builtin-macro-redefined -Wl,-fatal_warnings")
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG  "-g3 -ggdb -O0")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "-g3 -ggdb")
+set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O0")
 SET(VERBOSE_LOGS "n" CACHE STRING "'Enable Verbose Logging' flag, turns on compile-time controlled debug and trace logs, defaults to 'n'")
 if (${VERBOSE_LOGS} MATCHES "y")
   set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG} -DSPDLOG_TRACE_ON -DSPDLOG_DEBUG_ON")
 endif()
 # to enable tracing add: -DENABLE_TRACING
-set(CMAKE_CXX_FLAGS "-I${INCLUDE_VENDOR_SPDLOG} -I${INCLUDE_VENDOR_CONCQUEUE} ${CMAKE_CXX_FLAGS} ${GLOBAL_WARNINGS} ${GLOBAL_COPTS} -pthread -std=c++0x")
+set(CMAKE_CXX_FLAGS "-I${INCLUDE_VENDOR_SPDLOG} -I${INCLUDE_VENDOR_CONCQUEUE} -I${PROTOBUF_INCLUDE_DIR} ${CMAKE_CXX_FLAGS} ${GLOBAL_WARNINGS} ${GLOBAL_COPTS} -pthread -std=c++0x")
 
 ##########################################################
 # Build
@@ -186,9 +227,9 @@ add_library(${BASE_OUTPUT} STATIC ${SOURCE_FILES})
 add_library(${OUTPUT} SHARED ${TI_SRC_FILES})
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD") 
-    target_link_libraries(${BASE_OUTPUT} ${JNI_LIBRARIES} proto ${PROTOBUF_LIBRARY} ${ZLIB_LDFLAGS} ${CURL_LDFLAGS} ${LIBCUCKOO_CITY_HASH_LIB})
+    target_link_libraries(${BASE_OUTPUT} proto ${PROTOBUF_LIBRARY} ${ZLIB_LDFLAGS} ${CURL_LDFLAGS} ${MEDIDA_LDFLAGS} ${LIBCUCKOO_CITY_HASH_LIB})
 else()
-    target_link_libraries(${BASE_OUTPUT} ${JNI_LIBRARIES} proto ${PROTOBUF_LIBRARY} ${ZLIB_LDFLAGS} ${CURL_LDFLAGS} ${LIBCUCKOO_CITY_HASH_LIB} dl)
+    target_link_libraries(${BASE_OUTPUT} proto ${PROTOBUF_LIBRARY} ${ZLIB_LDFLAGS} ${CURL_LDFLAGS} ${MEDIDA_LDFLAGS} ${LIBCUCKOO_CITY_HASH_LIB} dl)
 endif()
 target_link_libraries(${OUTPUT} ${BASE_OUTPUT})
 
@@ -209,3 +250,7 @@ endif()
 
 # make test
 add_test(unitTests ${BIN}/unitTests)
+
+# install
+install(TARGETS  ${OUTPUT}
+LIBRARY DESTINATION lib)

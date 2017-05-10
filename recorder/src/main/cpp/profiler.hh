@@ -8,34 +8,18 @@
 #include <string>
 
 #include "globals.hh"
+#include "profile_writer.hh"
 #include "thread_map.hh"
 #include "signal_handler.hh"
 #include "stacktraces.hh"
 #include "processor.hh"
 #include "perf_ctx.hh"
-#include "profile_writer.hh"
+
 
 using namespace std::chrono;
 using std::ofstream;
 using std::ostringstream;
 using std::string;
-
-#include "trace.hh"
-
-const int kTraceProfilerTotal = 10;
-
-const int kTraceProfilerStartFailed = 0;
-const int kTraceProfilerStartOk = 1;
-const int kTraceProfilerSetIntervalFailed = 2;
-const int kTraceProfilerSetIntervalOk = 3;
-const int kTraceProfilerSetFramesFailed = 4;
-const int kTraceProfilerSetFramesOk = 5;
-const int kTraceProfilerSetFileFailed = 6;
-const int kTraceProfilerSetFileOk = 7;
-const int kTraceProfilerStopFailed = 8;
-const int kTraceProfilerStopOk = 9;
-
-TRACE_DECLARE(Profiler, kTraceProfilerTotal);
 
 template <bool blocking = true>
 class SimpleSpinLockGuard {
@@ -67,17 +51,17 @@ public:
     ~SimpleSpinLockGuard() {}
 };
 
-class Profiler {
+class Profiler : public Process {
 public:
-    explicit Profiler(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap &_thread_map, std::shared_ptr<ProfileWriter> _writer, std::uint32_t _max_stack_depth, std::uint32_t _sampling_freq)
-        : jvm(_jvm), jvmti(_jvmti), thread_map(_thread_map), max_stack_depth(calculate_max_stack_depth(_max_stack_depth)), writer(_writer), tts(max_stack_depth), ongoing_conf(false) {
-        set_sampling_freq(_sampling_freq);
-        configure();
-    }
+    static std::uint32_t calculate_max_stack_depth(std::uint32_t hinted_max_stack_depth);
+
+    explicit Profiler(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap &_thread_map, ProfileSerializingWriter& _serializer, std::uint32_t _max_stack_depth, std::uint32_t _sampling_freq, ProbPct& _prob_pct, std::uint8_t _noctx_cov_pct);
 
     bool start(JNIEnv *jniEnv);
 
     void stop();
+
+    void run();
 
     void handle(int signum, siginfo_t *info, void *context);
 
@@ -98,30 +82,34 @@ private:
 
     CircularQueue *buffer;
 
-    Processor *processor;
-
     SignalHandler* handler;
 
-    SerializationFlushThresholds sft;
-    TruncationThresholds tts;
-    ProfileSerializingWriter* serializer;
+    ProfileSerializingWriter& serializer;
 
-    // indicates change of internal state
-    std::atomic<bool> ongoing_conf;
+    ProbPct& prob_pct;
+    std::atomic<std::uint32_t> sampling_attempts;
+    const std::uint8_t noctx_cov_pct;
+
+    bool running;
+
+    std::uint32_t samples_handled;
+
+    metrics::Ctr& s_c_cpu_samp_total;
+    metrics::Ctr& s_c_cpu_samp_err_no_jni;
+    metrics::Ctr& s_c_cpu_samp_err_unexpected;
+    metrics::Ctr& s_c_cpu_samp_gc;
+    metrics::Hist& s_h_pop_spree_len;
+    metrics::Timer& s_t_pop_spree_tm;
 
     void set_sampling_freq(std::uint32_t sampling_freq);
 
     void set_max_stack_depth(std::uint32_t max_stack_depth);
-
-    static std::uint32_t calculate_max_stack_depth(std::uint32_t hinted_max_stack_depth);
 
     void configure();
 
     inline std::uint32_t capture_stack_depth() {
         return max_stack_depth + 1;
     }
-
-    bool __is_running();
 
     DISALLOW_COPY_AND_ASSIGN(Profiler);
 };

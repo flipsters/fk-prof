@@ -9,13 +9,60 @@ void controllerRunnable(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *arg) {
     control->run();
 }
 
+void write_system_prop(jvmtiEnv* env, const char* name, std::stringstream& ss) {
+    char* value;
+    if (env->GetSystemProperty(name, &value) == JVMTI_ERROR_NONE) {
+        ss << value << "; ";
+        env->Deallocate((unsigned char *) value);
+    }
+}
+
+std::string load_vm_id(jvmtiEnv* env) {
+    std::stringstream ss;
+    write_system_prop(env, "java.vm.name", ss);
+    write_system_prop(env, "java.vm.specification.version", ss);
+    write_system_prop(env, "java.vm.version", ss);
+    write_system_prop(env, "java.vm.info", ss);
+    write_system_prop(env, "java.vm.vendor", ss);
+    return ss.str();
+}
+
+Controller::Controller(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap& _thread_map, ConfigurationOptions& _cfg) :
+    jvm(_jvm), jvmti(_jvmti), thread_map(_thread_map), cfg(_cfg), keep_running(false), writer(nullptr),
+    serializer(nullptr), processor(nullptr), raw_writer_ring(_cfg.tx_ring_sz),
+
+    s_t_poll_rpc(get_metrics_registry().new_timer({METRICS_DOMAIN, METRICS_TYPE_RPC, "poll"})),
+    s_c_poll_rpc_failures(get_metrics_registry().new_counter({METRICS_DOMAIN, METRICS_TYPE_RPC, "poll", "failures"})),
+
+    s_t_associate_rpc(get_metrics_registry().new_timer({METRICS_DOMAIN, METRICS_TYPE_RPC, "associate"})),
+    s_c_associate_rpc_failures(get_metrics_registry().new_counter({METRICS_DOMAIN, METRICS_TYPE_RPC, "associate", "failures"})),
+
+    s_v_work_cpu_sampling(get_metrics_registry().new_value({METRICS_DOMAIN, METRICS_TYPE_STATE, "working", "cpu_sampling"})),
+
+    s_c_work_success(get_metrics_registry().new_counter({METRICS_DOMAIN, "work", "retire", "success"})),
+    s_c_work_failure(get_metrics_registry().new_counter({METRICS_DOMAIN, "work", "retire", "failure"})),
+    s_c_work_retired(get_metrics_registry().new_counter({METRICS_DOMAIN, "work", "retired"})) {
+
+    current_work.set_work_id(0);
+    current_work_state = recording::WorkResponse::complete;
+    current_work_result = recording::WorkResponse::success;
+    cancel_work = []{};
+    vm_id = load_vm_id(jvmti);
+}
+
 void Controller::start() {
     keep_running.store(true, std::memory_order_relaxed);
     thd_proc = start_new_thd(jvm, jvmti, "Fk-Prof Controller Thread", controllerRunnable, this);
 }
 
 void Controller::stop() {
-    keep_running.store(false, std::memory_order_relaxed);
+    cancel_work();
+    scheduler.schedule(Time::now(), [&]() {
+            //This is necessary because it wakes up the scheduler.poll and makes keep_running == false
+            //  We can either schedule something or we'd need additional stop-control in scheduler.
+            //  This hack (in a good way) simplifies scheduler.
+            keep_running.store(false, std::memory_order_relaxed);
+        });
     await_thd_death(thd_proc);
     thd_proc.reset();
 }
@@ -41,7 +88,7 @@ static void time_now_str(std::function<void(const char*)> fn) {
     fn(buffer);
 }
 
-static void populate_recorder_info(recording::RecorderInfo& ri, const ConfigurationOptions& cfg, const Time::Pt& start_time) {
+static void populate_recorder_info(recording::RecorderInfo& ri, const ConfigurationOptions& cfg, const std::string& vm_id, const Time::Pt& start_time, std::uint64_t poll_tick) {
     ri.set_ip(cfg.ip);
     ri.set_hostname(cfg.host);
     ri.set_app_id(cfg.app_id);
@@ -49,16 +96,20 @@ static void populate_recorder_info(recording::RecorderInfo& ri, const Configurat
     ri.set_cluster(cfg.cluster);
     ri.set_instance_id(cfg.inst_id);
     ri.set_proc_name(cfg.proc);
-    ri.set_vm_id(cfg.vm_id);
+    ri.set_vm_id(vm_id + cfg.vm_id);
     ri.set_zone(cfg.zone);
     ri.set_instance_type(cfg.inst_typ);
     time_now_str([&ri](std::string now) {
             ri.set_local_time(now);
         });
     ri.set_recorder_version(RECORDER_VERION);
+    ri.set_recorder_tick(poll_tick);
     auto now = Time::now();
     std::chrono::duration<double> uptime = now - start_time;
     ri.set_recorder_uptime(uptime.count());
+
+    auto c = ri.mutable_capabilities();
+    c->set_can_cpu_sample(cfg.allow_sigprof);
 }
 
 static void populate_issued_work_status(recording::WorkResponse& w_res, std::uint64_t work_id, recording::WorkResponse::WorkState state, recording::WorkResponse::WorkResult result, Time::Pt& start_tm, Time::Pt& end_tm) {
@@ -109,7 +160,7 @@ static int read_from_curl_response(char *in_buff, size_t size, size_t nmemb, voi
     return available;
 }
 
-CurlHeader make_header_list(const std::vector<const char*>& headers) {
+static CurlHeader make_header_list(const std::vector<const char*>& headers) {
     CurlHeader header_list(nullptr, curl_slist_free_all);
     for(auto hdr : headers) {
         auto new_head = curl_slist_append(header_list.get(), hdr);
@@ -121,7 +172,13 @@ CurlHeader make_header_list(const std::vector<const char*>& headers) {
     return header_list;
 }
 
-static inline bool do_call(Curl& curl, const char* url, const char* functional_area, std::uint32_t retries_used) {
+static CurlHeader default_http_req_headers() {
+    return make_header_list({"Content-type: application/octet-stream", "Transfer-Encoding: chunked"});
+}
+
+static inline bool do_call(Curl& curl, const char* url, const char* functional_area, std::uint32_t retries_used, metrics::Timer& timer, metrics::Ctr& fail_ctr) {
+    auto timer_ctx = timer.time_scope();
+    curl_easy_setopt(curl.get(), CURLOPT_URL, url);
     auto res = curl_easy_perform(curl.get());
     long http_code = -1;
     if (res == CURLE_OK) {
@@ -132,45 +189,41 @@ static inline bool do_call(Curl& curl, const char* url, const char* functional_a
     }
     auto curl_err_str = curl_easy_strerror(res);
     logger->error("COMM Couldn't talk to {} (for {}) (error({}): {}, http-status: {}, retries-used: {})", url, functional_area, res, curl_err_str, http_code, retries_used);
+    fail_ctr.inc();
     return false;
 }
 
-void Controller::run_with_associate(const Buff& associate_response_buff, const Time::Pt& start_time) {
-    recording::AssignedBackend assigned;
-    assigned.ParseFromArray(associate_response_buff.buff + associate_response_buff.read_end, associate_response_buff.write_end - associate_response_buff.read_end);
-    const std::string& host = assigned.host();
-    std::uint32_t port = assigned.port();
-    std::stringstream ss;
-    ss << "http://" << host << ":" << port << "/poll";
-    const std::string url = ss.str();
-    logger->info("Connecting to associate: {}", url);
-    std::uint32_t backoff_seconds = cfg.backoff_start;
-    auto retries_used = 0;
-
+void Controller::run() {
+    auto start_time = Time::now();
+    CurlInit _;
     Curl curl(curl_easy_init(), curl_easy_cleanup);
-    CurlHeader header_list(make_header_list({"Content-type: application/octet-stream", "Transfer-Encoding:", "Expect:"}));
-    if (curl.get() == nullptr || header_list == nullptr) {
-        logger->error("Controller couldn't talk to assigned backend failed because cURL init failed");
-        return;
-    }
-    curl_easy_setopt(curl.get(), CURLOPT_HTTPHEADER, header_list.get());
-    curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl.get(), CURLOPT_POST, 1L);
-    curl_easy_setopt(curl.get(), CURLOPT_UPLOAD, 1L);
-
+    CurlHeader header_list(default_http_req_headers());
     Buff send(1024);
     Buff recv(1024);
 
+    if (curl.get() == nullptr || header_list == nullptr) {
+        logger->error("Controller initialization failed because cURL init failed");
+        return;
+    }
+    curl_easy_setopt(curl.get(), CURLOPT_HTTPHEADER, header_list.get());
+    curl_easy_setopt(curl.get(), CURLOPT_POST, 1L);
     curl_easy_setopt(curl.get(), CURLOPT_READDATA, &send);
     curl_easy_setopt(curl.get(), CURLOPT_READFUNCTION, write_to_curl_request);
     curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, &recv);
     curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, read_from_curl_response);
-    
-    std::function<void()> poll_cb;
+    curl_easy_setopt(curl.get(), CURLOPT_TIMEOUT, cfg.rpc_timeout);
 
+    std::function<void()> poll_cb, assoc_cb;
+
+    // setup things necessary for POLL
+    std::string poll_url, poll_host;
+    std::uint32_t poll_port;
+    auto poll_backoff_seconds = cfg.backoff_start;
+    auto poll_retries_used = 0;
+    std::uint64_t poll_tick = 0;
     poll_cb = [&]() {
         recording::PollReq p_req;
-        populate_recorder_info(*p_req.mutable_recorder_info(), cfg, start_time);
+        populate_recorder_info(*p_req.mutable_recorder_info(), cfg, vm_id, start_time, poll_tick);
 
         with_current_work([&p_req](Controller::W& w, Controller::WSt& wst, Controller::WRes& wres, Time::Pt& start_tm, Time::Pt& end_tm) {
                 populate_issued_work_status(*p_req.mutable_work_last_issued(), w.work_id(), wst, wres, start_tm, end_tm);
@@ -187,53 +240,31 @@ void Controller::run_with_associate(const Buff& associate_response_buff, const T
         logger->trace("Polling now");
 
         auto next_tick = Time::now();
-        if (do_call(curl, url.c_str(), "associate-poll", retries_used)) {
-            accept_work(recv, host, port);
-            backoff_seconds = cfg.backoff_start;
-            retries_used = 0;
+        if (do_call(curl, poll_url.c_str(), "associate-poll", poll_retries_used, s_t_poll_rpc, s_c_poll_rpc_failures)) {
+            accept_work(recv, poll_host, poll_port);
+            poll_backoff_seconds = cfg.backoff_start;
+            poll_retries_used = 0;
             next_tick += Time::sec(cfg.poll_itvl);
+            poll_tick = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
         } else {
-            if (retries_used++ >= cfg.max_retries) {
-                logger->error("COMM failed too many times, giving up on the associate: {}", url);
+            if (poll_retries_used++ >= cfg.max_retries) {
+                // old associate seems gone for good, let us find a new one
+                logger->error("COMM failed too many times, giving up on the associate: {}", poll_url);
+                poll_retries_used = 0;
+                poll_backoff_seconds = cfg.backoff_start;
+                scheduler.schedule(Time::now(), assoc_cb);
                 return;
             }
-            next_tick += Time::sec(backoff(backoff_seconds, cfg.backoff_multiplier, cfg.backoff_max));
+            next_tick += Time::sec(backoff(poll_backoff_seconds, cfg.backoff_multiplier, cfg.backoff_max));
         }
         scheduler.schedule(next_tick, poll_cb);
     };
 
-    scheduler.schedule(Time::now(), poll_cb);
-    
-    while (keep_running.load(std::memory_order_relaxed) && scheduler.poll());
-}
-
-void Controller::run() {
-    auto start_time = Time::now();
-    CurlInit _;
-    Curl curl(curl_easy_init(), curl_easy_cleanup);
-    CurlHeader header_list(make_header_list({ "Content-type: application/octet-stream", "Transfer-Encoding:", "Expect:"}));
-    Buff send(1024);
-    Buff recv(1024);
-    auto backoff_seconds = cfg.backoff_start;
-    
-    if (curl.get() == nullptr || header_list == nullptr) {
-        logger->error("Controller initialization failed because cURL init failed");
-        return;
-    }
-    curl_easy_setopt(curl.get(), CURLOPT_HTTPHEADER, header_list.get());
-    std::string service_endpoint_url = cfg.service_endpoint + std::string("/association");
-    curl_easy_setopt(curl.get(), CURLOPT_URL, service_endpoint_url.c_str());
-    curl_easy_setopt(curl.get(), CURLOPT_UPLOAD, 1L);
-
-    curl_easy_setopt(curl.get(), CURLOPT_READDATA, &send);
-    curl_easy_setopt(curl.get(), CURLOPT_READFUNCTION, write_to_curl_request);
-    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, &recv);
-    curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, read_from_curl_response);
-    
-    while (keep_running.load(std::memory_order_relaxed)) {
-        logger->info("Calling service-endpoint {} for associate resolution", service_endpoint_url);
+    // setup things necessary for discovering ASSOCIATE
+    auto assoc_backoff_seconds = cfg.backoff_start;
+    assoc_cb = [&] {
         recording::RecorderInfo ri;
-        populate_recorder_info(ri, cfg, start_time);
+        populate_recorder_info(ri, cfg, vm_id, start_time, 0);
         auto serialized_size = ri.ByteSize();
         send.ensure_free(serialized_size);
         ri.SerializeToArray(send.buff, send.capacity);
@@ -241,45 +272,28 @@ void Controller::run() {
         send.read_end = 0;
         curl_easy_setopt(curl.get(), CURLOPT_INFILESIZE, serialized_size);
         recv.write_end = recv.read_end = 0;
-        if (do_call(curl, service_endpoint_url.c_str(), "associate-discovery", 0)) {
-            backoff_seconds = cfg.backoff_start;
-            run_with_associate(recv, start_time);
+        std::string service_endpoint_url = cfg.service_endpoint + std::string("/association");
+        logger->info("Calling service-endpoint {} for associate resolution", service_endpoint_url);
+        if (do_call(curl, service_endpoint_url.c_str(), "associate-discovery", 0, s_t_associate_rpc, s_c_associate_rpc_failures)) {
+            assoc_backoff_seconds = cfg.backoff_start;
+            recording::AssignedBackend assigned;
+            assigned.ParseFromArray(recv.buff + recv.read_end, recv.write_end - recv.read_end);
+            poll_host = assigned.host();
+            poll_port = assigned.port();
+            poll_url = "http://" + poll_host + ":" + std::to_string(poll_port) + "/poll";
+            logger->info("Connecting to associate: {}", poll_url);
+            scheduler.schedule(Time::now(), poll_cb);
         } else {
-            std::this_thread::sleep_for(Time::sec(backoff(backoff_seconds, cfg.backoff_multiplier, cfg.backoff_max)));
+            auto next_attempt = Time::now() + Time::sec(backoff(assoc_backoff_seconds, cfg.backoff_multiplier, cfg.backoff_max));
+            scheduler.schedule(next_attempt, assoc_cb);
         }
-    }
- 
+    };
 
-    // if ((clientConnection = accept(listener, (struct sockaddr *) &clientAddress, &addressSize)) == -1) {
-    //     logError("ERROR: Failed to accept incoming connection: %s\n", strerror(errno));
-    //     continue;
-    // }
+    // discover associate (it'll setup poll post discovery)
+    scheduler.schedule(Time::now(), assoc_cb);
 
-    // if ((bytesRead = recv(clientConnection, buf, MAX_DATA_SIZE - 1, 0)) == -1) {
-    //     if (bytesRead == 0) {
-    //         // client closed the connection
-    //     } else {
-    //         logError("ERROR: Failed to read data from client: %s\n", strerror(errno));
-    //     }
-    // } else {
-    //     buf[bytesRead] = '\0';
-
-    //     if (strstr(buf, "start") == buf) {
-    //         startSampling();
-    //     } else if (strstr(buf, "stop") == buf) {
-    //         stopSampling();
-    //     } else if (strstr(buf, "status") == buf) {
-    //         reportStatus(clientConnection);
-    //     } else if (strstr(buf, "get ") == buf) {
-    //         getProfilerParam(clientConnection, buf + 4);
-    //     } else if (strstr(buf, "set ") == buf) {
-    //         setProfilerParam(buf + 4);
-    //     } else {
-    //         logError("WARN: Unknown command received, ignoring: %s\n", buf);
-    //     }
-    // }
-
-    // close(clientConnection);
+    // work, work work...
+    while (keep_running.load(std::memory_order_relaxed) && scheduler.poll());
 }
 
 void Controller::with_current_work(std::function<void(Controller::W&, Controller::WSt&, Controller::WRes&, Time::Pt&, Time::Pt&)> proc) {
@@ -316,9 +330,16 @@ void Controller::accept_work(Buff& poll_response_buff, const std::string& host, 
                 start_tm = end_tm = Time::now();
 
                 if ((delay + w.duration()) > 0) {
+                    if (! capable(w)) {
+                        logger->critical("Ignoring work {}, as capability doesn't match", w.work_id());
+                        wst = recording::WorkResponse::complete;
+                        wres = recording::WorkResponse::failure;
+                        s_c_work_failure.inc();
+                        return;
+                    }
                     wst = recording::WorkResponse::pre_start;
                     wres = recording::WorkResponse::unknown;
-                    issueWork(host, port, res.controller_id(), res.controller_version());
+                    issue_work(host, port, res.controller_id(), res.controller_version());
                 } else {
                     wst = recording::WorkResponse::complete;
                     wres = recording::WorkResponse::success;
@@ -331,11 +352,24 @@ void Controller::accept_work(Buff& poll_response_buff, const std::string& host, 
 
 void http_raw_writer_runnable(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *arg);
 
-static int ring_to_curl(char *out_buff, size_t size, size_t nitems, void *_ring) {
-    auto ring = static_cast<BlockingRingBuffer*>(_ring);
+typedef std::tuple<BlockingRingBuffer*, metrics::Timer*, metrics::Hist*> ProfileDataReadCtx;
+
+static int ring_to_curl(char *out_buff, size_t size, size_t nitems, void *_ctx) {
+    auto& ctx = *static_cast<ProfileDataReadCtx*>(_ctx);
+    auto ring = std::get<0>(ctx);
+    auto timer_ctx = std::get<1>(ctx)->time_scope();
     auto copied = ring->read(reinterpret_cast<std::uint8_t*>(out_buff), 0, size * nitems);
     logger->debug("Writing {} bytes of recorded data", copied);
+    std::get<2>(ctx)->update(copied);
     return copied;
+}
+
+static int log_curl_response(char *in_buff, size_t size, size_t nmemb, void *recv_buff) {
+    int sz = size * nmemb;
+    std::string body(in_buff, sz);
+    std::string ctx(static_cast<const char*>(recv_buff));
+    logger->info("Curl {} response body: '{}'", ctx, body);
+    return sz;
 }
 
 class HttpRawProfileWriter : public RawWriter {
@@ -354,12 +388,29 @@ private:
     //  can be used for other desirable things like compression.
     BlockingRingBuffer& ring;
 
-    std::function<void()> cancellation_fn;
+    std::function<void()>& cancellation_fn;
+
+    std::uint32_t tx_timeout;
 
     ThdProcP thd_proc;
 
+    metrics::Timer& s_t_rpc;
+    metrics::Ctr& s_c_rpc_failures;
+    
+    metrics::Timer& s_t_fill_wait;
+    metrics::Hist& s_h_req_chunk_sz;
+
 public:
-    HttpRawProfileWriter(JavaVM *jvm, jvmtiEnv *jvmti, const std::string& _host, const std::uint32_t _port, BlockingRingBuffer& _ring, std::function<void()>&& _cancellation_fn) : RawWriter(), host(_host), port(_port), ring(_ring), cancellation_fn(_cancellation_fn) {
+    HttpRawProfileWriter(JavaVM *jvm, jvmtiEnv *jvmti, const std::string& _host, const std::uint32_t _port,
+                         BlockingRingBuffer& _ring, std::function<void()>& _cancellation_fn, const std::uint32_t _tx_timeout) :
+        RawWriter(), host(_host), port(_port), ring(_ring), cancellation_fn(_cancellation_fn), tx_timeout(_tx_timeout),
+
+        s_t_rpc(get_metrics_registry().new_timer({METRICS_DOMAIN, METRICS_TYPE_RPC, "profile"})),
+        s_c_rpc_failures(get_metrics_registry().new_counter({METRICS_DOMAIN, METRICS_TYPE_RPC, "profile", "failures"})),
+
+        s_t_fill_wait(get_metrics_registry().new_timer({METRICS_DOMAIN, METRICS_TYPE_WAIT, "profile", "req_data_feed"})),
+        s_h_req_chunk_sz(get_metrics_registry().new_histogram({METRICS_DOMAIN, METRICS_TYPE_SZ, "profile", "chunk"})) {
+
         ring.reset();
         thd_proc = start_new_thd(jvm, jvmti, "Fk-Prof Profiler Writer Thread", http_raw_writer_runnable, this);
     }
@@ -380,20 +431,24 @@ public:
         logger->info("Will now post profile to associate: {}", url);
 
         Curl curl(curl_easy_init(), curl_easy_cleanup);
-        CurlHeader header_list(make_header_list({"Content-type: application/octet-stream", "Transfer-Encoding: chunked"}));
+        CurlHeader header_list(default_http_req_headers());
         if (curl.get() == nullptr || header_list == nullptr) {
             logger->error("Controller couldn't post profile because cURL init failed");
             return;
         }
         curl_easy_setopt(curl.get(), CURLOPT_HTTPHEADER, header_list.get());
-        curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl.get(), CURLOPT_POST, 1L);
-        curl_easy_setopt(curl.get(), CURLOPT_UPLOAD, 1L);
 
-        curl_easy_setopt(curl.get(), CURLOPT_READDATA, &ring);
+        ProfileDataReadCtx rd_ctx {&ring, &s_t_fill_wait, &s_h_req_chunk_sz};
+
+        curl_easy_setopt(curl.get(), CURLOPT_READDATA, &rd_ctx);
         curl_easy_setopt(curl.get(), CURLOPT_READFUNCTION, ring_to_curl);
+        curl_easy_setopt(curl.get(), CURLOPT_TIMEOUT, tx_timeout);
 
-        if (do_call(curl, url.c_str(), "send-profile", 0)) {
+        curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, "PROFILE-RPC");
+        curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, log_curl_response);
+
+        if (do_call(curl, url.c_str(), "send-profile", 0, s_t_rpc, s_c_rpc_failures)) {
             logger->info("Profile posted successfully!");
         } else {
             logger->error("Couldn't post profile, http request failed, cancelling work.");
@@ -416,33 +471,49 @@ void populate_recording_header(recording::RecordingHeader& rh, const recording::
     *wa = w;
 }
 
-void Controller::issueWork(const std::string& host, const std::uint32_t port, std::uint32_t controller_id, std::uint32_t controller_version) {
+void Controller::issue_work(const std::string& host, const std::uint32_t port, std::uint32_t controller_id, std::uint32_t controller_version) {
     auto at = Time::now() + Time::sec(current_work.delay());
     scheduler.schedule(at, [&, port, controller_id, controller_version]() {
             with_current_work([&](Controller::W& w, Controller::WSt& wst, Controller::WRes& wres, Time::Pt& start_tm, Time::Pt& end_tm) {
                     auto work_id = w.work_id();
-                    std::function<void()> cancellation_cb = [&, work_id]() {
+                    cancel_work = [&, work_id]() {
+                        raw_writer_ring.readonly(); //because now there is no point in reading/writing anything anyway, this prevents some races:
+                        // 1. Where processor wants to write more but raw-writer can't read any more
+                        // 2. When user shuts down the JVM while profile is being recorded
                         scheduler.schedule(Time::now(), [&] {
                                 wres = recording::WorkResponse::failure;
-                                retireWork(work_id);
+                                retire_work(work_id);
                             });
                     };
                     if (w.work_size() > 0) {
-                        std::shared_ptr<HttpRawProfileWriter> raw_writer(new HttpRawProfileWriter(jvm, jvmti, host, port, raw_writer_ring, std::move(cancellation_cb)));
+                        std::uint32_t tx_timeout = cfg.slow_tx_tolerance * w.duration();
+                        std::shared_ptr<HttpRawProfileWriter> raw_writer(new HttpRawProfileWriter(jvm, jvmti, host, port, raw_writer_ring, cancel_work, tx_timeout));
                         writer.reset(new ProfileWriter(raw_writer, buff));
                         recording::RecordingHeader rh;
                         populate_recording_header(rh, w, controller_id, controller_version);
                         writer->write_header(rh);
                     }
-                    
                     for (auto i = 0; i < w.work_size(); i++) {
                         auto work = w.work(i);
-                        issue(work);
+                        prep(work);
                     }
+
+                    serializer.reset(new ProfileSerializingWriter(jvmti, *writer.get(), SiteResolver::method_info, SiteResolver::line_no, get_ctx_reg(), sft, tts, cfg.noctx_cov_pct));
+
+                    JNIEnv *env = getJNIEnv(jvm);
+                    Processes processes;
+                    for (auto i = 0; i < w.work_size(); i++) {
+                        auto work = w.work(i);
+                        issue(work, processes, env);
+                    }
+
+                    processor.reset(new Processor(jvmti, std::move(processes)));
+                    processor->start(env);
+
                     start_tm = Time::now();
                     auto stop_at = start_tm + Time::sec(w.duration());
                     scheduler.schedule(stop_at, [&, work_id]() {
-                            retireWork(work_id);
+                            retire_work(work_id);
                         });
                     logger->info("Issuing work-id {}, it is slated for retire in {} seconds", w.work_id(), w.duration());
                     wst = recording::WorkResponse::running;
@@ -450,25 +521,43 @@ void Controller::issueWork(const std::string& host, const std::uint32_t port, st
         });
 }
 
-void Controller::retireWork(const std::uint64_t work_id) {
+void Controller::retire_work(const std::uint64_t work_id) {
     with_current_work([&](Controller::W& w, Controller::WSt& wst, Controller::WRes& wres, Time::Pt& start_tm, Time::Pt& end_tm) {
             if (w.work_id() != work_id) {
                 logger->warn("Stale work-retire call (target work_id was {}, current work_id is {}), ignoring", work_id, w.work_id());
                 return;//TODO: test me!
             }
+            if (wst == recording::WorkResponse::complete) {
+                logger->info("Work {} has already been retired (result: {}), ignoring stale retire call", work_id, wres);
+                return;
+            }
+
+            processor->stop();
+            processor.reset();
+
             logger->info("Will now retire work {}", work_id);
             for (auto i = 0; i < w.work_size(); i++) {
                 auto work = w.work(i);
                 retire(work);
             }
+
+            serializer.reset();
             writer.reset();
-            
+
             logger->info("Retiring work-id {}, status before retire {}", w.work_id(), wres);
             wst = recording::WorkResponse::complete;
             if ( wres == recording::WorkResponse::unknown) {
                 wres = recording::WorkResponse::success;
             }
             end_tm = Time::now();
+
+
+            s_c_work_retired.inc();
+            if (wres == recording::WorkResponse::success) {
+                s_c_work_success.inc();
+            } else {
+                s_c_work_failure.inc();
+            }
         });
 }
 
@@ -478,15 +567,49 @@ bool has_cpu_sample_work_p(const recording::Work& work) {
     return false;
 }
 
-void Controller::issue(const recording::Work& work) {
+bool Controller::capable(const W& w) {
+    for (auto i = 0; i < w.work_size(); i++) {
+        auto work = w.work(i);
+        if (! capable(work)) return false;
+    }
+    return true;
+}
+
+bool Controller::capable(const recording::Work& work) {
     auto w_type = work.w_type();
     switch(w_type) {
     case recording::WorkType::cpu_sample_work:
-        if (has_cpu_sample_work_p(work))
-            issue(work.cpu_sample());
-        return;
+        return has_cpu_sample_work_p(work) && capable(work.cpu_sample());
     default:
         logger->error("Encountered unknown work type {}", w_type);
+        return false;
+    }
+}
+
+void Controller::prep(const recording::Work& work) {
+    auto w_type = work.w_type();
+    switch(w_type) {
+    case recording::WorkType::cpu_sample_work:
+        if (has_cpu_sample_work_p(work)) {
+            prep(work.cpu_sample());
+        }
+        return;
+    default:
+        assert(false);
+    }
+}
+
+void Controller::issue(const recording::Work& work, Processes& processes, JNIEnv* env) {
+    auto w_type = work.w_type();
+    switch(w_type) {
+    case recording::WorkType::cpu_sample_work:
+        if (has_cpu_sample_work_p(work)) {
+            issue(work.cpu_sample(), processes, env);
+            s_v_work_cpu_sampling.update(1);
+        }
+        return;
+    default:
+        assert(false);
     }
 }
 
@@ -494,46 +617,60 @@ void Controller::retire(const recording::Work& work) {
     auto w_type = work.w_type();
     switch(w_type) {
     case recording::WorkType::cpu_sample_work:
-        if (has_cpu_sample_work_p(work))
+        if (has_cpu_sample_work_p(work)) {
             retire(work.cpu_sample());
+            s_v_work_cpu_sampling.update(0);
+        }
         return;
     default:
-        logger->error("Encountered unknown work type {}", w_type);
+        assert(false);
     }
 }
 
-void Controller::issue(const recording::CpuSampleWork& csw) {
+bool Controller::capable(const recording::CpuSampleWork& csw) {
+    bool capable = cfg.allow_sigprof;
+    if (! capable) logger->warn("Not capable of cpu-sampling work");
+    return capable;
+}
+
+void Controller::prep(const recording::CpuSampleWork& csw) {
+    sft.cpu_samples = csw.serialization_flush_threshold();
+    tts.cpu_samples_max_stack_sz = Profiler::calculate_max_stack_depth(csw.max_frames());
+}
+
+class CpuProfileProcess : public Process {
+    ReadsafePtr<Profiler> p;
+    bool available;
+
+public:
+    CpuProfileProcess() : p(GlobalCtx::recording.cpu_profiler) {
+        available = p.available();
+    }
+
+    virtual ~CpuProfileProcess() {}
+
+    void run() {
+        if (available) p->run();
+    }
+
+    void stop() {
+        if (available) p->stop();
+    }
+};
+
+void Controller::issue(const recording::CpuSampleWork& csw, Processes& processes, JNIEnv* env) {
     auto freq = csw.frequency();
-    auto max_stack_depth = csw.max_frames();
-    logger->info("Starting cpu-sampling at {} Hz and for upto {} frames", freq, max_stack_depth);
+    logger->info("Starting cpu-sampling at {} Hz and for upto {} frames", freq, tts.cpu_samples_max_stack_sz);
     
-    GlobalCtx::recording.cpu_profiler.reset(new Profiler(jvm, jvmti, thread_map, writer, max_stack_depth, freq));
-    JNIEnv *env = getJNIEnv(jvm);
-    GlobalCtx::recording.cpu_profiler->start(env);
+    GlobalCtx::recording.cpu_profiler.reset(new Profiler(jvm, jvmti, thread_map, *serializer.get(), tts.cpu_samples_max_stack_sz, freq, get_prob_pct(), cfg.noctx_cov_pct));
+    ReadsafePtr<Profiler> p(GlobalCtx::recording.cpu_profiler);
+    p->start(env);
+    processes.push_back(new CpuProfileProcess());
 }
 
 void Controller::retire(const recording::CpuSampleWork& csw) {
-    auto freq = csw.frequency();
-    auto max_stack_depth = csw.max_frames();
-    logger->info("Stopping cpu-sampling", freq, max_stack_depth);
-
-    GlobalCtx::recording.cpu_profiler->stop();
+    logger->info("Stopping cpu-sampling");
     GlobalCtx::recording.cpu_profiler.reset();
-}
-
-void Controller::startSampling() {
-    // JNIEnv *env = getJNIEnv(jvm);
-
-    // if (env == NULL) {
-    //     logError("ERROR: Failed to obtain JNI environment, cannot start sampling\n");
-    //     return;
-    // }
-
-    // profiler->start(env);
-}
-
-void Controller::stopSampling() {
-    // profiler->stop();
 }
 
 namespace GlobalCtx {

@@ -1,6 +1,7 @@
 package fk.prof.aggregation.model;
 
 import fk.prof.aggregation.proto.AggregatedProfileModel.*;
+import fk.prof.metrics.ProcessGroupTag;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -8,35 +9,58 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class FinalizedAggregationWindow {
-  private final String appId;
-  private final String clusterId;
-  private final String procId;
-  private final LocalDateTime start;
-  private final LocalDateTime endWithTolerance;
-  private final Collection<RecorderInfo> recorders;
+  protected final String appId;
+  protected final String clusterId;
+  protected final String procId;
+  protected final LocalDateTime start;
+  protected final LocalDateTime endedAt;
+  protected final int durationInSecs;
   protected final Map<Long, FinalizedProfileWorkInfo> workInfoLookup;
   protected final FinalizedCpuSamplingAggregationBucket cpuSamplingAggregationBucket;
+
+  private final ProcessGroupTag processGroupTag;
 
   public FinalizedAggregationWindow(String appId,
                                     String clusterId,
                                     String procId,
                                     LocalDateTime start,
-                                    LocalDateTime endWithTolerance,
-                                    Collection<RecorderInfo> recorders,
+                                    LocalDateTime endedAt,
+                                    int durationInSecs,
                                     Map<Long, FinalizedProfileWorkInfo> workInfoLookup,
                                     FinalizedCpuSamplingAggregationBucket cpuSamplingAggregationBucket) {
     this.appId = appId;
     this.clusterId = clusterId;
     this.procId = procId;
     this.start = start;
-    this.endWithTolerance = endWithTolerance;
-    this.recorders = recorders;
+    this.endedAt = endedAt;
+    this.durationInSecs = durationInSecs;
     this.workInfoLookup = workInfoLookup;
     this.cpuSamplingAggregationBucket = cpuSamplingAggregationBucket;
+
+    this.processGroupTag = new ProcessGroupTag(appId, clusterId, procId);
+  }
+
+  public ProcessGroupTag getProcessGroupTag() {
+    return processGroupTag;
   }
 
   public FinalizedProfileWorkInfo getDetailsForWorkId(long workId) {
     return this.workInfoLookup.get(workId);
+  }
+
+  //NOTE: This is computed on expiry of aggregation window, null otherwise. Having a getter here to make this testable
+  public LocalDateTime getEndedAt() {
+    return this.endedAt;
+  }
+
+  @Override
+  public String toString() {
+    return "app_id=" + appId +
+        ", cluster_id=" + clusterId +
+        ", proc_id=" + procId +
+        ", start=" + start +
+        ", end=" + endedAt +
+        ", duration=" + durationInSecs;
   }
 
   @Override
@@ -53,7 +77,8 @@ public class FinalizedAggregationWindow {
         && this.clusterId.equals(other.clusterId)
         && this.procId.equals(other.procId)
         && this.start.equals(other.start)
-        && this.endWithTolerance.equals(other.endWithTolerance)
+        && this.durationInSecs == other.durationInSecs
+        && this.endedAt == null ? other.endedAt == null : this.endedAt.equals(other.endedAt)
         && this.workInfoLookup.equals(other.workInfoLookup)
         && this.cpuSamplingAggregationBucket.equals(other.cpuSamplingAggregationBucket);
   }
@@ -61,8 +86,9 @@ public class FinalizedAggregationWindow {
   protected Header buildHeaderProto(int version, WorkType workType) {
     Header.Builder builder = Header.newBuilder()
         .setFormatVersion(version)
-        .setAggregationEndTime(endWithTolerance.atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_ZONED_DATE_TIME))
+        .setAggregationEndTime(endedAt == null ? null : endedAt.atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_ZONED_DATE_TIME))
         .setAggregationStartTime(start.atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_ZONED_DATE_TIME))
+        .setWindowDuration(durationInSecs)
         .setAppId(appId)
         .setClusterId(clusterId)
         .setProcId(procId);
@@ -76,10 +102,6 @@ public class FinalizedAggregationWindow {
 
   protected Header buildHeaderProto(int version) {
     return buildHeaderProto(version, null);
-  }
-
-  protected RecorderList buildRecorderListProto() {
-    return RecorderList.newBuilder().addAllRecorders(recorders).build();
   }
 
   /**
@@ -111,10 +133,10 @@ public class FinalizedAggregationWindow {
     }
 
     // using first profile.tracesCount * 2 as initial capacity to avoid array resize. All recorded profiles have almost same set of traces.
-    int initialCapacity = workInfoLookup.values().iterator().next().recordedTraces().size() * 2;
+    int initialCapacity = workInfoLookup.values().iterator().next().getRecordedTraces().size() * 2;
     Set<String> traces = new HashSet<>(initialCapacity);
 
-    workInfoLookup.values().stream().forEach(e -> traces.addAll(e.recordedTraces()));
+    workInfoLookup.values().stream().forEach(e -> traces.addAll(e.getRecordedTraces()));
 
     builder.addAllName(traces);
 

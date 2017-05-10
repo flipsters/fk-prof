@@ -17,14 +17,6 @@ JNIEXPORT jboolean JNICALL Java_fk_prof_TestJni_generateCpusampleSimpleProfile
 
 /*
  * Class:     fk_prof_TestJni
- * Method:    setupLogger
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_fk_prof_TestJni_setupLogger
-  (JNIEnv *, jclass);
-
-/*
- * Class:     fk_prof_TestJni
  * Method:    setupPerfCtx
  * Signature: ()V
  */
@@ -94,6 +86,14 @@ JNIEXPORT jint JNICALL Java_fk_prof_TestJni_getCtxMergeSemantic
  */
 JNIEXPORT jboolean JNICALL Java_fk_prof_TestJni_isGenerated
   (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     fk_prof_TestJni
+ * Method:    getNoCtxName
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_fk_prof_TestJni_getNoCtxName
+  (JNIEnv *, jobject);
 
 #ifdef __cplusplus
 }

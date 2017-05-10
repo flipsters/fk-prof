@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#define NOCTX_NAME "~ OTHERS ~"
+
 class RawWriter {
 public:
     RawWriter() {}
@@ -36,13 +38,12 @@ private:
 
     template <class T> void write_unchecked_obj(const T& value);
 
+    void mark_eof();
+
 public:
-    ProfileWriter(std::shared_ptr<RawWriter> _w, Buff& _data) : w(_w), data(_data), header_written(false) {
-        data.write_end = data.read_end = 0;
-    }
-    ~ProfileWriter() {
-        flush();
-    }
+    ProfileWriter(std::shared_ptr<RawWriter> _w, Buff& _data);
+
+    ~ProfileWriter();
 
     void write_header(const recording::RecordingHeader& rh);
 
@@ -66,6 +67,7 @@ struct TruncationThresholds {
     TruncationCap cpu_samples_max_stack_sz;
 
     TruncationThresholds(TruncationCap _cpu_samples_max_stack_sz) : cpu_samples_max_stack_sz(_cpu_samples_max_stack_sz) {}
+    TruncationThresholds() : cpu_samples_max_stack_sz(DEFAULT_MAX_FRAMES_TO_CAPTURE) {}
     ~TruncationThresholds() {}
 };
 
@@ -85,7 +87,6 @@ private:
     recording::Wse cpu_sample_accumulator;
     
     std::unordered_set<MthId> known_methods;
-    MthId next_mthd_id;
     std::unordered_map<ThdId, ThdId> known_threads;
     ThdId next_thd_id;
     std::unordered_map<PerfCtx::TracePt, CtxId> known_ctxs;
@@ -95,11 +96,25 @@ private:
     FlushCtr cpu_samples_flush_ctr;
 
     const TruncationThresholds& trunc_thresholds;
-    
-public:
-    ProfileSerializingWriter(jvmtiEnv* _jvmti, ProfileWriter& _w, SiteResolver::MethodInfoResolver _fir, SiteResolver::LineNoResolver _lnr, PerfCtx::Registry& _reg, const SerializationFlushThresholds& _sft, const TruncationThresholds& _trunc_thresholds) : jvmti(_jvmti), w(_w), fir(_fir), lnr(_lnr), reg(_reg), next_mthd_id(10), next_thd_id(3), next_ctx_id(5), sft(_sft), cpu_samples_flush_ctr(0), trunc_thresholds(_trunc_thresholds) {}
 
-    ~ProfileSerializingWriter() {}
+    metrics::Ctr& s_c_new_thd_info;
+    metrics::Ctr& s_c_new_ctx_info;
+    metrics::Ctr& s_c_total_mthd_info;
+    metrics::Ctr& s_c_new_mthd_info;
+
+    metrics::Ctr& s_c_bad_lineno;
+
+    metrics::Ctr& s_c_frame_snipped;
+
+    metrics::Mtr& s_m_stack_sample_err;
+    metrics::Mtr& s_m_cpu_sample_add;
+
+public:
+    ProfileSerializingWriter(jvmtiEnv* _jvmti, ProfileWriter& _w, SiteResolver::MethodInfoResolver _fir, SiteResolver::LineNoResolver _lnr,
+                             PerfCtx::Registry& _reg, const SerializationFlushThresholds& _sft, const TruncationThresholds& _trunc_thresholds,
+                             std::uint8_t _noctx_cov_pct);
+
+    ~ProfileSerializingWriter();
 
     virtual void record(const JVMPI_CallTrace &trace, ThreadBucket *info = nullptr, std::uint8_t ctx_len = 0, PerfCtx::ThreadTracker::EffectiveCtx* ctx = nullptr);
 

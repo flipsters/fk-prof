@@ -1,5 +1,6 @@
 package fk.prof.backend.request.profile.parser;
 
+import com.codahale.metrics.Histogram;
 import fk.prof.backend.exception.AggregationFailure;
 import fk.prof.backend.request.CompositeByteBufInputStream;
 import recording.Recorder;
@@ -13,9 +14,13 @@ public class WseParser {
   private Adler32 wseChecksum = new Adler32();
   private boolean wseParsed = false;
   private int maxMessageSizeInBytes;
+  private boolean endMarkerReceived = false;
 
-  public WseParser(int maxMessageSizeInBytes) {
+  private MessageParser msgParser;
+
+  public WseParser(int maxMessageSizeInBytes, Histogram histWseSize) {
     this.maxMessageSizeInBytes = maxMessageSizeInBytes;
+    this.msgParser = new MessageParser(histWseSize);
   }
 
   /**
@@ -25,6 +30,10 @@ public class WseParser {
    */
   public boolean isParsed() {
     return this.wseParsed;
+  }
+
+  public boolean isEndMarkerReceived() {
+    return this.endMarkerReceived;
   }
 
   /**
@@ -54,11 +63,15 @@ public class WseParser {
     try {
       if (wse == null) {
         in.markAndDiscardRead();
-        wse = MessageParser.readDelimited(Recorder.Wse.parser(), in, maxMessageSizeInBytes, "WSE");
+        wse = msgParser.readDelimited(Recorder.Wse.parser(), in, maxMessageSizeInBytes, "WSE");
+        if(wse == null) {
+          endMarkerReceived = true;
+          return;
+        }
         in.updateChecksumSinceMarked(wseChecksum);
       }
       in.markAndDiscardRead();
-      int checksumValue = MessageParser.readRawVariantInt(in, "headerChecksumValue");
+      int checksumValue = msgParser.readRawVariantInt(in, "wseChecksumValue");
       if (checksumValue != ((int) wseChecksum.getValue())) {
         throw new AggregationFailure("Checksum of wse does not match");
       }
@@ -73,7 +86,7 @@ public class WseParser {
       }
     }
     catch (IOException e) {
-      throw new AggregationFailure(e);
+      throw new AggregationFailure(e, true);
     }
   }
 }

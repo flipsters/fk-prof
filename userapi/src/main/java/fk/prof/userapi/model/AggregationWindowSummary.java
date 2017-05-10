@@ -14,16 +14,14 @@ import java.util.Map;
 public class AggregationWindowSummary {
     private final AggregatedProfileModel.Header header;
     private final AggregatedProfileModel.TraceCtxNames traceNames;
-    private final AggregatedProfileModel.RecorderList recorders;
     private final List<AggregatedProfileModel.ProfileWorkInfo> profiles;
     private final Map<AggregatedProfileModel.WorkType, WorkSpecificSummary> wsSummary;
 
     public AggregationWindowSummary(AggregatedProfileModel.Header header, AggregatedProfileModel.TraceCtxNames traceNames,
-                                    AggregatedProfileModel.RecorderList recorders, List<AggregatedProfileModel.ProfileWorkInfo> profiles,
+                                    List<AggregatedProfileModel.ProfileWorkInfo> profiles,
                                     Map<AggregatedProfileModel.WorkType, WorkSpecificSummary> wsSummary) {
         this.header = header;
         this.traceNames = traceNames;
-        this.recorders = recorders;
         this.profiles = profiles;
         this.wsSummary = wsSummary;
     }
@@ -33,18 +31,11 @@ public class AggregationWindowSummary {
     }
 
     public int getDuration() {
-        ZonedDateTime start = getStart();
-        ZonedDateTime end = ZonedDateTime.parse(header.getAggregationEndTime(), DateTimeFormatter.ISO_ZONED_DATE_TIME);
-
-        return (int)start.until(end, ChronoUnit.SECONDS);
+        return header.getWindowDuration();
     }
 
     public Iterable<String> getTraces() {
         return traceNames.getNameList();
-    }
-
-    public Iterable<AggregatedProfileModel.RecorderInfo> getRecorders() {
-        return recorders.getRecordersList();
     }
 
     public Iterable<AggregatedProfileModel.ProfileWorkInfo> getProfiles() {

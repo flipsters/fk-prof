@@ -1,7 +1,8 @@
-
 # binaries
 build*
 target/
+
+dist/
 
 # vim
 *.swp
@@ -9,10 +10,16 @@ target/
 # JDK crashes
 hs_err_pid*
 
+# local configuration
+recorder_env.properties
+
 # output files
 log-*.hpl
 dump.hpl
 traces.txt
+
+# mvn
+pom.xml.versionsBackup
 
 # IDE
 .idea
@@ -47,9 +54,14 @@ cscope.*
 
 .#*
 core
+
 # ui
 npm-debug.log
 ui/public/*
 
 #Ignore logs directory
 backend/logs/
+
+recorder/.vscode/c_cpp_properties.json
+
+recorder/.vscode/settings.json

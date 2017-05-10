@@ -20,57 +20,54 @@ void sleep_for_millis(uint period) {
 #endif
 }
 
-TRACE_DEFINE_BEGIN(Processor, kTraceProcessorTotal)
-    TRACE_DEFINE("start processor")
-    TRACE_DEFINE("stop processor")
-    TRACE_DEFINE("chech that processor is running")
-TRACE_DEFINE_END(Processor, kTraceProcessorTotal);
+Processor::Processor(jvmtiEnv* _jvmti, Processes&& _processes)
+    : jvmti(_jvmti), running(false), processes(_processes),
+
+      s_t_yield_tm(get_metrics_registry().new_timer({METRICS_DOMAIN, "processor", "sched_yield", "time"})) {}
+
+Processor::~Processor() {
+    for (auto& p : processes) {
+        delete p;
+    }
+}
 
 void Processor::run() {
-    int popped = 0;
-
     while (true) {
-        while (buffer_.pop()) {
-            ++popped;
+        for (auto& p : processes) {
+            p->run();
         }
 
-        if (popped > 200) {
-            if (!handler_.updateSigprofInterval()) {
-                break;
-            }
-            popped = 0;
-        }
-
-        if (!isRunning_.load(std::memory_order_relaxed)) {
+        if (!running.load(std::memory_order_relaxed)) {
             break;
         }
 
-        sched_yield();
+        {
+            auto _ = s_t_yield_tm.time_scope();
+            sched_yield();
+        }
     }
 
-    handler_.stopSigprof();
-    // no shared data access after this point, can be safely deleted
+    for (auto& p : processes) {
+        p->stop();
+    }
 }
 
-void callbackToRunProcessor(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *arg) {
+void callback_to_run_processor(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *arg) {
     Processor* processor = static_cast<Processor*>(arg);
     processor->run();
 }
 
 void Processor::start(JNIEnv *jniEnv) {
-    TRACE(Processor, kTraceProcessorStart);
-    isRunning_.store(true, std::memory_order_relaxed);
-    thd_proc = start_new_thd(jniEnv, jvmti_, "Fk-Prof Processing Thread", callbackToRunProcessor, this);
+    running.store(true, std::memory_order_relaxed);
+    thd_proc = start_new_thd(jniEnv, jvmti, "Fk-Prof Processing Thread", callback_to_run_processor, this);
 }
 
 void Processor::stop() {
-    TRACE(Processor, kTraceProcessorStop);
-    isRunning_.store(false, std::memory_order_relaxed);
+    running.store(false, std::memory_order_relaxed);
     await_thd_death(thd_proc);
     thd_proc.reset();
 }
 
-bool Processor::isRunning() const {
-    TRACE(Processor, kTraceProcessorRunning);
-    return isRunning_.load(std::memory_order_relaxed);
+bool Processor::is_running() const {
+    return running.load(std::memory_order_relaxed);
 }

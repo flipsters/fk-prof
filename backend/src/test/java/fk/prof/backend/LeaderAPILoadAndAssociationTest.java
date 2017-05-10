@@ -5,6 +5,7 @@ import fk.prof.backend.deployer.impl.LeaderHttpVerticleDeployer;
 import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator;
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
+import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.util.ProtoUtil;
 import io.vertx.core.Future;
@@ -26,6 +27,8 @@ import org.junit.runner.RunWith;
 import recording.Recorder;
 
 import java.io.IOException;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -66,10 +69,11 @@ public class LeaderAPILoadAndAssociationTest {
     BackendAssociationStore backendAssociationStore = new ZookeeperBasedBackendAssociationStore(
         vertx, curatorClient, backendAssociationPath,
         configManager.getLoadReportIntervalInSeconds(),
-        leaderHttpConfig.getInteger("load.miss.tolerance", 1), configManager.getBackendHttpPort(),
+        leaderHttpConfig.getInteger("load.miss.tolerance", 1),
         new ProcessGroupCountBasedBackendComparator());
+    PolicyStore policyStore = new PolicyStore(curatorClient);
 
-    VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore);
+    VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore, policyStore);
     leaderHttpDeployer.deploy();
     //Wait for some time for deployment to complete
     Thread.sleep(1000);
@@ -77,9 +81,7 @@ public class LeaderAPILoadAndAssociationTest {
 
   @After
   public void tearDown(TestContext context) throws IOException {
-    System.out.println("Tearing down");
     vertx.close(result -> {
-      System.out.println("Vertx shutdown");
       curatorClient.close();
       try {
         testingServer.close();
@@ -93,7 +95,7 @@ public class LeaderAPILoadAndAssociationTest {
 
   @Test(timeout = 5000)
   public void reportNewBackendLoad(TestContext context) throws IOException {
-    makeRequestReportLoad(BackendDTO.LoadReportRequest.newBuilder().setIp("1").setLoad(0.5f).setCurrTick(1).build())
+    makeRequestReportLoad(BackendDTO.LoadReportRequest.newBuilder().setIp("1").setPort(1).setLoad(0.5f).setCurrTick(1).build())
         .setHandler(ar -> {
           if(ar.succeeded()) {
             context.assertEquals(0, ar.result().getProcessGroupList().size());
@@ -118,39 +120,38 @@ public class LeaderAPILoadAndAssociationTest {
   @Test(timeout = 5000)
   public void getAssociationForProcessGroups(TestContext context) throws IOException {
     final Async async = context.async();
-    BackendDTO.LoadReportRequest loadRequest1 = BackendDTO.LoadReportRequest.newBuilder().setIp("1").setLoad(0.5f).setCurrTick(1).build();
-    BackendDTO.LoadReportRequest loadRequest2 = BackendDTO.LoadReportRequest.newBuilder().setIp("2").setLoad(0.5f).setCurrTick(1).build();
+    BackendDTO.LoadReportRequest.Builder loadRequestBuilder1 = BackendDTO.LoadReportRequest.newBuilder().setIp("1").setPort(1).setLoad(0.5f);
+    BackendDTO.LoadReportRequest.Builder loadRequestBuilder2 = BackendDTO.LoadReportRequest.newBuilder().setIp("2").setPort(1).setLoad(0.5f);
 
-    makeRequestReportLoad(loadRequest1)
+    makeRequestReportLoad(loadRequestBuilder1.clone().setCurrTick(1).build())
         .setHandler(ar1 -> {
           if(ar1.succeeded()) {
             try {
-              makeRequestGetAssociation(mockProcessGroups.get(0))
+              makeRequestPostAssociation(buildRecorderInfoFromProcessGroup(mockProcessGroups.get(0)))
                   .setHandler(ar2 -> {
                     if (ar2.succeeded()) {
                       try {
-//                        Recorder.AssignedBackend ab2 = Recorder.AssignedBackend.parseFrom(ar2.result())
                         context.assertEquals("1", ar2.result().getHost());
-                        makeRequestGetAssociation(mockProcessGroups.get(1))
+                        makeRequestPostAssociation(buildRecorderInfoFromProcessGroup(mockProcessGroups.get(1)))
                             .setHandler(ar3 -> {
                               if (ar3.succeeded()) {
                                 context.assertEquals("1", ar3.result().getHost());
                                 try {
-                                  makeRequestReportLoad(loadRequest2)
+                                  makeRequestReportLoad(loadRequestBuilder2.clone().setCurrTick(1).build())
                                       .setHandler(ar4 -> {
                                         if (ar4.succeeded()) {
                                           try {
-                                            makeRequestGetAssociation(mockProcessGroups.get(2))
+                                            makeRequestPostAssociation(buildRecorderInfoFromProcessGroup(mockProcessGroups.get(2)))
                                                 .setHandler(ar5 -> {
                                                   if (ar5.succeeded()) {
                                                     context.assertEquals("2", ar5.result().getHost());
                                                     vertx.setTimer(3000, timerId -> {
                                                       try {
-                                                        makeRequestReportLoad(loadRequest1)
+                                                        makeRequestReportLoad(loadRequestBuilder1.clone().setCurrTick(2).build())
                                                             .setHandler(ar6 -> {
                                                               if (ar6.succeeded()) {
                                                                 try {
-                                                                  makeRequestGetAssociation(mockProcessGroups.get(2))
+                                                                  makeRequestPostAssociation(buildRecorderInfoFromProcessGroup(mockProcessGroups.get(2)))
                                                                       .setHandler(ar7 -> {
                                                                         if (ar7.succeeded()) {
                                                                           context.assertEquals("1", ar7.result().getHost());
@@ -210,8 +211,12 @@ public class LeaderAPILoadAndAssociationTest {
         .handler(response -> {
           response.bodyHandler(buffer -> {
             try {
-              Recorder.ProcessGroups result = Recorder.ProcessGroups.parseFrom(buffer.getBytes());
-              future.complete(result);
+              if(response.statusCode() == 200) {
+                Recorder.ProcessGroups result = Recorder.ProcessGroups.parseFrom(buffer.getBytes());
+                future.complete(result);
+              } else {
+                future.fail(buffer.toString());
+              }
             } catch (Exception ex) {
               future.fail(ex);
             }
@@ -223,7 +228,7 @@ public class LeaderAPILoadAndAssociationTest {
     return future;
   }
 
-  private Future<Recorder.AssignedBackend> makeRequestGetAssociation(Recorder.ProcessGroup payload)
+  private Future<Recorder.AssignedBackend> makeRequestPostAssociation(Recorder.RecorderInfo payload)
       throws IOException {
     Future<Recorder.AssignedBackend> future = Future.future();
     HttpClientRequest request = vertx.createHttpClient()
@@ -242,4 +247,23 @@ public class LeaderAPILoadAndAssociationTest {
     return future;
   }
 
+  private static Recorder.RecorderInfo buildRecorderInfoFromProcessGroup(Recorder.ProcessGroup processGroup) {
+    return Recorder.RecorderInfo.newBuilder()
+        .setAppId(processGroup.getAppId())
+        .setCluster(processGroup.getCluster())
+        .setProcName(processGroup.getProcName())
+        .setRecorderTick(1)
+        .setHostname("1")
+        .setInstanceGrp("1")
+        .setInstanceId("1")
+        .setInstanceType("1")
+        .setLocalTime(LocalDateTime.now(Clock.systemUTC()).toString())
+        .setRecorderUptime(100)
+        .setRecorderVersion(1)
+        .setVmId("1")
+        .setZone("1")
+        .setIp("1")
+        .setCapabilities(Recorder.RecorderCapabilities.newBuilder().setCanCpuSample(true))
+        .build();
+  }
 }

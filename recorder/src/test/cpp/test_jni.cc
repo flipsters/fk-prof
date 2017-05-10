@@ -1,6 +1,7 @@
 #include "test_jni.hh"
 #include "../../main/cpp/perf_ctx.hh"
 #include "../../main/cpp/globals.hh"
+#include "../../main/cpp/profile_writer.hh"
 #include "../../main/cpp/thread_map.hh"
 #include "test_profile.hh"
 #include "test.hh"
@@ -23,23 +24,21 @@ JNIEXPORT jboolean JNICALL Java_fk_prof_TestJni_generateCpusampleSimpleProfile(J
     return JNI_FALSE;
 }
 
-JNIEXPORT void JNICALL Java_fk_prof_TestJni_setupLogger(JNIEnv* jni, jclass self) {
-    init_logger();
-}
-
 int perf_ctx_idx = 0, in_ctx = -1;
 
 std::string last_registered_ctx_name("");
 int last_registered_coverage_pct = 0;
 std::atomic<bool> ctx_ready(false);
+TestEnv* test_env;
 
 JNIEXPORT void JNICALL Java_fk_prof_TestJni_teardownPerfCtx(JNIEnv* jni, jobject self) {
     if (! ctx_ready.load(std::memory_order_acquire)) {
         jni->ThrowNew(jni->FindClass("java/lang/IllegalStateException"), "PerfCtx is not setup yet, so can't tear it down");
         return;
     }
-    delete GlobalCtx::ctx_reg;
-    delete GlobalCtx::prob_pct;
+    delete ctx_reg;
+    delete prob_pct;
+    delete test_env;
     ctx_ready.store(false, std::memory_order_release);
 
 }
@@ -49,8 +48,9 @@ JNIEXPORT void JNICALL Java_fk_prof_TestJni_setupPerfCtx(JNIEnv* jni, jobject se
         jni->ThrowNew(jni->FindClass("java/lang/IllegalStateException"), "PerfCtx is already setup");
         return;
     }
-    GlobalCtx::ctx_reg = new PerfCtx::Registry();
-    GlobalCtx::prob_pct = new ProbPct();
+    test_env = new TestEnv();
+    ctx_reg = new PerfCtx::Registry();
+    prob_pct = new ProbPct();
     ctx_ready.store(true, std::memory_order_release);
 }
 
@@ -69,7 +69,7 @@ JNIEXPORT jint JNICALL Java_fk_prof_TestJni_getCurrentCtx(JNIEnv* jni, jobject s
     }
 
     if (jni->GetArrayLength(arr) < PerfCtx::MAX_NESTING) {
-        jni->ThrowNew(jni->FindClass("java/lang/IllegalArgumentException"), Util::to_s("Got a very small array, need array with length > ", PerfCtx::MAX_NESTING).c_str());
+        jni->ThrowNew(jni->FindClass("java/lang/IllegalArgumentException"), Util::to_s("Got a very small array, need array with length > ", static_cast<std::int32_t>(PerfCtx::MAX_NESTING)).c_str());
         return -1;
     }
 
@@ -84,6 +84,12 @@ JNIEXPORT jint JNICALL Java_fk_prof_TestJni_getCurrentCtx(JNIEnv* jni, jobject s
     PerfCtx::ThreadTracker::EffectiveCtx eff_ctx;
     auto count = ctx_tracker.current(eff_ctx);
     logger->info("Wrote {} entries to effective_ctx", count);
+    if ((count > 0) && (!ctx_tracker.in_ctx())) {
+        auto msg = Util::to_s("Thread tracker doesn't seem to be bahaving right, it has ", count, " entries, but doesn't think its in a ctx.");
+        jni->ThrowNew(jni->FindClass("java/lang/IllegalStateException"), msg.c_str());
+        return -1;
+    }
+
     jlong result[PerfCtx::MAX_NESTING];
 
     for (auto i = 0; i < count; i++) {
@@ -102,7 +108,7 @@ JNIEXPORT jint JNICALL Java_fk_prof_TestJni_getCurrentCtx(JNIEnv* jni, jobject s
     std::uint8_t cov_pct;                                               \
     PerfCtx::MergeSemantic m_sem;                                       \
     try {                                                               \
-        GlobalCtx::ctx_reg->resolve(pt, name, is_gen, cov_pct, m_sem);  \
+        get_ctx_reg().resolve(pt, name, is_gen, cov_pct, m_sem);        \
     } catch (const PerfCtx::UnknownCtx& e) {                            \
         jni->ThrowNew(jni->FindClass("java/lang/IllegalStateException"), e.what()); \
         return ret;                                                     \
@@ -126,4 +132,8 @@ JNIEXPORT jint JNICALL Java_fk_prof_TestJni_getCtxMergeSemantic(JNIEnv* jni, job
 JNIEXPORT jboolean JNICALL Java_fk_prof_TestJni_isGenerated(JNIEnv* jni, jobject self, jlong tpt) {
     RESOLVE(tpt, false);
     return static_cast<jboolean>(is_gen);
+}
+
+JNIEXPORT jstring JNICALL Java_fk_prof_TestJni_getNoCtxName(JNIEnv* jni, jobject self) {
+    return jni->NewStringUTF(NOCTX_NAME);
 }

@@ -11,6 +11,7 @@
 #include "prob_pct.hh"
 #include <unordered_map>
 #include <functional>
+#include "metrics.hh"
 
 #ifndef PERF_CTX_H
 #define PERF_CTX_H
@@ -97,24 +98,39 @@ namespace PerfCtx {
         NameToPt name_to_pt;
         PtToName pt_to_name;
 
+        std::atomic<bool> exhausted;
+
+        metrics::Ctr& s_c_ctx;
+        metrics::Mtr& s_m_create_rebind;
+        metrics::Mtr& s_m_create_conflict;
+        metrics::Mtr& s_m_create_runout;
+
+        metrics::Mtr& s_m_merge_reuse;
+        metrics::Ctr& s_c_merge_new;
+
         void load_unused_primes(std::uint32_t count);
-        void name_for(TracePt pt, std::string& name) throw (UnknownCtx);
 
     public:
-        Registry() : unused_prime_nos(MAX_USER_CTX_COUNT) {
-            load_unused_primes(MAX_USER_CTX_COUNT);
-        };
-        ~Registry() {};
+        Registry();
+        ~Registry();
         
         TracePt find_or_bind(const char* name, std::uint8_t coverage_pct, std::uint8_t merge_type) throw (CtxCreationFailure);
         TracePt merge_bind(const std::vector<ThreadCtx>& parent, bool strict = false);
+        void name_for(TracePt pt, std::string& name) throw (UnknownCtx);
         void resolve(TracePt pt, std::string& name, bool& is_generated, std::uint8_t& coverage_pct, MergeSemantic& m_sem) throw (UnknownCtx);
     };
 
-    class IncorrectEnterExitPairing : public std::runtime_error {
+    class IncorrectEnterExitPairing {
+        std::string msg;
+
     public:
-        IncorrectEnterExitPairing(const TracePt expected, const TracePt got) : runtime_error(Util::to_s("Expected ", expected, " got ", got)) {};
-        virtual ~IncorrectEnterExitPairing() {}
+        IncorrectEnterExitPairing(Registry& reg, const TracePt expected, const TracePt got);
+
+        IncorrectEnterExitPairing(Registry& reg, const TracePt got);
+
+        ~IncorrectEnterExitPairing() {}
+
+        const char* what() const;
     };
 
     MergeSemantic merge_semantic(TracePt pt);
@@ -139,18 +155,19 @@ namespace PerfCtx {
     public:
         typedef std::array<TracePt, MAX_NESTING> EffectiveCtx;
         
-        ThreadTracker(Registry& _reg, ProbPct& _pct, int _tid) : reg(_reg), pct(_pct), ignore_count(0), effective_start(0), effective_end(0), record(false), tid(_tid) {
-            effective.reserve((MAX_NESTING * (MAX_NESTING + 1)) / 2);
-        }
-        ~ThreadTracker() {}
+        ThreadTracker(Registry& _reg, ProbPct& _pct, int _tid);
+        ~ThreadTracker();
 
         void enter(TracePt pt);
         void exit(TracePt pt) throw (IncorrectEnterExitPairing);
         int current(EffectiveCtx& curr);
         bool should_record();
+        bool in_ctx();
     };
 };
 
 std::ostream& operator<<(std::ostream& os, PerfCtx::MergeSemantic ms);
+
+PerfCtx::Registry& get_ctx_reg();
 
 #endif

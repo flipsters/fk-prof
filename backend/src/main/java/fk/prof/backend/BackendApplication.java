@@ -1,8 +1,12 @@
 package fk.prof.backend;
 
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.cli.*;
 
 public class BackendApplication {
+  private static Logger logger = LoggerFactory.getLogger(BackendApplication.class);
+
   public static void main(String[] args) throws Exception {
     ConfigManager.setDefaultSystemProperties();
     CommandLineParser parser = new DefaultParser();
@@ -20,6 +24,12 @@ public class BackendApplication {
     String confPath = cmd.getOptionValue("c");
 
     BackendManager backendManager = new BackendManager(confPath);
-    backendManager.launch();
+    backendManager.launch().setHandler(ar -> {
+      if(ar.succeeded())  {
+        logger.info("Backend launched");
+      } else {
+        logger.error("Error launching backend: ", ar.cause());
+      }
+    });
   }
 }
