@@ -11,6 +11,7 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.hamcrest.Matcher;
 import org.joda.time.DateTime;
 import org.joda.time.format.ISODateTimeFormat;
 import org.junit.After;
@@ -20,6 +21,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import recording.Recorder;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -27,12 +29,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
-import static fk.prof.recorder.AssociationTest.assertRecorderInfoAllGood;
+import static fk.prof.recorder.AssociationTest.assertRecorderInfoAllGood_AndGetTick;
 import static fk.prof.recorder.WorkHandlingTest.*;
 import static fk.prof.recorder.utils.Matchers.approximately;
 import static fk.prof.recorder.utils.Matchers.approximatelyBetween;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.assertThat;
 
 public class CpuSamplingTest {
@@ -57,7 +60,9 @@ public class CpuSamplingTest {
             "backoff_start=2," +
             "backoff_max=5," +
             "poll_itvl=1," +
-            "log_lvl=trace";
+            "log_lvl=trace," +
+            "stats_syslog_tag=foobar";
+    private static final String NOCTX_NAME = "~ OTHERS ~";
     private TestBackendServer server;
     private Function<byte[], byte[]>[] association = new Function[2];
     private Function<byte[], byte[]>[] poll = new Function[18];
@@ -79,7 +84,7 @@ public class CpuSamplingTest {
 
     @After
     public void tearDown() {
-        runner.stop();
+        assertThat(runner.stop(), is(true));
         server.stop();
         associateServer.stop();
     }
@@ -103,8 +108,11 @@ public class CpuSamplingTest {
         pollAction[poll.length - 1].get(poll.length + 4, TimeUnit.SECONDS); //some grace time
 
         long idx = 0;
+        Matcher<Long> recorderTickMatcher = is(0l);
+        long previousTick;
         for (WorkHandlingTest.PollReqWithTime prwt : pollReqs) {
-            assertRecorderInfoAllGood(prwt.req.getRecorderInfo());
+            previousTick = assertRecorderInfoAllGood_AndGetTick(prwt.req.getRecorderInfo(), recorderTickMatcher, AssociationTest.rc(true));
+            recorderTickMatcher = greaterThan(previousTick);
             assertItHadNoWork(prwt.req.getWorkLastIssued(), idx == 0 ? idx : idx + 99);
             if (idx > 0) {
                 assertThat("idx = " + idx, prwt.time - prevTime, approximatelyBetween(1000l, 2000l)); //~1 sec tolerance
@@ -138,15 +146,57 @@ public class CpuSamplingTest {
 
         assertRecordingHeaderIsGood(cpuSamplingWorkIssueTime, hdr, CPU_SAMPLING_MAX_FRAMES);
 
-        assertProfileCallAndContent(profileCalledSecondTime, profileEntries, Collections.singletonMap("inferno",
-                rootMatcher(DUMMY_ROOT_NODE_FN_NAME, DUMMY_ROOT_NOTE_FN_SIGNATURE, 0, 1, childrenMatcher(
-                        nodeMatcher(Burn20And80PctCpu.class, "main", "([Ljava/lang/String;)V", 0, 1, childrenMatcher(
-                                nodeMatcher(Burn20And80PctCpu.class, "burnCpu", "()V", 0, 1, childrenMatcher(
-                                        nodeMatcher(Burn20Of100.class, "burn", "()V", 0, 1, childrenMatcher(
-                                                nodeMatcher(Blackhole.class, "consumeCPU", "(J)V", 20, 10, Collections.emptySet()))),
-                                        nodeMatcher(WrapperA.class, "burnSome", "(S)V", 0, 1, childrenMatcher(
-                                                nodeMatcher(Burn80Of100.class, "burn", "()V", 0, 1, childrenMatcher(
-                                                        nodeMatcher(Blackhole.class, "consumeCPU", "(J)V", 80, 10, Collections.emptySet())))))))))))), new TraceIdPivotResolver(), new HashMap<Integer, TraceInfo>(), new HashMap<Integer, ThreadInfo>(), new HashMap<Long, MthdInfo>(), new HashMap<String, SampledStackNode>());
+        assertProfileCallAndContent(profileCalledSecondTime, profileEntries, new HashMap<String, StackNodeMatcher>() {{
+            put(NOCTX_NAME, zeroSampleRoot());
+            put("inferno", rootMatcher(childrenMatcher(
+                    nodeMatcher(Burn20And80PctCpu.class, "main", "([Ljava/lang/String;)V", 0, 1, childrenMatcher(
+                            nodeMatcher(Burn20And80PctCpu.class, "burnCpu", "()V", 0, 1, childrenMatcher(
+                                    nodeMatcher(Burn20Of100.class, "burn", "()V", 0, 1, childrenMatcher(
+                                            nodeMatcher(Blackhole.class, "consumeCPU", "(J)V", 20, 10, Collections.emptySet()))),
+                                    nodeMatcher(WrapperA.class, "burnSome", "(S)V", 0, 1, childrenMatcher(
+                                            nodeMatcher(Burn80Of100.class, "burn", "()V", 0, 1, childrenMatcher(
+                                                    nodeMatcher(Blackhole.class, "consumeCPU", "(J)V", 80, 10, Collections.emptySet()))))))))))));
+        }}, new TraceIdPivotResolver(), new HashMap<Integer, TraceInfo>(), new HashMap<Integer, ThreadInfo>(), new HashMap<Long, MthdInfo>(), new HashMap<String, SampledStackNode>());
+    }
+
+    @Test
+    public void should_ShutdownCleanly_On_SIGTERM_WhileProfiling() throws ExecutionException, InterruptedException, IOException, TimeoutException {
+        List<Recorder.Wse> profileEntries = new ArrayList<>();
+        MutableObject<Recorder.RecordingHeader> hdr = new MutableObject<>();
+        MutableBoolean profileCalledSecondTime = new MutableBoolean(false);
+        String cpuSamplingWorkIssueTime = ISODateTimeFormat.dateTime().print(DateTime.now());
+
+        int delay = 1;
+        int workAllocatingPoll = 1;
+        int gracePeriod = 1;
+        int duration = 10;
+        PollReqWithTime[] pollReqs = stubRecorderInteraction(profileEntries, hdr, profileCalledSecondTime, cpuSamplingWorkIssueTime, WorkHandlingTest.CPU_SAMPLING_MAX_FRAMES, duration, delay, workAllocatingPoll);
+
+        runner = new AgentRunner(Burn20And80PctCpu.class.getCanonicalName(), USUAL_RECORDER_ARGS);
+        runner.start();
+
+        assocAction[0].get(4, TimeUnit.SECONDS);
+        long prevTime = System.currentTimeMillis();
+
+        assertThat(assocAction[0].isDone(), is(true));
+        int runningWorkPoll = workAllocatingPoll + delay + gracePeriod;
+        pollAction[runningWorkPoll].get(runningWorkPoll + 4, TimeUnit.SECONDS); //some grace time
+        
+        assertThat(runner.stop(), is(true));//this actually waits for the process to be reaped
+        assertThat(runner.exitCode(), is(128 + 15)); //15 == SIGTERM
+
+        assertWorkStateAndResultIs(pollReqs[1].req.getWorkLastIssued(), 100, Recorder.WorkResponse.WorkState.complete, Recorder.WorkResponse.WorkResult.success, 0);
+        assertWorkStateAndResultIs(pollReqs[runningWorkPoll].req.getWorkLastIssued(), CPU_SAMPLING_WORK_ID, Recorder.WorkResponse.WorkState.running, Recorder.WorkResponse.WorkResult.unknown, gracePeriod);
+        
+        //This assertion requires that runner.stop or something else above this assertion in this test waits for target process to return
+        //   else this assertion would be meaningless (because target-process is live implies more polls can happen).
+        int firstMissedPollIdx = runningWorkPoll;
+        while ((firstMissedPollIdx < pollReqs.length) && 
+                (pollAction[firstMissedPollIdx].isDone())) {
+            firstMissedPollIdx++;
+        }
+        assertThat(firstMissedPollIdx, lessThan(duration + delay + workAllocatingPoll + gracePeriod));//make sure that the target-process died while profiling (so test indeed produced the intended condition)
+        assertThat(firstMissedPollIdx, lessThan(poll.length));
     }
 
     @Test
@@ -177,13 +227,14 @@ public class CpuSamplingTest {
         HashMap<String, SampledStackNode> aggregations = new HashMap<>();
         assertProfileCallAndContent(profileCalledSecondTime, profileEntries, new HashMap<String, StackNodeMatcher>() {{
             Class klass = Burn50And50PctCpu.class;
-            put("100_pct_single_inferno", generate_Main_Burn_Immolate_BacktraceMatcher(66, klass));
-            put("50_pct_duplicate_inferno", generate_Main_Burn_Immolate_BacktraceMatcher(33, klass));
-            put("50_pct_duplicate_inferno_child", generate_Main_Burn_Immolate_BacktraceMatcher(33, klass));
+            put(NOCTX_NAME, zeroSampleRoot());
+            put("100_pct_single_inferno", generate_Main_Burn_Immolate_BacktraceMatcher(66, klass, 25));
+            put("50_pct_duplicate_inferno", generate_Main_Burn_Immolate_BacktraceMatcher(33, klass, 25));
+            put("50_pct_duplicate_inferno_child", generate_Main_Burn_Immolate_BacktraceMatcher(33, klass, 25));
         }}, new TraceIdPivotResolver(), traceInfoMap, new HashMap<Integer, ThreadInfo>(), new HashMap<Long, MthdInfo>(), aggregations);
-        
+
         assertThat(traceInfoMap.values(), hasItems(new TraceInfo("100_pct_single_inferno", 100, MergeSemantics.MERGE_TO_PARENT), new TraceInfo("50_pct_duplicate_inferno", 50, MergeSemantics.MERGE_TO_PARENT), new TraceInfo("50_pct_duplicate_inferno_child", 50, MergeSemantics.DUPLICATE)));
-        
+
         //check BCI and Line-no was posted correctly, blackhole consumeCPU call should almost always be on stack 
 
         Map<ImmutablePair<Integer, Integer>, MutableInt> bci_lineNo_Histo = new HashMap<>();
@@ -202,10 +253,10 @@ public class CpuSamplingTest {
             }
             allCallSites += ctr;
         }
-        
-        double ratio = (double) blackholeCallSites /  allCallSites;
+
+        double ratio = (double) blackholeCallSites / allCallSites;
         double expectedMin = 0.9;
-        assertThat("The line-no/bci distribution was somehow not right (expected " + expectedMin + "x calls to be on hot fn call-site, but it was only " + ratio + "x (details: "  + bci_lineNo_Histo + ")", ratio, greaterThan(expectedMin));
+        assertThat("The line-no/bci distribution was somehow not right (expected " + expectedMin + "x calls to be on hot fn call-site, but it was only " + ratio + "x (details: " + bci_lineNo_Histo + ")", ratio, greaterThan(expectedMin));
     }
 
     private void buildBciLineNoHistogram(SampledStackNode node, Map<ImmutablePair<Integer, Integer>, MutableInt> bci_lineNo_histo, Class klass, String fnName, String sig) {
@@ -231,11 +282,11 @@ public class CpuSamplingTest {
         }
     }
 
-    private StackNodeMatcher generate_Main_Burn_Immolate_BacktraceMatcher(final int expectedOncpuPct, final Class klass) {
-        return rootMatcher(DUMMY_ROOT_NODE_FN_NAME, DUMMY_ROOT_NOTE_FN_SIGNATURE, 0, 1, childrenMatcher(
+    private StackNodeMatcher generate_Main_Burn_Immolate_BacktraceMatcher(final int expectedOncpuPct, final Class klass, final int pctMatchTolerance) {
+        return rootMatcher(childrenMatcher(
                 nodeMatcher(klass, "main", "([Ljava/lang/String;)V", 0, 1, childrenMatcher(
                         nodeMatcher(klass, "immolate", "(I)V", 0, 1, childrenMatcher(
-                                nodeMatcher(Blackhole.class, "consumeCPU", "(J)V", expectedOncpuPct, 25, Collections.emptySet())))))));
+                                nodeMatcher(Blackhole.class, "consumeCPU", "(J)V", expectedOncpuPct, pctMatchTolerance, Collections.emptySet())))))));
     }
 
     @Test
@@ -302,14 +353,19 @@ public class CpuSamplingTest {
         HashMap<Integer, TraceInfo> traceInfoMap = new HashMap<>();
         assertProfileCallAndContent(profileCalledSecondTime, profileEntries, new HashMap<String, StackNodeMatcher>() {{
             Class klass = BurnCpuScoped.class;
-            put("p100", generate_Main_Burn_Immolate_BacktraceMatcher(33, klass));
-            put("p100 > c1", generate_Main_Burn_Immolate_BacktraceMatcher(33, klass));
-            put("p100 > c1 > c2", generate_Main_Burn_Immolate_BacktraceMatcher(33, klass));
+            put(NOCTX_NAME, zeroSampleRoot());
+            put("p100", generate_Main_Burn_Immolate_BacktraceMatcher(33, klass, 25));
+            put("p100 > c1", generate_Main_Burn_Immolate_BacktraceMatcher(33, klass, 25));
+            put("p100 > c1 > c2", generate_Main_Burn_Immolate_BacktraceMatcher(33, klass, 25));
+            put("c1", rootMatcher(Collections.emptySet()));
+            put("c2", rootMatcher(Collections.emptySet()));
         }}, new TraceIdPivotResolver(), traceInfoMap, new HashMap<Integer, ThreadInfo>(), new HashMap<Long, MthdInfo>(), new HashMap<String, SampledStackNode>());
         assertThat(traceInfoMap.values(), hasItems(
                 new TraceInfo("p100", 100, MergeSemantics.STACK_UP),
                 TraceInfo.mergedTraceInfo("p100 > c1"),
-                TraceInfo.mergedTraceInfo("p100 > c1 > c2")));
+                TraceInfo.mergedTraceInfo("p100 > c1 > c2"),
+                new TraceInfo("c1", 0, MergeSemantics.PARENT_SCOPED),
+                new TraceInfo("c2", 0, MergeSemantics.PARENT_SCOPED)));
     }
 
     @Test
@@ -339,14 +395,58 @@ public class CpuSamplingTest {
         HashMap<Integer, TraceInfo> traceInfoMap = new HashMap<>();
         assertProfileCallAndContent(profileCalledSecondTime, profileEntries, new HashMap<String, StackNodeMatcher>() {{
             Class klass = BurnCpuStacked.class;
-            put("p50", generate_Main_Burn_Immolate_BacktraceMatcher(25, klass));
-            put("c100", generate_Main_Burn_Immolate_BacktraceMatcher(50, klass));
+            put(NOCTX_NAME, zeroSampleRoot());
+            put("p50", generate_Main_Burn_Immolate_BacktraceMatcher(25, klass, 25));
+            put("c100", generate_Main_Burn_Immolate_BacktraceMatcher(50, klass, 25));
         }}, new TraceIdPivotResolver(), traceInfoMap, new HashMap<Integer, ThreadInfo>(), new HashMap<Long, MthdInfo>(), new HashMap<String, SampledStackNode>());
         assertThat(traceInfoMap.values(), hasItems(
                 new TraceInfo("p50", 50, MergeSemantics.PARENT_SCOPED),
                 new TraceInfo("c100", 100, MergeSemantics.STACK_UP)));
     }
-    
+
+    private StackNodeMatcher zeroSampleRoot() {
+        return rootMatcher(Collections.emptySet());
+    }
+
+    private StackNodeMatcher rootMatcher(Set<StackNodeMatcher> children) {
+        return rootMatcher(DUMMY_ROOT_NODE_FN_NAME, DUMMY_ROOT_NOTE_FN_SIGNATURE, 0, 1, children);
+    }
+
+    @Test
+    public void should_Report_NoCtxData() throws ExecutionException, InterruptedException, IOException, TimeoutException {
+        List<Recorder.Wse> profileEntries = new ArrayList<>();
+        MutableObject<Recorder.RecordingHeader> hdr = new MutableObject<>();
+        MutableBoolean profileCalledSecondTime = new MutableBoolean(false);
+        String cpuSamplingWorkIssueTime = ISODateTimeFormat.dateTime().print(DateTime.now());
+
+        PollReqWithTime[] pollReqs = stubRecorderInteraction(profileEntries, hdr, profileCalledSecondTime, cpuSamplingWorkIssueTime, WorkHandlingTest.CPU_SAMPLING_MAX_FRAMES);
+
+        runner = new AgentRunner(BurnHalfInHalfOut.class.getCanonicalName(), USUAL_RECORDER_ARGS + ",noctx_cov_pct=50");
+        runner.start();
+
+        assocAction[0].get(4, TimeUnit.SECONDS);
+        long prevTime = System.currentTimeMillis();
+
+        assertThat(assocAction[0].isDone(), is(true));
+        pollAction[poll.length - 1].get(poll.length + 4, TimeUnit.SECONDS); //some grace time
+
+        assertPollIntervalIsGood(pollReqs, prevTime);
+
+        assertPolledInStatusIsGood(pollReqs);
+
+        assertRecordingHeaderIsGood(cpuSamplingWorkIssueTime, hdr, CPU_SAMPLING_MAX_FRAMES);
+
+        HashMap<Integer, TraceInfo> traceInfoMap = new HashMap<>();
+        assertProfileCallAndContent(profileCalledSecondTime, profileEntries, new HashMap<String, StackNodeMatcher>() {{
+            Class klass = BurnHalfInHalfOut.class;
+            put(NOCTX_NAME, generate_Main_Burn_Immolate_BacktraceMatcher(25, klass, 20));
+            put("c100", generate_Main_Burn_Immolate_BacktraceMatcher(50, klass, 20));
+        }}, new TraceIdPivotResolver(), traceInfoMap, new HashMap<Integer, ThreadInfo>(), new HashMap<Long, MthdInfo>(), new HashMap<String, SampledStackNode>());
+        assertThat(traceInfoMap.values(), hasItems(
+                new TraceInfo(NOCTX_NAME, 50, MergeSemantics.MERGE_TO_PARENT),
+                new TraceInfo("c100", 100, MergeSemantics.MERGE_TO_PARENT)));
+    }
+
     @Test
     public void should_SnipBacktrace_ToChosenLength() throws ExecutionException, InterruptedException, IOException, TimeoutException {
         List<Recorder.Wse> profileEntries = new ArrayList<>();
@@ -374,7 +474,8 @@ public class CpuSamplingTest {
 
         HashMap<String, SampledStackNode> aggregation = new HashMap<>();
         assertProfileCallAndContent(profileCalledSecondTime, profileEntries, new HashMap<String, StackNodeMatcher>() {{
-            put("inferno", rootMatcher(DUMMY_ROOT_NODE_FN_NAME, DUMMY_ROOT_NOTE_FN_SIGNATURE, 0, 1, childrenMatcher(
+            put(NOCTX_NAME, zeroSampleRoot());
+            put("inferno", rootMatcher(childrenMatcher(
                     nodeMatcher(CpuBurningRunnable.class, "run", "()V", 0, 1, childrenMatcher(
                             nodeMatcher(Blackhole.class, "consumeCPU", "(J)V", 100, 10, Collections.emptySet()))))));
         }}, new TraceIdPivotResolver(), new HashMap<>(), new HashMap<Integer, ThreadInfo>(), new HashMap<Long, MthdInfo>(), aggregation);
@@ -398,29 +499,32 @@ public class CpuSamplingTest {
     }
 
     private StackNodeMatcher generate_Thread_Runnable_Immolate_BacktraceMatcher(final int expectedOncpuPct) {
-        return rootMatcher(DUMMY_ROOT_NODE_FN_NAME, DUMMY_ROOT_NOTE_FN_SIGNATURE, 0, 1, childrenMatcher(
+        return rootMatcher(childrenMatcher(
                 nodeMatcher(Thread.class, "run", "()V", 0, 1, childrenMatcher(
                         nodeMatcher(CpuBurningRunnable.class, "run", "()V", 0, 1, childrenMatcher(
                                 nodeMatcher(Blackhole.class, "consumeCPU", "(J)V", expectedOncpuPct, 20, Collections.emptySet())))))));
     }
 
     private PollReqWithTime[] stubRecorderInteraction(List<Recorder.Wse> profileEntries, MutableObject<Recorder.RecordingHeader> hdr, MutableBoolean profileCalledSecondTime, String cpuSamplingWorkIssueTime, final int maxFrames) {
+        return stubRecorderInteraction(profileEntries, hdr, profileCalledSecondTime, cpuSamplingWorkIssueTime, maxFrames, 10, 2, 1);
+    }
+
+    private PollReqWithTime[] stubRecorderInteraction(List<Recorder.Wse> profileEntries, MutableObject<Recorder.RecordingHeader> hdr, MutableBoolean profileCalledSecondTime, String cpuSamplingWorkIssueTime, int maxFrames, int duration, int delay, final int workAllocatingPoll) {
         PollReqWithTime pollReqs[] = new PollReqWithTime[poll.length];
 
         MutableObject<Recorder.RecorderInfo> recInfo = new MutableObject<>();
 
         association[0] = pointToAssociate(recInfo, 8090);
 
-        poll[0] = tellRecorderWeHaveNoWork(pollReqs, 0);
-
-        poll[1] = issueCpuProfilingWork(pollReqs, 1, 10, 2, cpuSamplingWorkIssueTime, CPU_SAMPLING_WORK_ID, maxFrames);
-        for (int i = 2; i < poll.length; i++) {
+        for (int i = 0; i < poll.length; i++) {
+            if (i == workAllocatingPoll) continue;
             poll[i] = tellRecorderWeHaveNoWork(pollReqs, i);
         }
+        poll[workAllocatingPoll] = issueCpuProfilingWork(pollReqs, 1, duration, delay, cpuSamplingWorkIssueTime, CPU_SAMPLING_WORK_ID, maxFrames);
 
         profile[0] = (req) -> {
             recordProfile(req, hdr, profileEntries);
-            return new byte[0];
+            return "Processed profile successfully!".getBytes(Charset.forName("UTF-8"));
         };
         profile[1] = (req) -> {
             profileCalledSecondTime.setTrue();
@@ -446,8 +550,11 @@ public class CpuSamplingTest {
 
     private void assertPollIntervalIsGood(PollReqWithTime[] pollReqs, long prevTime) {
         long idx = 0;
+        long previousTick;
+        Matcher<Long> recorderTickMatcher = is(0l);
         for (PollReqWithTime prwt : pollReqs) {
-            assertRecorderInfoAllGood(prwt.req.getRecorderInfo());
+            previousTick = assertRecorderInfoAllGood_AndGetTick(prwt.req.getRecorderInfo(), recorderTickMatcher, AssociationTest.rc(true));
+            recorderTickMatcher = greaterThan(previousTick);
             if (idx > 0) {
                 assertThat("idx = " + idx, prwt.time - prevTime, approximatelyBetween(1000l, 2000l)); //~1 sec tolerance
             }
@@ -674,6 +781,9 @@ public class CpuSamplingTest {
                 }
             }
         }
+
+        //debug aid, the thing is almost a json, just a little top-level key-massaging is necessary (massage and use 'jq')
+        //System.out.println("aggregations = " + aggregations);
 
         //now let us match it
         for (Map.Entry<String, StackNodeMatcher> expectedEntry : expected.entrySet()) {

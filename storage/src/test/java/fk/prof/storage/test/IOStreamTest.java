@@ -1,5 +1,9 @@
 package fk.prof.storage.test;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.Timer;
 import fk.prof.storage.AsyncStorage;
 import fk.prof.storage.FileNamingStrategy;
 import fk.prof.storage.ObjectNotFoundException;
@@ -59,7 +63,7 @@ public class IOStreamTest {
             pool = new GenericObjectPool<>(new ByteBufferPoolFactory(partSize , false), poolConfig);
         }
 
-        os = new StorageBackedOutputStream(pool, storage, fileName);
+        os = new StorageBackedOutputStream(pool, storage, fileName, mock(Histogram.class), mock(Meter.class), mock(Timer.class), mock(Counter.class));
         is = new StorageBackedInputStream(storage, fileName);
     }
 
@@ -73,8 +77,8 @@ public class IOStreamTest {
         assertEquals(contentSize/partSize + 1, storage.writtenContent.size());
 
         // verify that we got the correct chunks
-        for(int i = 0; i < contentSize/partSize + 1; ++i) {
-            String contentPart = storage.writtenContent.get(fileName.getFileName(i + 1));
+        for(int i = 0; i < contentSize/partSize; ++i) {
+            String contentPart = storage.writtenContent.get(fileName.getFileName(i));
             assertNotNull(contentPart);
             assertEquals(content.substring(i * partSize, Math.min((i + 1) * partSize, contentSize)), contentPart);
         }

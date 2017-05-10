@@ -9,6 +9,8 @@ import recording.Recorder;
 import java.time.Clock;
 import java.time.LocalDateTime;
 
+import static fk.prof.backend.PollAndLoadApiTest.enableCpuSampling;
+
 public class RecorderDetailTest {
 
   @Test
@@ -18,15 +20,19 @@ public class RecorderDetailTest {
     Assert.assertEquals(true, recorderDetail.isDefunct());
     Assert.assertEquals(false, recorderDetail.canAcceptWork());
 
-    //send poll with default work response
+    Recorder.WorkResponse workResponse = Recorder.WorkResponse.newBuilder()
+        .setElapsedTime(100)
+        .setWorkId(0)
+        .setWorkResult(Recorder.WorkResponse.WorkResult.success)
+        .setWorkState(Recorder.WorkResponse.WorkState.complete)
+        .build();
+
+    //send poll with default work response and tick 1
     boolean updated = recorderDetail.receivePoll(Recorder.PollReq.newBuilder()
         .setRecorderInfo(recorderInfoBuilder.setRecorderTick(1).build())
-        .setWorkLastIssued(Recorder.WorkResponse.newBuilder()
-            .setElapsedTime(100)
-            .setWorkId(0)
-            .setWorkResult(Recorder.WorkResponse.WorkResult.success)
-            .setWorkState(Recorder.WorkResponse.WorkState.complete).build())
+        .setWorkLastIssued(workResponse)
         .build());
+
     Assert.assertTrue(updated);
     Assert.assertEquals(false, recorderDetail.isDefunct());
     Assert.assertEquals(true, recorderDetail.canAcceptWork());
@@ -98,6 +104,7 @@ public class RecorderDetailTest {
         .setRecorderVersion(1)
         .setVmId("1")
         .setZone("1")
+        .setCapabilities(enableCpuSampling())
         .setIp(ip);
   }
 }

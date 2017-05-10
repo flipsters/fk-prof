@@ -3,26 +3,18 @@
 ASGCTType Asgct::asgct_;
 IsGCActiveType Asgct::is_gc_active_;
 
-TRACE_DEFINE_BEGIN(Profiler, kTraceProfilerTotal)
-    TRACE_DEFINE("start failed")
-    TRACE_DEFINE("start succeeded")
-    TRACE_DEFINE("set sampling interval failed")
-    TRACE_DEFINE("set sampling interval succeeded")
-    TRACE_DEFINE("set stack frames to capture failed")
-    TRACE_DEFINE("set stack frames to capture succeeded")
-    TRACE_DEFINE("set new file failed")
-    TRACE_DEFINE("set new file succeeded")
-    TRACE_DEFINE("stop failed")
-    TRACE_DEFINE("stop succeeded")
-TRACE_DEFINE_END(Profiler, kTraceProfilerTotal);
+static thread_local std::atomic<bool> in_handler{false};
 
 static void handle_profiling_signal(int signum, siginfo_t *info, void *context) {
-    std::shared_ptr<Profiler> cpu_profiler = GlobalCtx::recording.cpu_profiler;
-    if (cpu_profiler.get() == nullptr) {
-        logger->warn("Received profiling signal while recording is off! Something wrong?");
-    } else {
-        cpu_profiler->handle(signum, info, context);
+    if (in_handler.load(std::memory_order_seq_cst)) return;
+    in_handler.store(true, std::memory_order_seq_cst);
+    {
+        ReadsafePtr<Profiler> p(GlobalCtx::recording.cpu_profiler);
+        if (p.available()) {
+            p->handle(signum, info, context);
+        }
     }
+    in_handler.store(false, std::memory_order_seq_cst);
 }
 
 void Profiler::handle(int signum, siginfo_t *info, void *context) {
@@ -32,19 +24,19 @@ void Profiler::handle(int signum, siginfo_t *info, void *context) {
     JNIEnv *jniEnv = getJNIEnv(jvm);
     ThreadBucket *thread_info = nullptr;
     PerfCtx::ThreadTracker* ctx_tracker = nullptr;
+    auto current_sampling_attempt = sampling_attempts.fetch_add(1, std::memory_order_relaxed);
     if (jniEnv != nullptr) {
         thread_info = thread_map.get(jniEnv);
+        bool do_record = true;
         if (thread_info != nullptr) {//TODO: increment a counter here to monitor freq of this, it could be GC thd or compiler-broker etc
             ctx_tracker = &(thread_info->ctx_tracker);
-            if (! ctx_tracker->should_record()) {
-                SPDLOG_DEBUG(logger, "Ignoring the sampling opportunity");
-                return;
-            }
+            do_record = ctx_tracker->in_ctx() ? ctx_tracker->should_record() : get_prob_pct().on(current_sampling_attempt, noctx_cov_pct);
+        }
+        if (! do_record) {
+            return;
         }
     }
-    SimpleSpinLockGuard<false> guard(ongoing_conf); // sync buffer
 
-    // sample data structure
     STATIC_ARRAY(frames, JVMPI_CallFrame, capture_stack_depth(), MAX_FRAMES_TO_CAPTURE);
 
     JVMPI_CallTrace trace;
@@ -72,41 +64,25 @@ void Profiler::handle(int signum, siginfo_t *info, void *context) {
 }
 
 bool Profiler::start(JNIEnv *jniEnv) {
-    SimpleSpinLockGuard<true> guard(ongoing_conf);
-    /* within critical section */
-
-    if (__is_running()) {
-        TRACE(Profiler, kTraceProfilerStartFailed);
-        logError("WARN: Start called but sampling is already running\n");
+    if (running) {
+        logger->warn("Start called but sampling is already running");
         return true;
     }
-
-    TRACE(Profiler, kTraceProfilerStartOk);
 
     // reference back to Profiler::handle on the singleton
     // instance of Profiler
     handler->SetAction(&handle_profiling_signal);
-    processor->start(jniEnv);
     bool res = handler->updateSigprofInterval();
+    running = true;
     return res;
 }
 
 void Profiler::stop() {
-    /* Make sure it doesn't overlap with configure */
-    SimpleSpinLockGuard<true> guard(ongoing_conf);
-
-    if (!__is_running()) {
-        TRACE(Profiler, kTraceProfilerStopFailed);
+    if (!running) {
         return;
     }
 
     handler->stopSigprof();
-    processor->stop();
-}
-
-// non-blocking version (cen be called once spin-lock with acquire semantics is grabed)
-bool Profiler::__is_running() {
-    return processor && processor->isRunning();
 }
 
 void Profiler::set_sampling_freq(std::uint32_t sampling_freq) {
@@ -124,36 +100,52 @@ std::uint32_t Profiler::calculate_max_stack_depth(std::uint32_t _max_stack_depth
 }
 
 void Profiler::configure() {
-    serializer = new ProfileSerializingWriter(jvmti, *writer.get(), SiteResolver::method_info, SiteResolver::line_no, *GlobalCtx::ctx_reg, sft, tts);
-    
-    buffer = new CircularQueue(*serializer, capture_stack_depth());
+    buffer = new CircularQueue(serializer, capture_stack_depth());
 
     handler = new SignalHandler(itvl_min, itvl_max);
     int processor_interval = Size * itvl_min / 1000 / 2;
     logger->debug("CpuSamplingProfiler is using processor-interval value: {}", processor_interval);
-    processor = new Processor(jvmti, *buffer, *handler, processor_interval > 0 ? processor_interval : 1);
 }
 
 #define METRIC_TYPE "cpu_samples"
 
-Profiler::Profiler(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap &_thread_map, std::shared_ptr<ProfileWriter> _writer, std::uint32_t _max_stack_depth, std::uint32_t _sampling_freq)
-    : jvm(_jvm), jvmti(_jvmti), thread_map(_thread_map), max_stack_depth(calculate_max_stack_depth(_max_stack_depth)), writer(_writer), tts(max_stack_depth), ongoing_conf(false),
+Profiler::Profiler(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap &_thread_map, ProfileSerializingWriter& _serializer, std::uint32_t _max_stack_depth, std::uint32_t _sampling_freq, ProbPct& _prob_pct, std::uint8_t _noctx_cov_pct)
+    : jvm(_jvm), jvmti(_jvmti), thread_map(_thread_map), max_stack_depth(_max_stack_depth), serializer(_serializer),
+      prob_pct(_prob_pct), sampling_attempts(0), noctx_cov_pct(_noctx_cov_pct), running(false), samples_handled(0),
 
-      s_c_cpu_samp_total(GlobalCtx::metrics_registry->new_counter({METRICS_DOMAIN, METRIC_TYPE, "opportunities"})),
+      s_c_cpu_samp_total(get_metrics_registry().new_counter({METRICS_DOMAIN, METRIC_TYPE, "opportunities"})),
 
-      s_c_cpu_samp_err_no_jni(GlobalCtx::metrics_registry->new_counter({METRICS_DOMAIN, METRIC_TYPE, "err_no_jni"})),
-      s_c_cpu_samp_err_unexpected(GlobalCtx::metrics_registry->new_counter({METRICS_DOMAIN, METRIC_TYPE, "err_unexpected"})),
-      s_c_cpu_samp_gc(GlobalCtx::metrics_registry->new_counter({METRICS_DOMAIN, METRIC_TYPE, "err_in_gc"})) {
+      s_c_cpu_samp_err_no_jni(get_metrics_registry().new_counter({METRICS_DOMAIN, METRIC_TYPE, "err_no_jni"})),
+      s_c_cpu_samp_err_unexpected(get_metrics_registry().new_counter({METRICS_DOMAIN, METRIC_TYPE, "err_unexpected"})),
+      s_c_cpu_samp_gc(get_metrics_registry().new_counter({METRICS_DOMAIN, METRIC_TYPE, "err_in_gc"})),
+
+      s_h_pop_spree_len(get_metrics_registry().new_histogram({METRICS_DOMAIN, METRIC_TYPE, "pop_spree", "length"})),
+      s_t_pop_spree_tm(get_metrics_registry().new_timer({METRICS_DOMAIN, METRIC_TYPE, "pop_spree", "time"})) {
 
     set_sampling_freq(_sampling_freq);
     configure();
 }
 
 Profiler::~Profiler() {
-    SimpleSpinLockGuard<false> guard(ongoing_conf); // nonblocking
-    if (__is_running()) stop();
-    delete processor;
+    if (running) stop();
     delete handler;
     delete buffer;
-    delete serializer;
+}
+
+void Profiler::run() {
+    {
+        auto _ = s_t_pop_spree_tm.time_scope();
+
+        int poppped_before = samples_handled;
+        while (buffer->pop()) ++samples_handled;
+
+        s_h_pop_spree_len.update(samples_handled - poppped_before);
+    }
+
+    if (samples_handled > 200) {
+        if (! handler->updateSigprofInterval()) {
+            logger->warn("Couldn't switch sigprof interval to the next random value");
+        }
+        samples_handled = 0;
+    }
 }

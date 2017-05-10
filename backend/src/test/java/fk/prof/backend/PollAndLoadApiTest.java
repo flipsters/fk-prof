@@ -1,6 +1,7 @@
 package fk.prof.backend;
 
 import com.google.common.io.Files;
+import fk.prof.aggregation.model.AggregationWindowStorage;
 import fk.prof.backend.deployer.VerticleDeployer;
 import fk.prof.backend.deployer.impl.*;
 import fk.prof.backend.http.ProfHttpClient;
@@ -46,12 +47,12 @@ import java.time.LocalDateTime;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
 public class PollAndLoadApiTest {
-
   private Vertx vertx;
   private ConfigManager configManager;
   private CuratorFramework curatorClient;
@@ -63,6 +64,10 @@ public class PollAndLoadApiTest {
   private WorkSlotPool workSlotPool;
   private BackendAssociationStore backendAssociationStore;
   private PolicyStore policyStore;
+  private AggregationWindowStorage aggregationWindowStorage;
+
+  private String backendDaemonVerticleDeployment;
+  private List<String> backendHttpVerticleDeployments;
   private String policyPath = "/policy";
 
   @Before
@@ -87,26 +92,29 @@ public class PollAndLoadApiTest {
     curatorClient.create().forPath(policyPath);
 
     vertx = Vertx.vertx(new VertxOptions(configManager.getVertxConfig()));
-    backendAssociationStore = new ZookeeperBasedBackendAssociationStore(vertx, curatorClient, backendAssociationPath, 1, 1, configManager.getBackendHttpPort(), new ProcessGroupCountBasedBackendComparator());
-    leaderStore = spy(new InMemoryLeaderStore(configManager.getIPAddress()));
+    backendAssociationStore = new ZookeeperBasedBackendAssociationStore(vertx, curatorClient, backendAssociationPath, 1, 1, new ProcessGroupCountBasedBackendComparator());
+    leaderStore = spy(new InMemoryLeaderStore(configManager.getIPAddress(), configManager.getLeaderHttpPort()));
     when(leaderStore.isLeader()).thenReturn(false);
     associatedProcessGroups = new AssociatedProcessGroupsImpl(configManager.getRecorderDefunctThresholdInSeconds());
     workSlotPool = new WorkSlotPool(configManager.getSlotPoolCapacity());
     activeAggregationWindows = new ActiveAggregationWindowsImpl();
     policyStore = spy(new ZKWithCachePolicyStore(curatorClient, policyPath));
+    aggregationWindowStorage = mock(AggregationWindowStorage.class);
 
     VerticleDeployer backendHttpVerticleDeployer = new BackendHttpVerticleDeployer(vertx, configManager, leaderStore,
         activeAggregationWindows, associatedProcessGroups);
     VerticleDeployer backendDaemonVerticleDeployer = new BackendDaemonVerticleDeployer(vertx, configManager, leaderStore,
-        associatedProcessGroups, activeAggregationWindows, workSlotPool);
+        associatedProcessGroups, activeAggregationWindows, workSlotPool, aggregationWindowStorage);
     CompositeFuture.all(backendHttpVerticleDeployer.deploy(), backendDaemonVerticleDeployer.deploy()).setHandler(ar -> {
       if(ar.failed()) {
         context.fail(ar.result().cause());
       }
       try {
+        backendHttpVerticleDeployments = ((CompositeFuture)ar.result().list().get(0)).list();
+        backendDaemonVerticleDeployment = (String)((CompositeFuture)ar.result().list().get(0)).list().get(0);
 
         VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, configManager, backendAssociationStore, policyStore);
-        Runnable leaderElectedTask = LeaderElectedTask.newBuilder().build(vertx, leaderHttpVerticleDeployer);
+        Runnable leaderElectedTask = LeaderElectedTask.newBuilder().build(vertx, leaderHttpVerticleDeployer, backendAssociationStore, policyStore);
         VerticleDeployer leaderElectionParticipatorVerticleDeployer = new LeaderElectionParticipatorVerticleDeployer(
             vertx, configManager, curatorClient, leaderElectedTask);
         VerticleDeployer leaderElectionWatcherVerticleDeployer = new LeaderElectionWatcherVerticleDeployer(vertx, configManager, curatorClient, leaderStore);
@@ -147,9 +155,10 @@ public class PollAndLoadApiTest {
     Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId("1").setCluster("1").setProcName("1").build();
     //this test can be brittle because teardown of zk in previous running test, causes delay in setting up of leader when zk is setup again for this test
     //mocking leader address here so that association does not return 503
-    when(leaderStore.getLeaderIPAddress()).thenReturn("127.0.0.1");
+    when(leaderStore.getLeader())
+        .thenReturn(BackendDTO.LeaderDetail.newBuilder().setHost("127.0.0.1").setPort(configManager.getLeaderHttpPort()).build());
     try {
-      makeRequestGetAssociation(processGroup).setHandler(ar -> {
+      makeRequestPostAssociation(buildRecorderInfoFromProcessGroup(processGroup)).setHandler(ar -> {
         if (ar.failed()) {
           context.fail(ar.cause());
         }
@@ -157,7 +166,7 @@ public class PollAndLoadApiTest {
         //Wait for sometime for load to get reported at least twice
         vertx.setTimer(2500, timerId1 -> {
           try {
-            makeRequestGetAssociation(processGroup).setHandler(ar2 -> {
+            makeRequestPostAssociation(buildRecorderInfoFromProcessGroup(processGroup)).setHandler(ar2 -> {
               if (ar2.failed()) {
                 context.fail(ar2.cause());
               }
@@ -193,7 +202,7 @@ public class PollAndLoadApiTest {
     //Wait for sometime for load to get reported twice, so that backend gets marked as available
     vertx.setTimer(2500, timerId -> {
       try {
-        makeRequestGetAssociation(processGroup).setHandler(ar -> {
+        makeRequestPostAssociation(buildRecorderInfoFromProcessGroup(processGroup)).setHandler(ar -> {
           if (ar.failed()) {
             context.fail(ar.cause());
           }
@@ -218,16 +227,15 @@ public class PollAndLoadApiTest {
     });
   }
 
-  @Test(timeout = 10000)
+  @Test(timeout = 20000)
   public void testAggregationWindowSetupAndPollResponse(TestContext context) throws Exception {
-    //TODO: Failing intermittently
     final Async async = context.async();
     Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId("1").setCluster("1").setProcName("1").build();
     policyStore.putRecordingPolicy(processGroup, buildRecordingPolicy(1));
     CountDownLatch latch = new CountDownLatch(1);
-    when(policyStore.getRecordingPolicy(processGroup)).then(invocationOnMock -> {
+    when(policyStore.get(processGroup)).then(invocationOnMock -> {
       //Induce delay here so that before work is fetched, poll request of recorder succeeds and it gets marked healthy
-      boolean released = latch.await(8, TimeUnit.SECONDS);
+      latch.await(8, TimeUnit.SECONDS);
       return invocationOnMock.callRealMethod();
     });
 
@@ -246,14 +254,14 @@ public class PollAndLoadApiTest {
         //Wait for sometime for load to get reported twice, so that backend gets marked as available
         vertx.setTimer(2500, timerId -> {
           try {
-            makeRequestGetAssociation(processGroup).setHandler(ar2 -> {
+            makeRequestPostAssociation(buildRecorderInfoFromProcessGroup(processGroup)).setHandler(ar2 -> {
               if (ar2.failed()) {
                 context.fail(ar2.cause());
               }
               context.assertEquals(200, ar2.result().getStatusCode());
               try {
                 //wait for some time so that backend reports load
-                vertx.setTimer(1500, timerId1 -> {
+                vertx.setTimer(2500, timerId1 -> {
                   try {
                     Recorder.PollReq pollReq1 = Recorder.PollReq.newBuilder()
                         .setRecorderInfo(buildRecorderInfo(processGroup, 2))
@@ -273,7 +281,7 @@ public class PollAndLoadApiTest {
                             .setRecorderInfo(buildRecorderInfo(processGroup, 3))
                             .setWorkLastIssued(buildWorkResponse(0, Recorder.WorkResponse.WorkState.complete))
                             .build();
-                        vertx.setTimer(1500, timerId2 -> {
+                        vertx.setTimer(4500, timerId2 -> {
                           try {
                             makePollRequest(assignedBackend, pollReq2).setHandler(ar4 -> {
                               if(ar4.failed()) {
@@ -317,11 +325,11 @@ public class PollAndLoadApiTest {
 
   }
 
-  private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestGetAssociation(Recorder.ProcessGroup payload)
+  private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestPostAssociation(Recorder.RecorderInfo payload)
       throws IOException {
     Future<ProfHttpClient.ResponseWithStatusTuple> future = Future.future();
     HttpClientRequest request = vertx.createHttpClient()
-        .put(configManager.getBackendHttpPort(), "localhost", "/association")
+        .post(configManager.getBackendHttpPort(), "localhost", "/association")
         .handler(response -> {
           response.bodyHandler(buffer -> {
             try {
@@ -381,7 +389,12 @@ public class PollAndLoadApiTest {
         .setVmId("1")
         .setZone("1")
         .setIp("1")
+        .setCapabilities(enableCpuSampling())
         .build();
+  }
+
+  public static Recorder.RecorderCapabilities enableCpuSampling() {
+    return Recorder.RecorderCapabilities.newBuilder().setCanCpuSample(true).build();
   }
 
   private Recorder.WorkResponse buildWorkResponse(long workId, Recorder.WorkResponse.WorkState workState) {
@@ -393,4 +406,23 @@ public class PollAndLoadApiTest {
         .build();
   }
 
+  private static Recorder.RecorderInfo buildRecorderInfoFromProcessGroup(Recorder.ProcessGroup processGroup) {
+    return Recorder.RecorderInfo.newBuilder()
+        .setAppId(processGroup.getAppId())
+        .setCluster(processGroup.getCluster())
+        .setProcName(processGroup.getProcName())
+        .setRecorderTick(1)
+        .setHostname("1")
+        .setInstanceGrp("1")
+        .setInstanceId("1")
+        .setInstanceType("1")
+        .setLocalTime(LocalDateTime.now(Clock.systemUTC()).toString())
+        .setRecorderUptime(100)
+        .setRecorderVersion(1)
+        .setVmId("1")
+        .setZone("1")
+        .setIp("1")
+        .setCapabilities(enableCpuSampling())
+        .build();
+  }
 }

@@ -2,9 +2,9 @@
 #include <vector>
 #include <iostream>
 #include <cstdint>
-#include "fixtures.hh"
 #include "test.hh"
 #include "../../main/cpp/profiler.hh"
+#include "fixtures.hh"
 #include <unordered_map>
 #include "../../main/cpp/blocking_ring_buffer.hh"
 #include "../../main/cpp/circular_queue.hh"
@@ -12,9 +12,10 @@
 #include <tuple>
 #include "../../main/cpp/checksum.hh"
 #include <google/protobuf/io/coded_stream.h>
+#include "../../main/cpp/thread_map.hh"
 
 namespace std {
-    template <> class hash<std::tuple<std::int64_t, jint>> {
+    template <> struct hash<std::tuple<std::int64_t, jint>> {
         std::hash<std::int64_t> i64_h;
         std::hash<jint> jint_h;
 
@@ -54,6 +55,7 @@ void stub(FnStub& method_lookup_stub, LineNoStub& line_no_lookup_stub, std::int6
     line_no_lookup_stub.insert({std::make_tuple(method_id, 10), 1});
     line_no_lookup_stub.insert({std::make_tuple(method_id, 20), 2});
     line_no_lookup_stub.insert({std::make_tuple(method_id, 30), 3});
+    line_no_lookup_stub.insert({std::make_tuple(method_id, 40), 4});
 }
 
 struct AccumulatingRawWriter : public RawWriter {
@@ -93,9 +95,8 @@ jmethodID mid(std::uint64_t id) {
         CHECK_EQUAL(fn_sig, mthd_info.signature());                     \
     }
 
-#define ASSERT_TRACE_CTX_INFO_IS(trace_ctx, ctx_id, ctx_name, cov_pct, merge_semantics, is_gen) \
+#define ASSERT_TRACE_CTX_INFO_WITHOUT_CTXID_IS(trace_ctx, ctx_name, cov_pct, merge_semantics, is_gen) \
     {                                                                   \
-        CHECK_EQUAL(ctx_id, trace_ctx.trace_id());                      \
         CHECK_EQUAL(ctx_name, trace_ctx.trace_name());                  \
         if (is_gen) {                                                   \
             CHECK_EQUAL(true, trace_ctx.is_generated());                \
@@ -109,6 +110,12 @@ jmethodID mid(std::uint64_t id) {
         }                                                               \
     }
 
+#define ASSERT_TRACE_CTX_INFO_IS(trace_ctx, ctx_id, ctx_name, cov_pct, merge_semantics, is_gen) \
+    {                                                                   \
+        CHECK_EQUAL(ctx_id, trace_ctx.trace_id());                      \
+        ASSERT_TRACE_CTX_INFO_WITHOUT_CTXID_IS(trace_ctx, ctx_name, cov_pct, merge_semantics, is_gen); \
+    }
+
 typedef std::int64_t F_mid;
 typedef std::int32_t F_bci;
 typedef std::int32_t F_line;
@@ -116,10 +123,16 @@ std::tuple<F_mid, F_bci, F_line> fr(F_mid mid, F_bci bci, F_line line) {
     return std::make_tuple(mid, bci, line);
 }
 
+#define NO_THD -1
+
 #define ASSERT_STACK_SAMPLE_IS(ss, time_offset, thd_id, frames, ctx_ids, is_snipped) \
     {                                                                   \
         CHECK_EQUAL(time_offset, ss.start_offset_micros());             \
-        CHECK_EQUAL(thd_id, ss.thread_id());                            \
+        if (thd_id == NO_THD) {                                         \
+            CHECK_EQUAL(false, ss.has_thread_id());                     \
+        } else {                                                        \
+            CHECK_EQUAL(thd_id, ss.thread_id());                        \
+        }                                                               \
         CHECK_EQUAL(frames.size(), ss.frame_size());                    \
         auto i = 0;                                                     \
         for (auto it = frames.begin(); it != frames.end(); it++, i++) { \
@@ -162,15 +175,15 @@ TEST(ProfileSerializer__should_write_cpu_samples) {
     auto ctx_bar = reg.find_or_bind("bar", 30, to_parent_semantic);
     auto ctx_baz = reg.find_or_bind("baz", 40, dup_semantic);
     
-    ProbPct prob_pct;
-    GlobalCtx::prob_pct = &prob_pct;
-    GlobalCtx::ctx_reg = &reg;
+    ProbPct ppct;
+    prob_pct = &ppct;
+    ctx_reg = &reg;
 
     jvmtiEnv* ti = nullptr;
 
     SerializationFlushThresholds sft;
     TruncationThresholds tts(7);
-    ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts);
+    ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts, 15);
 
     CircularQueue q(ps, 10);
     
@@ -191,9 +204,10 @@ TEST(ProfileSerializer__should_write_cpu_samples) {
     ct.num_frames = 5;
 
     ThreadBucket t25(25, "Thread No. 25", 5, true);
+
     t25.ctx_tracker.enter(ctx_foo);
     t25.ctx_tracker.enter(ctx_bar);
-    q.push(ct, &t25);
+    q.push(ct, ThreadBucket::acq_bucket(&t25));
     t25.ctx_tracker.exit(ctx_bar);
     t25.ctx_tracker.exit(ctx_foo);
 
@@ -214,7 +228,7 @@ TEST(ProfileSerializer__should_write_cpu_samples) {
     ThreadBucket tmain(42, "main thread", 10, false);
     tmain.ctx_tracker.enter(ctx_bar);
     tmain.ctx_tracker.enter(ctx_baz);
-    q.push(ct, &tmain);
+    q.push(ct, ThreadBucket::acq_bucket(&tmain));
     tmain.ctx_tracker.exit(ctx_baz);
 
     frames[0].method_id = mid(c);
@@ -230,21 +244,24 @@ TEST(ProfileSerializer__should_write_cpu_samples) {
     frames[5].method_id = mid(y);
     frames[5].lineno = 30;
     ct.num_frames = 6;
-    q.push(ct, &tmain);
+    q.push(ct, ThreadBucket::acq_bucket(&tmain));
     
     tmain.ctx_tracker.exit(ctx_bar);
 
+    frames[0].method_id = mid(c);
+    frames[0].lineno = 40;
+    q.push(ct, nullptr);
+
     CHECK(q.pop());
     CHECK(q.pop());
     CHECK(q.pop());
-    CHECK(! q.pop());//because only 3 samples were pushed
+    CHECK(q.pop());
+    CHECK(! q.pop());//because only 4 samples were pushed
 
     ps.flush();
 
-    buff.readonly();
-
     std::shared_ptr<std::uint8_t> tmp_buff(new std::uint8_t[1024 * 1024], std::default_delete<std::uint8_t[]>());
-    auto bytes_sz = buff.read(tmp_buff.get(), 0, 1024 * 1024);
+    auto bytes_sz = buff.read(tmp_buff.get(), 0, 1024 * 1024, false);
     CHECK(bytes_sz > 0);
 
     google::protobuf::io::CodedInputStream cis(tmp_buff.get(), bytes_sz);
@@ -284,14 +301,15 @@ TEST(ProfileSerializer__should_write_cpu_samples) {
     ASSERT_METHOD_INFO_IS(idx_data.method_info(3), e, "x/E.class", "x.E", "fn_e", "(J)I");
     ASSERT_METHOD_INFO_IS(idx_data.method_info(4), f, "x/F.class", "x.F", "fn_f", "(J)I");
 
-    CHECK_EQUAL(3, idx_data.trace_ctx_size());
-    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(0), 5, "foo", 20, 0, false);
-    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(1), 6, "bar", 30, 0, false);
-    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(2), 7, "baz", 40, 4, false);
+    CHECK_EQUAL(4, idx_data.trace_ctx_size());
+    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(0), 0, NOCTX_NAME, 15, 0, false);
+    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(1), 5, "foo", 20, 0, false);
+    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(2), 6, "bar", 30, 0, false);
+    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(3), 7, "baz", 40, 4, false);
 
     auto cse = wse.cpu_sample_entry();
 
-    CHECK_EQUAL(3, cse.stack_sample_size());
+    CHECK_EQUAL(4, cse.stack_sample_size());
     auto s1 = {fr(d, 10, 1), fr(c, 10, 1), fr(d, 20, 2), fr(c, 20, 2), fr(y, 30, 3)};
     auto s1_ctxs = {5};
     ASSERT_STACK_SAMPLE_IS(cse.stack_sample(0), 0, 3, s1, s1_ctxs, false); //TODO: fix this to actually record time-offset, right now we are using zero
@@ -301,6 +319,9 @@ TEST(ProfileSerializer__should_write_cpu_samples) {
     auto s3 = {fr(c, 10, 1), fr(f, 10, 1), fr(e, 20, 2), fr(d, 20, 2), fr(c, 30, 3), fr(y, 30, 3)};
     auto s3_ctxs = {6};
     ASSERT_STACK_SAMPLE_IS(cse.stack_sample(2), 0, 4, s3, s3_ctxs, false);
+    auto s4 = {fr(c, 40, 4), fr(f, 10, 1), fr(e, 20, 2), fr(d, 20, 2), fr(c, 30, 3), fr(y, 30, 3)};
+    auto s4_ctxs = {0};
+    ASSERT_STACK_SAMPLE_IS(cse.stack_sample(3), 0, NO_THD, s4, s4_ctxs, false);
 }
 
 TEST(ProfileSerializer__should_write_cpu_samples__with_scoped_ctx) {
@@ -323,15 +344,15 @@ TEST(ProfileSerializer__should_write_cpu_samples__with_scoped_ctx) {
     auto ctx_foo = reg.find_or_bind("foo", 20, to_parent_semantic);
     auto ctx_bar = reg.find_or_bind("bar", 30, scoped_semantic);
     
-    ProbPct prob_pct;
-    GlobalCtx::prob_pct = &prob_pct;
-    GlobalCtx::ctx_reg = &reg;
+    ProbPct ppct;
+    prob_pct = &ppct;
+    ctx_reg = &reg;
 
     jvmtiEnv* ti = nullptr;
 
     SerializationFlushThresholds sft;
     TruncationThresholds tts(7);
-    ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts);
+    ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts, 0);
 
     CircularQueue q(ps, 10);
     
@@ -350,7 +371,7 @@ TEST(ProfileSerializer__should_write_cpu_samples__with_scoped_ctx) {
     ThreadBucket t25(25, "some thread", 8, false);
     t25.ctx_tracker.enter(ctx_foo);
     t25.ctx_tracker.enter(ctx_bar);
-    q.push(ct, &t25);
+    q.push(ct, ThreadBucket::acq_bucket(&t25));
     t25.ctx_tracker.exit(ctx_bar);
     t25.ctx_tracker.exit(ctx_foo);
 
@@ -362,7 +383,7 @@ TEST(ProfileSerializer__should_write_cpu_samples__with_scoped_ctx) {
 
     t25.ctx_tracker.enter(ctx_bar);
     t25.ctx_tracker.enter(ctx_foo);
-    q.push(ct, &t25);
+    q.push(ct, ThreadBucket::acq_bucket(&t25));
     t25.ctx_tracker.exit(ctx_foo);
     t25.ctx_tracker.exit(ctx_bar);
 
@@ -372,10 +393,8 @@ TEST(ProfileSerializer__should_write_cpu_samples__with_scoped_ctx) {
 
     ps.flush();
 
-    buff.readonly();
-
-    std::shared_ptr<std::uint8_t> tmp_buff(new std::uint8_t[1024 * 1024]);
-    auto bytes_sz = buff.read(tmp_buff.get(), 0, 1024 * 1024);
+    std::shared_ptr<std::uint8_t> tmp_buff(new std::uint8_t[1024 * 1024], std::default_delete<std::uint8_t[]>());
+    auto bytes_sz = buff.read(tmp_buff.get(), 0, 1024 * 1024, false);
     CHECK(bytes_sz > 0);
 
     google::protobuf::io::CodedInputStream cis(tmp_buff.get(), bytes_sz);
@@ -401,9 +420,10 @@ TEST(ProfileSerializer__should_write_cpu_samples__with_scoped_ctx) {
     ASSERT_METHOD_INFO_IS(idx_data.method_info(0), c, "x/C.class", "x.C", "fn_c", "(F)I");
     ASSERT_METHOD_INFO_IS(idx_data.method_info(1), y, "x/Y.class", "x.Y", "fn_y", "(I)J");
 
-    CHECK_EQUAL(2, idx_data.trace_ctx_size());
-    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(0), 5, "foo > bar", 0, 0, true);
-    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(1), 6, "bar", 30, 1, false);
+    CHECK_EQUAL(3, idx_data.trace_ctx_size());
+    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(0), 0, NOCTX_NAME, 0, 0, false);
+    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(1), 5, "foo > bar", 0, 0, true);
+    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(2), 6, "bar", 30, 1, false);
 
     auto cse = wse.cpu_sample_entry();
 
@@ -435,16 +455,16 @@ TEST(ProfileSerializer__should_auto_flush__at_buffering_threshold) {
     auto to_parent_semantic = static_cast<std::uint8_t>(PerfCtx::MergeSemantic::to_parent);
     auto ctx_foo = reg.find_or_bind("foo", 20, to_parent_semantic);
     
-    ProbPct prob_pct;
-    GlobalCtx::prob_pct = &prob_pct;
-    GlobalCtx::ctx_reg = &reg;
+    ProbPct ppct;
+    prob_pct = &ppct;
+    ctx_reg = &reg;
 
     jvmtiEnv* ti = nullptr;
 
     SerializationFlushThresholds sft;
     sft.cpu_samples = 10;
     TruncationThresholds tts(7);
-    ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts);
+    ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts, 0);
 
     CircularQueue q(ps, 10);
     
@@ -461,21 +481,19 @@ TEST(ProfileSerializer__should_auto_flush__at_buffering_threshold) {
     ThreadBucket t25(25, "some thread", 8, false);
     t25.ctx_tracker.enter(ctx_foo);
     for (auto i = 0; i < 10; i++) {
-        q.push(ct, &t25);
+        q.push(ct, ThreadBucket::acq_bucket(&t25));
         CHECK(q.pop());
 
         std::uint8_t tmp;
         CHECK_EQUAL(0, buff.read(&tmp, 0, 1, false));
     }
-    q.push(ct, &t25);
+    q.push(ct, ThreadBucket::acq_bucket(&t25));
     t25.ctx_tracker.exit(ctx_foo);
     CHECK(q.pop());
 
-    buff.readonly();
-
     const std::size_t one_meg = 1024 * 1024;
-    std::shared_ptr<std::uint8_t> tmp_buff(new std::uint8_t[one_meg]);
-    auto bytes_sz = buff.read(tmp_buff.get(), 0, one_meg);
+    std::shared_ptr<std::uint8_t> tmp_buff(new std::uint8_t[one_meg], std::default_delete<std::uint8_t[]>());
+    auto bytes_sz = buff.read(tmp_buff.get(), 0, one_meg, false);
     CHECK(bytes_sz > 0);
     CHECK(bytes_sz < one_meg);
 
@@ -502,8 +520,9 @@ TEST(ProfileSerializer__should_auto_flush__at_buffering_threshold) {
     ASSERT_METHOD_INFO_IS(idx_data.method_info(0), c, "x/C.class", "x.C", "fn_c", "(F)I");
     ASSERT_METHOD_INFO_IS(idx_data.method_info(1), y, "x/Y.class", "x.Y", "fn_y", "(I)J");
 
-    CHECK_EQUAL(1, idx_data.trace_ctx_size());
-    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(0), 5, "foo", 20, 0, false);
+    CHECK_EQUAL(2, idx_data.trace_ctx_size());
+    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(0), 0, NOCTX_NAME, 0, 0, false);
+    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(1), 5, "foo", 20, 0, false);
 
     auto cse = wse.cpu_sample_entry();
     CHECK_EQUAL(10, cse.stack_sample_size());
@@ -535,16 +554,16 @@ TEST(ProfileSerializer__should_auto_flush_correctly__after_first_flush___and_sho
     auto ctx_foo = reg.find_or_bind("foo", 20, to_parent_semantic);
     auto ctx_bar = reg.find_or_bind("bar", 30, to_parent_semantic);
     
-    ProbPct prob_pct;
-    GlobalCtx::prob_pct = &prob_pct;
-    GlobalCtx::ctx_reg = &reg;
+    ProbPct ppct;
+    prob_pct = &ppct;
+    ctx_reg = &reg;
 
     jvmtiEnv* ti = nullptr;
 
     SerializationFlushThresholds sft;
     sft.cpu_samples = 10;
     TruncationThresholds tts(7);
-    ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts);
+    ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts, 0);
 
     CircularQueue q(ps, 10);
     
@@ -576,20 +595,18 @@ TEST(ProfileSerializer__should_auto_flush_correctly__after_first_flush___and_sho
             ps.flush();//check manual flush interleving
         }
         if (i < 15) {
-            q.push(ct0, &t25);
+            q.push(ct0, ThreadBucket::acq_bucket(&t25));
         } else {
-            q.push(ct1, &t10);
+            q.push(ct1, ThreadBucket::acq_bucket(&t10));
         }
         CHECK(q.pop());
     }
     t25.ctx_tracker.exit(ctx_foo);
     t10.ctx_tracker.exit(ctx_bar);
 
-    buff.readonly();
-
     const std::size_t one_meg = 1024 * 1024;
-    std::shared_ptr<std::uint8_t> tmp_buff(new std::uint8_t[one_meg]);
-    auto bytes_sz = buff.read(tmp_buff.get(), 0, one_meg);
+    std::shared_ptr<std::uint8_t> tmp_buff(new std::uint8_t[one_meg], std::default_delete<std::uint8_t[]>());
+    auto bytes_sz = buff.read(tmp_buff.get(), 0, one_meg, false);
     CHECK(bytes_sz > 0);
     CHECK(bytes_sz < one_meg);
 
@@ -645,8 +662,9 @@ TEST(ProfileSerializer__should_auto_flush_correctly__after_first_flush___and_sho
     ASSERT_METHOD_INFO_IS(idx_data0.method_info(0), c, "x/C.class", "x.C", "fn_c", "(F)I");
     ASSERT_METHOD_INFO_IS(idx_data0.method_info(1), y, "x/Y.class", "x.Y", "fn_y", "(I)J");
 
-    CHECK_EQUAL(1, idx_data0.trace_ctx_size());
-    ASSERT_TRACE_CTX_INFO_IS(idx_data0.trace_ctx(0), 5, "foo", 20, 0, false);
+    CHECK_EQUAL(2, idx_data0.trace_ctx_size());
+    ASSERT_TRACE_CTX_INFO_IS(idx_data0.trace_ctx(0), 0, NOCTX_NAME, 0, 0, false);
+    ASSERT_TRACE_CTX_INFO_IS(idx_data0.trace_ctx(1), 5, "foo", 20, 0, false);
 
     auto cse0 = wse0.cpu_sample_entry();
     CHECK_EQUAL(10, cse0.stack_sample_size());
@@ -703,15 +721,15 @@ TEST(ProfileSerializer__should_write_cpu_samples__with_forte_error) {
 
     PerfCtx::Registry reg;
     
-    ProbPct prob_pct;
-    GlobalCtx::prob_pct = &prob_pct;
-    GlobalCtx::ctx_reg = &reg;
+    ProbPct ppct;
+    prob_pct = &ppct;
+    ctx_reg = &reg;
 
     jvmtiEnv* ti = nullptr;
 
     SerializationFlushThresholds sft;
     TruncationThresholds tts(7);
-    ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts);
+    ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts, 0);
 
     CircularQueue q(ps, 10);
     
@@ -729,10 +747,8 @@ TEST(ProfileSerializer__should_write_cpu_samples__with_forte_error) {
 
     ps.flush();
 
-    buff.readonly();
-
-    std::shared_ptr<std::uint8_t> tmp_buff(new std::uint8_t[1024 * 1024]);
-    auto bytes_sz = buff.read(tmp_buff.get(), 0, 1024 * 1024);
+    std::shared_ptr<std::uint8_t> tmp_buff(new std::uint8_t[1024 * 1024], std::default_delete<std::uint8_t[]>());
+    auto bytes_sz = buff.read(tmp_buff.get(), 0, 1024 * 1024, false);
     CHECK(bytes_sz > 0);
 
     google::protobuf::io::CodedInputStream cis(tmp_buff.get(), bytes_sz);
@@ -752,7 +768,8 @@ TEST(ProfileSerializer__should_write_cpu_samples__with_forte_error) {
     CHECK_EQUAL(0, idx_data.monitor_info_size());
     CHECK_EQUAL(0, idx_data.thread_info_size());
     CHECK_EQUAL(0, idx_data.method_info_size());
-    CHECK_EQUAL(0, idx_data.trace_ctx_size());
+    CHECK_EQUAL(1, idx_data.trace_ctx_size());
+    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(0), 0, NOCTX_NAME, 0, 0, false);
 
     auto cse = wse.cpu_sample_entry();
 
@@ -787,15 +804,15 @@ TEST(ProfileSerializer__should_snip_short__very_long_cpu_sample_backtraces) {
     auto to_parent_semantic = static_cast<std::uint8_t>(PerfCtx::MergeSemantic::to_parent);
     auto ctx_foo = reg.find_or_bind("foo", 20, to_parent_semantic);
     
-    ProbPct prob_pct;
-    GlobalCtx::prob_pct = &prob_pct;
-    GlobalCtx::ctx_reg = &reg;
+    ProbPct ppct;
+    prob_pct = &ppct;
+    ctx_reg = &reg;
 
     jvmtiEnv* ti = nullptr;
 
     SerializationFlushThresholds sft;
     TruncationThresholds tts(4);
-    ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts);
+    ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts, 0);
 
     CircularQueue q(ps, 10);
     
@@ -817,7 +834,7 @@ TEST(ProfileSerializer__should_snip_short__very_long_cpu_sample_backtraces) {
 
     ThreadBucket t25(25, "Thread No. 25", 5, true);
     t25.ctx_tracker.enter(ctx_foo);
-    q.push(ct, &t25);
+    q.push(ct, ThreadBucket::acq_bucket(&t25));
     t25.ctx_tracker.exit(ctx_foo);
 
     CHECK(q.pop());
@@ -825,10 +842,8 @@ TEST(ProfileSerializer__should_snip_short__very_long_cpu_sample_backtraces) {
 
     ps.flush();
 
-    buff.readonly();
-
     std::shared_ptr<std::uint8_t> tmp_buff(new std::uint8_t[1024 * 1024], std::default_delete<std::uint8_t[]>());
-    auto bytes_sz = buff.read(tmp_buff.get(), 0, 1024 * 1024);
+    auto bytes_sz = buff.read(tmp_buff.get(), 0, 1024 * 1024, false);
     CHECK(bytes_sz > 0);
 
     google::protobuf::io::CodedInputStream cis(tmp_buff.get(), bytes_sz);
@@ -864,8 +879,9 @@ TEST(ProfileSerializer__should_snip_short__very_long_cpu_sample_backtraces) {
     ASSERT_METHOD_INFO_IS(idx_data.method_info(0), d, "x/D.class", "x.D", "fn_d", "(J)I");
     ASSERT_METHOD_INFO_IS(idx_data.method_info(1), c, "x/C.class", "x.C", "fn_c", "(F)I");
 
-    CHECK_EQUAL(1, idx_data.trace_ctx_size());
-    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(0), 5, "foo", 20, 0, false);
+    CHECK_EQUAL(2, idx_data.trace_ctx_size());
+    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(0), 0, NOCTX_NAME, 0, 0, false);
+    ASSERT_TRACE_CTX_INFO_IS(idx_data.trace_ctx(1), 5, "foo", 20, 0, false);
 
     auto cse = wse.cpu_sample_entry();
 
@@ -874,3 +890,212 @@ TEST(ProfileSerializer__should_snip_short__very_long_cpu_sample_backtraces) {
     auto s1_ctxs = {5};
     ASSERT_STACK_SAMPLE_IS(cse.stack_sample(0), 0, 3, s1, s1_ctxs, true); //TODO: fix this to actually record time-offset, right now we are using zero
 }
+
+void play_last_flush_scenario(recording::Wse& wse1, int additional_traces) {
+    BlockingRingBuffer buff(1024 * 1024);
+    std::shared_ptr<RawWriter> raw_w_ptr(new AccumulatingRawWriter(buff));
+    Buff pw_buff;
+
+    method_lookup_stub.clear();
+    line_no_lookup_stub.clear();
+
+    std::int64_t y = 1, c = 2, d = 3;
+    stub(method_lookup_stub, line_no_lookup_stub, y, "x/Y.class", "x.Y", "fn_y", "(I)J");
+    stub(method_lookup_stub, line_no_lookup_stub, c, "x/C.class", "x.C", "fn_c", "(F)I");
+    stub(method_lookup_stub, line_no_lookup_stub, d, "x/D.class", "x.D", "fn_d", "(J)I");
+
+    PerfCtx::Registry reg;
+    auto to_parent_semantic = static_cast<std::uint8_t>(PerfCtx::MergeSemantic::to_parent);
+    auto ctx_foo = reg.find_or_bind("foo", 20, to_parent_semantic);
+
+    //we create some unused ones, to test they indeed get flushed
+    auto duplicate_semantic = static_cast<std::uint8_t>(PerfCtx::MergeSemantic::duplicate);
+    auto stack_semantic = static_cast<std::uint8_t>(PerfCtx::MergeSemantic::stack_up);
+    auto scoped_semantic = static_cast<std::uint8_t>(PerfCtx::MergeSemantic::scoped);
+    auto strict_scoped_semantic = static_cast<std::uint8_t>(PerfCtx::MergeSemantic::scoped_strict);
+    reg.find_or_bind("bar", 40, to_parent_semantic);
+    reg.find_or_bind("baz", 50, duplicate_semantic);
+    reg.find_or_bind("quux", 60, stack_semantic);
+    reg.find_or_bind("corge", 70, scoped_semantic);
+    reg.find_or_bind("grault", 80, strict_scoped_semantic);
+
+    ProbPct ppct;
+    prob_pct = &ppct;
+    ctx_reg = &reg;
+
+    jvmtiEnv* ti = nullptr;
+
+    SerializationFlushThresholds sft;
+    sft.cpu_samples = 10;
+    TruncationThresholds tts(7);
+
+    STATIC_ARRAY(frames0, JVMPI_CallFrame, 7, 7);
+    JVMPI_CallTrace ct0;
+
+    frames0[0].method_id = mid(c);
+    frames0[0].lineno = 10;
+    frames0[1].method_id = mid(y);
+    frames0[1].lineno = 20;
+    ct0.frames = frames0;
+    ct0.num_frames = 2;
+
+    ThreadBucket t25(25, "some thread", 8, false);
+    t25.ctx_tracker.enter(ctx_foo);
+    {
+        //destructor is the cue for EoF
+        ProfileWriter pw(raw_w_ptr, pw_buff);
+
+        ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts, 0);
+
+        CircularQueue q(ps, 10);
+
+        for (auto i = 0; i < 10 + additional_traces; i++) {
+            q.push(ct0, ThreadBucket::acq_bucket(&t25));
+            CHECK(q.pop());
+        }
+        if (additional_traces == 0) {
+            ps.flush();
+        }
+    }
+    t25.ctx_tracker.exit(ctx_foo);
+
+    buff.readonly();
+
+    const std::size_t one_meg = 1024 * 1024;
+    std::shared_ptr<std::uint8_t> tmp_buff(new std::uint8_t[one_meg], std::default_delete<std::uint8_t[]>());
+    auto bytes_sz = buff.read(tmp_buff.get(), 0, one_meg);
+    CHECK(bytes_sz > 0);
+    CHECK(bytes_sz < one_meg);
+
+    google::protobuf::io::CodedInputStream cis(tmp_buff.get(), bytes_sz);
+
+    std::uint32_t len;
+    std::uint32_t csum;
+    Checksum c_calc;
+    recording::Wse wse0;
+
+    CHECK(cis.ReadVarint32(&len));
+    auto lim = cis.PushLimit(len);
+    CHECK(wse0.ParseFromCodedStream(&cis));
+    cis.PopLimit(lim);
+    auto pos = cis.CurrentPosition();
+    CHECK(cis.ReadVarint32(&csum));
+    auto computed_csum = c_calc.chksum(tmp_buff.get(), pos);
+    CHECK_EQUAL(computed_csum, csum);
+    auto next_record_start = cis.CurrentPosition();
+
+    CHECK(cis.ReadVarint32(&len));
+    lim = cis.PushLimit(len);
+    CHECK(wse1.ParseFromCodedStream(&cis));
+    cis.PopLimit(lim);
+    pos = cis.CurrentPosition();
+    CHECK(cis.ReadVarint32(&csum));
+    c_calc.reset();
+    computed_csum = c_calc.chksum(tmp_buff.get() + next_record_start, pos - next_record_start);
+    CHECK_EQUAL(computed_csum, csum);
+    //next_record_start = cis.CurrentPosition();// last one anyway, not required
+
+    CHECK(cis.ReadVarint32(&len));
+    CHECK_EQUAL(cis.CurrentPosition(), bytes_sz);
+    CHECK_EQUAL(0, len);//EOF marker
+
+    CHECK_EQUAL(recording::WorkType::cpu_sample_work, wse0.w_type());
+    CHECK_EQUAL(recording::WorkType::cpu_sample_work, wse1.w_type());
+
+    auto idx_data0 = wse0.indexed_data();
+    CHECK_EQUAL(0, idx_data0.monitor_info_size());
+
+    CHECK_EQUAL(1, idx_data0.thread_info_size());
+    ASSERT_THREAD_INFO_IS(idx_data0.thread_info(0), 3, "some thread", 8, false, 25);
+
+    CHECK_EQUAL(2, idx_data0.method_info_size());
+    ASSERT_METHOD_INFO_IS(idx_data0.method_info(0), c, "x/C.class", "x.C", "fn_c", "(F)I");
+    ASSERT_METHOD_INFO_IS(idx_data0.method_info(1), y, "x/Y.class", "x.Y", "fn_y", "(I)J");
+
+    CHECK_EQUAL(2, idx_data0.trace_ctx_size());
+    ASSERT_TRACE_CTX_INFO_IS(idx_data0.trace_ctx(0), 0, NOCTX_NAME, 0, 0, false);
+    ASSERT_TRACE_CTX_INFO_IS(idx_data0.trace_ctx(1), 5, "foo", 20, 0, false);
+
+    auto cse0 = wse0.cpu_sample_entry();
+    CHECK_EQUAL(10, cse0.stack_sample_size());
+
+    auto s0 = {fr(c, 10, 1), fr(y, 20, 2)};
+    auto s0_ctxs = {5};
+    for (auto i = 0; i < 10; i++) {
+        ASSERT_STACK_SAMPLE_IS(cse0.stack_sample(i), 0, 3, s0, s0_ctxs, false);
+    }
+}
+
+#include <algorithm>
+
+TEST(ProfileSerializer__should_report_unflushed_trace__and_EOF_after_last_flush) {
+    TestEnv _;
+    recording::Wse last;
+    play_last_flush_scenario(last, 1);
+
+    //There is a little bit of duplication here, but its for readability reasons
+    //duplicating entire test is no more readable, and returning these variables or
+    //passing them in for re-use hurts readability too.
+    //Anyway, we are better off with tests that are more readable than DRY.
+    std::int64_t y = 1, c = 2;
+    auto s0 = {fr(c, 10, 1), fr(y, 20, 2)};
+    auto s0_ctxs = {5};
+
+    auto last_data = last.indexed_data();
+    CHECK_EQUAL(0, last_data.monitor_info_size());
+    CHECK_EQUAL(0, last_data.thread_info_size());
+    CHECK_EQUAL(0, last_data.method_info_size());
+
+    CHECK_EQUAL(5, last_data.trace_ctx_size());
+    typedef std::pair<std::string, int> TraceCtxEntry;
+    std::vector<TraceCtxEntry> tce;
+    for (auto i = 0; i < 5; i ++) {
+        tce.emplace_back(last_data.trace_ctx(i).trace_name(), i);
+    }
+    std::sort(tce.begin(), tce.end());
+
+    ASSERT_TRACE_CTX_INFO_WITHOUT_CTXID_IS(last_data.trace_ctx(tce[0].second), "bar", 40, 0, false);
+    ASSERT_TRACE_CTX_INFO_WITHOUT_CTXID_IS(last_data.trace_ctx(tce[1].second), "baz", 50, 4, false);
+    ASSERT_TRACE_CTX_INFO_WITHOUT_CTXID_IS(last_data.trace_ctx(tce[2].second), "corge", 70, 1, false);
+    ASSERT_TRACE_CTX_INFO_WITHOUT_CTXID_IS(last_data.trace_ctx(tce[3].second), "grault", 80, 2, false);
+    ASSERT_TRACE_CTX_INFO_WITHOUT_CTXID_IS(last_data.trace_ctx(tce[4].second), "quux", 60, 3, false);
+
+    auto cse1 = last.cpu_sample_entry();
+    CHECK_EQUAL(1, cse1.stack_sample_size());
+    ASSERT_STACK_SAMPLE_IS(cse1.stack_sample(0), 0, 3, s0, s0_ctxs, false);
+}
+
+
+TEST(ProfileSerializer__should_report_all_user_tracepoints_that_were_never_reported_before__and_EOF_after_last_flush) {
+    TestEnv _;
+    recording::Wse last;
+    play_last_flush_scenario(last, 0);
+
+    //There is a little bit of duplication here, but its for readability reasons
+    //duplicating entire test is no more readable, and returning these variables or
+    //passing them in for re-use hurts readability too.
+    //Anyway, we are better off with tests that are more readable than DRY.
+
+    auto last_data = last.indexed_data();
+    CHECK_EQUAL(0, last_data.monitor_info_size());
+    CHECK_EQUAL(0, last_data.thread_info_size());
+    CHECK_EQUAL(0, last_data.method_info_size());
+
+    CHECK_EQUAL(5, last_data.trace_ctx_size());
+    typedef std::pair<std::string, int> TraceCtxEntry;
+    std::vector<TraceCtxEntry> tce;
+    for (auto i = 0; i < 5; i ++) {
+        tce.emplace_back(last_data.trace_ctx(i).trace_name(), i);
+    }
+    std::sort(tce.begin(), tce.end());
+
+    ASSERT_TRACE_CTX_INFO_WITHOUT_CTXID_IS(last_data.trace_ctx(tce[0].second), "bar", 40, 0, false);
+    ASSERT_TRACE_CTX_INFO_WITHOUT_CTXID_IS(last_data.trace_ctx(tce[1].second), "baz", 50, 4, false);
+    ASSERT_TRACE_CTX_INFO_WITHOUT_CTXID_IS(last_data.trace_ctx(tce[2].second), "corge", 70, 1, false);
+    ASSERT_TRACE_CTX_INFO_WITHOUT_CTXID_IS(last_data.trace_ctx(tce[3].second), "grault", 80, 2, false);
+    ASSERT_TRACE_CTX_INFO_WITHOUT_CTXID_IS(last_data.trace_ctx(tce[4].second), "quux", 60, 3, false);
+
+    auto cse1 = last.cpu_sample_entry();
+    CHECK_EQUAL(0, cse1.stack_sample_size());
+}
+

@@ -95,8 +95,8 @@ namespace PerfCtx {
         typedef cuckoohash_map<TracePt, std::string, CityHasher<TracePt> > PtToName;
 
         moodycamel::ConcurrentQueue<std::uint32_t> unused_prime_nos;
-        NameToPt name_to_pt;
-        PtToName pt_to_name;
+        NameToPt name_to_pt;    //contains only user-created trace-pts
+        PtToName pt_to_name;    //contains both user-created and generated trace-pts
 
         std::atomic<bool> exhausted;
 
@@ -109,7 +109,6 @@ namespace PerfCtx {
         metrics::Ctr& s_c_merge_new;
 
         void load_unused_primes(std::uint32_t count);
-        void name_for(TracePt pt, std::string& name) throw (UnknownCtx);
 
     public:
         Registry();
@@ -117,13 +116,22 @@ namespace PerfCtx {
         
         TracePt find_or_bind(const char* name, std::uint8_t coverage_pct, std::uint8_t merge_type) throw (CtxCreationFailure);
         TracePt merge_bind(const std::vector<ThreadCtx>& parent, bool strict = false);
+        void name_for(TracePt pt, std::string& name) throw (UnknownCtx);
         void resolve(TracePt pt, std::string& name, bool& is_generated, std::uint8_t& coverage_pct, MergeSemantic& m_sem) throw (UnknownCtx);
+        void user_ctxs(std::vector<TracePt>& ctxs);
     };
 
-    class IncorrectEnterExitPairing : public std::runtime_error {
+    class IncorrectEnterExitPairing {
+        std::string msg;
+
     public:
-        IncorrectEnterExitPairing(const TracePt expected, const TracePt got) : runtime_error(Util::to_s("Expected ", expected, " got ", got)) {};
-        virtual ~IncorrectEnterExitPairing() {}
+        IncorrectEnterExitPairing(Registry& reg, const TracePt expected, const TracePt got);
+
+        IncorrectEnterExitPairing(Registry& reg, const TracePt got);
+
+        ~IncorrectEnterExitPairing() {}
+
+        const char* what() const;
     };
 
     MergeSemantic merge_semantic(TracePt pt);
@@ -155,9 +163,12 @@ namespace PerfCtx {
         void exit(TracePt pt) throw (IncorrectEnterExitPairing);
         int current(EffectiveCtx& curr);
         bool should_record();
+        bool in_ctx();
     };
 };
 
 std::ostream& operator<<(std::ostream& os, PerfCtx::MergeSemantic ms);
+
+PerfCtx::Registry& get_ctx_reg();
 
 #endif

@@ -33,6 +33,7 @@ class AggregatedProfileDataContainer extends React.Component {
   componentWillReceiveProps (nextProps) {
     // if there's already a selected workType,
     // and user clicked a different profile, handle!
+    // also handle if a different trace is clicked
     if (nextProps.location.query.selectedWorkType) {
       // see if availableWorkTypes have it
       const isSelectedWorkTypeValid = nextProps.workTypes
@@ -56,7 +57,7 @@ class AggregatedProfileDataContainer extends React.Component {
               className="mdl-button mdl-js-button mdl-js-ripple-effect"
               style={
                 selectedWorkType === w.workType
-                  ? { background: '#ccc' } : {}
+                  ? { background: 'rgb(63,81,181)', color: 'white', cursor: 'default' } : {}
               }
             >
               {`${workTypeMap[w.workType].text} (${w.samples})`}
@@ -64,7 +65,12 @@ class AggregatedProfileDataContainer extends React.Component {
           ))}
         </div>
         <div>
-          {Komponent && <Komponent />}
+          {Komponent && (
+            <Komponent
+              location={this.props.location}
+              params={this.props.params}
+            />
+          )}
         </div>
       </div>
     );

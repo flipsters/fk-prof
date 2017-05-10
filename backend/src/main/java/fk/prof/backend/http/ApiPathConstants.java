@@ -7,10 +7,12 @@ public final class ApiPathConstants {
 
   public static final String LEADER_POST_LOAD = "/leader/load";
   public static final String LEADER_GET_WORK = "/leader/work";
-  public static final String LEADER_PUT_ASSOCIATION = "/leader/association";
+  public static final String LEADER_POST_ASSOCIATION = "/leader/association";
+  public static final String LEADER_POST_POLICY = "/leader/policy";
 
-  public static final String BACKEND_PUT_ASSOCIATION = "/association";
+  public static final String BACKEND_POST_ASSOCIATION = "/association";
   public static final String BACKEND_POST_POLL = "/poll";
+  public static final String BACKEND_HEALTHCHECK = "/health";
 
   public static final String BACKEND_POLICIES = "/policies/";
   public static final String BACKEND_GET_POLICIES_GIVEN_APPID = "/policies/:appId";

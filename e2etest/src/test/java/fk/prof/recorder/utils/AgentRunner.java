@@ -30,8 +30,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
+import java.nio.file.Path;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -41,6 +41,7 @@ import java.util.function.Consumer;
 public class AgentRunner {
     private static final Logger logger = LoggerFactory.getLogger(AgentRunner.class);
     public static final String DEFAULT_AGENT_INTERVAL = "interval=100";
+    private static final String PERFCTX_JAR_BASE_NAME_PATTERN = "^perfctx-.+\\.jar$";
 
     private final String fqdn;
     private final String args;
@@ -79,14 +80,13 @@ public class AgentRunner {
         startProcess();
         //readProcessId();
     }
-
+    
     private void startProcess() throws IOException {
-        String java = System.getProperty("java.home") + "/bin/java";
-        String agentArg = "-agentpath:../recorder/build/libfkpagent" + Platforms.getDynamicLibraryExtension() + (args != null ? "=" + args : "");
-        // Eg: java -agentpath:build/liblagent.so -cp target/classes/ InfiniteExample
+        String finalArgs = (args == null) ? perfCtxArgFrag() : args + "," + perfCtxArgFrag(); 
+        String agentArg = "-agentpath:../recorder/build/libfkpagent" + Platforms.getDynamicLibraryExtension() + "=" + finalArgs;
 
+        List<String> classpath = Util.discoverClasspath(getClass());
 
-        List<String> classpath = discoverClasspath(getClass());
         //System.out.println("classpath = " + classpath);
         ProcessBuilder pb = new ProcessBuilder();
         populateEnvVars(pb);
@@ -95,6 +95,12 @@ public class AgentRunner {
                 .redirectError(new File("/tmp/fkprof_stderr.log"))
                 .redirectOutput(new File("/tmp/fkprof_stdout.log"))
                 .start();
+    }
+
+    private String perfCtxArgFrag() {
+        Collection<Path> files = FileResolver.findFile("../perfctx/target", PERFCTX_JAR_BASE_NAME_PATTERN);
+        if (files.size() != 1) throw new IllegalStateException(String.format("Confused about the correct perf-ctx labeling jar. Expected 1 but found %s files matching the pattern '%s'", files.size(), PERFCTX_JAR_BASE_NAME_PATTERN));
+        return "pctx_jar_path=" + files.iterator().next().toAbsolutePath();
     }
 
     private void populateEnvVars(ProcessBuilder pb) throws IOException {
@@ -111,29 +117,19 @@ public class AgentRunner {
         }
     }
 
-    private List<String> discoverClasspath(Class klass) {
-        ClassLoader loader = klass.getClassLoader();
-        List<String> classPath = new ArrayList<>();
-        do {
-            if (loader instanceof URLClassLoader) {
-                URLClassLoader urlClassLoader = (URLClassLoader) loader;
-                URL[] urLs = urlClassLoader.getURLs();
-                for (URL urL : urLs) {
-                    classPath.add(urL.toString());
-                }
-            }
-            loader = loader.getParent();
-        } while (loader != null);
-        return classPath;
-    }
-
-    public void stop() {
+    public boolean stop() {
         process.destroy();
-        try {
-            process.waitFor(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            logger.info(e.getMessage(), e);
+        while (true) {
+            try {
+                return process.waitFor(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                logger.info(e.getMessage(), e);
+            }
         }
+    }
+    
+    public int exitCode() {
+        return process.exitValue();
     }
 
     public int getProcessId() {

@@ -54,6 +54,11 @@ public:
 };
 
 struct ThreadBucket {
+    struct {
+        ThreadBucket* next;
+        ThreadBucket* prev;
+    } links;
+
 	const int tid;
 	char *name;
     std::uint32_t priority;
@@ -62,7 +67,7 @@ struct ThreadBucket {
 	map::GC::EpochType localEpoch;
     PerfCtx::ThreadTracker ctx_tracker;
 
-	ThreadBucket(int id, const char *n, std::uint32_t _priority, bool _is_daemon) : tid(id), priority(_priority), is_daemon(_is_daemon), refs(1), ctx_tracker(*GlobalCtx::ctx_reg, *GlobalCtx::prob_pct, id) {
+	ThreadBucket(int id, const char *n, std::uint32_t _priority, bool _is_daemon) : tid(id), priority(_priority), is_daemon(_is_daemon), refs(1), ctx_tracker(get_ctx_reg(), get_prob_pct(), id) {
 		int len = strlen(n) + 1;
 		name = new char[len];
 		std::copy(n, n + len, name);
@@ -77,15 +82,12 @@ struct ThreadBucket {
 	~ThreadBucket() {
 		delete[] name;
 	}
-};
 
-
-template <typename MapProvider>
-class ThreadMapBase {
-private:
-	MapProvider map;
-
-	static ThreadBucket *acq_bucket(ThreadBucket *tb) {
+    // This function is public purely to aid testing
+    ////  and should never be called outside of tests.
+    // DO NOT CALL THIS unless you REALLY know what
+    ////  you are doing.
+    static ThreadBucket *acq_bucket(ThreadBucket *tb) {
 		if (tb != nullptr) {
 			int prev = tb->refs.fetch_add(1, std::memory_order_relaxed);
 			if (prev > 0) {
@@ -95,10 +97,38 @@ private:
 		}
 		return nullptr;
 	}
+};
+
+template <typename MapProvider>
+class ThreadMapBase {
+private:
+	MapProvider map;
+    std::mutex values_mutex;
+    ThreadBucket* values;
+
+    void remove_and_release(ThreadBucket* b) {
+        std::lock_guard<std::mutex> g(values_mutex);
+        if (b->links.next != nullptr) b->links.next->links.prev = b->links.prev;
+        if (b->links.prev != nullptr) b->links.prev->links.next = b->links.next;
+        if (values == b) values = b->links.next;
+        b->release();
+    }
+
+    void add_to_values(ThreadBucket *b) {
+        std::lock_guard<std::mutex> g(values_mutex);
+        b->links.prev = nullptr;
+        b->links.next = values;
+        if (values != nullptr) values->links.prev = b;
+        values = b;
+    }
 
 public:
 
-	ThreadMapBase(int capacity = kInitialMapSize) : map(capacity) {}
+	ThreadMapBase(int capacity = kInitialMapSize) : map(capacity), values(nullptr) {}
+
+    ~ThreadMapBase() {
+        while (values != nullptr) remove_and_release(values);
+    }
 
 	void put(JNIEnv *jni_env, const char *name, jint priority, jboolean is_daemon) {
 		put(jni_env, name, gettid(), priority, is_daemon);
@@ -108,15 +138,16 @@ public:
 		// constructor == call to acquire
         logger->info("Thread started - '{}' (jniEnv: {}, tid: {}, priority: {}, is_daemon: {})", name, reinterpret_cast<std::uint64_t>(jni_env), tid, priority, is_daemon);
 		ThreadBucket *info = new ThreadBucket(tid, name, static_cast<std::uint32_t>(priority), static_cast<bool>(is_daemon));
+        add_to_values(info);
         info->localEpoch = GCHelper::attach();
 		ThreadBucket *old = (ThreadBucket*)map.put((map::KeyType)jni_env, (map::ValueType)info);
 		if (old != nullptr)
-			old->release();
+			remove_and_release(old);
 		GCHelper::safepoint(info->localEpoch); // each thread inserts once
 	}
 
 	ThreadBucket *get(JNIEnv *jni_env) {
-		ThreadBucket *info = acq_bucket((ThreadBucket*)map.get((map::KeyType)jni_env));
+		ThreadBucket *info = ThreadBucket::acq_bucket((ThreadBucket*)map.get((map::KeyType)jni_env));
 		if (info != nullptr)
 			GCHelper::signalSafepoint(info->localEpoch);
 		return info;
@@ -127,7 +158,7 @@ public:
 		if (info != nullptr) {
             logger->info("Thread stopped - '{}' (jniEnv: {}, tid: {}, priority: {}, is_daemon: {})", info->name, reinterpret_cast<std::uint64_t>(jni_env), info->tid, info->priority, info->is_daemon);
 			GCHelper::detach(info->localEpoch);
-			info->release();
+            remove_and_release(info);
 		}
 	}
 };

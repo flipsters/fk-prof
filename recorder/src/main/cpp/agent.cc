@@ -6,8 +6,8 @@
 
 #include "globals.hh"
 #include "config.hh"
-#include "thread_map.hh"
 #include "profiler.hh"
+#include "thread_map.hh"
 #include "controller.hh"
 #include "perf_ctx.hh"
 #include "prob_pct.hh"
@@ -17,15 +17,17 @@
 #define GETENV_NEW_THREAD_ASYNC_UNSAFE
 #endif
 
-LoggerP logger(nullptr);
+LoggerP logger = spdlog::syslog_logger("syslog", "fk-prof-rec", LOG_PID);
 static ConfigurationOptions* CONFIGURATION;
 static Controller* controller;
-static ThreadMap threadMap;
-PerfCtx::Registry* GlobalCtx::ctx_reg;
-ProbPct* GlobalCtx::prob_pct;
-medida::MetricsRegistry* GlobalCtx::metrics_registry;
-medida::reporting::UdpReporter* metrics_reporter;
-MetricFormatter::SyslogTsdbFormatter *formatter;
+static ThreadMap thread_map;
+static medida::MetricsRegistry metrics_registry;
+static PerfCtx::Registry ctx_reg;
+static ProbPct prob_pct;
+static medida::reporting::UdpReporter* metrics_reporter;
+static MetricFormatter::SyslogTsdbFormatter *formatter;
+static ThdProcP metrics_thd;
+std::atomic<bool> abort_metrics_poll;
 
 // This has to be here, or the VM turns off class loading events.
 // And AsyncGetCallTrace needs class loading events to be turned on!
@@ -57,8 +59,15 @@ void CreateJMethodIDsForClass(jvmtiEnv *jvmti, jclass klass) {
         JVMTI_ERROR_CLEANUP(
             jvmti->GetClassSignature(klass, ksig.GetRef(), NULL),
             ksig.AbandonBecauseOfError());
-        logError("Failed to create method IDs for methods in class %s with error %d ",
-                 ksig.Get(), e);
+        logger->error("Failed to create method IDs for methods in class {} with error {} ", ksig.Get(), e);
+    }
+}
+
+void metrics_poller(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *arg) {
+    auto itvl = std::chrono::seconds(5);
+    while (! abort_metrics_poll.load(std::memory_order_relaxed)) {
+        std::this_thread::sleep_for(itvl);
+        metrics_reporter->run();
     }
 }
 
@@ -76,6 +85,7 @@ void JNICALL OnVMInit(jvmtiEnv *jvmti, JNIEnv *jniEnv, jthread thread) {
         CreateJMethodIDsForClass(jvmti, klass);
     }
 
+    metrics_thd = start_new_thd(jniEnv, jvmti, "Fk-Prof Metrics Reporter", metrics_poller, nullptr);
     controller->start();
 }
 
@@ -131,7 +141,13 @@ static bool PrepareJvmti(jvmtiEnv *jvmti) {
         JVMTI_ERROR_CLEANUP_RET(
             jvmti->AddCapabilities(&caps),
             false,
-            logError("Failed to add capabilities with error %d\n", error))
+            logger->error("Failed to add capabilities with error {}", error));
+    }
+    if (jvmti->AddToSystemClassLoaderSearch(CONFIGURATION->pctx_jar_path) != JVMTI_ERROR_NONE) {
+        logger->error("Failed to add path to perf-ctx jar ({}) to classpath {}", CONFIGURATION->pctx_jar_path, error);
+        return false;
+    } else {
+        logger->info("Added perf-ctx jar '{}' to classpath", CONFIGURATION->pctx_jar_path);
     }
     return true;
 }
@@ -157,14 +173,14 @@ void JNICALL OnNativeMethodBind(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread th
 
     int err = jvmti_env->GetMethodName(method, &name_ptr, &signature_ptr, NULL);
     if (err != JNI_OK) {
-        logError("Error %i retrieving method name", err);
+        logger->error("Error {} retrieving method name", err);
         return;
     }
     if (strcmp(name_ptr, "start0") == 0 && strcmp(signature_ptr, "()V") == 0) {
         jclass declaringClass;
         int err = jvmti_env->GetMethodDeclaringClass(method, &declaringClass);
         if (err != JNI_OK) {
-            logError("Error %i retrieving class", err);
+            logger->error("Error {} retrieving class", err);
             jvmti_env->Deallocate((unsigned char *) name_ptr);
             jvmti_env->Deallocate((unsigned char *) signature_ptr);
             return;
@@ -198,7 +214,7 @@ void JNICALL OnThreadStart(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread)
                 main_started = true;
             }
         }
-        threadMap.put(jni_env, thread_info.name, thread_info.priority, thread_info.is_daemon);
+        thread_map.put(jni_env, thread_info.name, thread_info.priority, thread_info.is_daemon);
         jvmti_env->Deallocate((unsigned char *) thread_info.name);
     }
     pthread_sigmask(SIG_UNBLOCK, &prof_signal_mask, NULL);
@@ -206,15 +222,15 @@ void JNICALL OnThreadStart(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread)
 
 void JNICALL OnThreadEnd(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread) {
     pthread_sigmask(SIG_BLOCK, &prof_signal_mask, NULL);
-    threadMap.remove(jni_env);
+    thread_map.remove(jni_env);
 }
 
 static bool RegisterJvmti(jvmtiEnv *jvmti) {
     sigemptyset(&prof_signal_mask);
     sigaddset(&prof_signal_mask, SIGPROF);
     // Create the list of callbacks to be called on given events.
-    jvmtiEventCallbacks *callbacks = new jvmtiEventCallbacks();
-    memset(callbacks, 0, sizeof(jvmtiEventCallbacks));
+    std::unique_ptr<jvmtiEventCallbacks> callbacks(new jvmtiEventCallbacks());
+    memset(callbacks.get(), 0, sizeof(jvmtiEventCallbacks));
 
     callbacks->VMInit = &OnVMInit;
     callbacks->VMDeath = &OnVMDeath;
@@ -228,7 +244,7 @@ static bool RegisterJvmti(jvmtiEnv *jvmti) {
     callbacks->ThreadStart = &OnThreadStart;
     callbacks->ThreadEnd = &OnThreadEnd;
 
-    JVMTI_ERROR_RET((jvmti->SetEventCallbacks(callbacks, sizeof(jvmtiEventCallbacks))), false);
+    JVMTI_ERROR_RET((jvmti->SetEventCallbacks(callbacks.get(), sizeof(jvmtiEventCallbacks))), false);
 
     jvmtiEvent events[] = { JVMTI_EVENT_VM_DEATH, JVMTI_EVENT_VM_INIT,
                             JVMTI_EVENT_CLASS_FILE_LOAD_HOOK, JVMTI_EVENT_CLASS_LOAD, JVMTI_EVENT_CLASS_PREPARE, JVMTI_EVENT_COMPILED_METHOD_LOAD,
@@ -271,8 +287,6 @@ AGENTEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved
     IMPLICITLY_USE(reserved);
     int err;
     jvmtiEnv *jvmti;
-    logger = spdlog::syslog_logger("syslog", "fk-prof-rec", LOG_PID);
-    
     CONFIGURATION = new ConfigurationOptions(options);
 
     logger->set_level(CONFIGURATION->log_level);
@@ -284,7 +298,7 @@ AGENTEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved
 
     if ((err = (jvm->GetEnv(reinterpret_cast<void **>(&jvmti), JVMTI_VERSION))) !=
             JNI_OK) {
-        logError("ERROR: JVMTI initialisation error %d\n", err);
+        logger->error("JVMTI initialisation error {}", err);
         return 1;
     }
 
@@ -315,15 +329,11 @@ AGENTEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved
     Asgct::SetAsgct(Accessors::GetJvmFunction<ASGCTType>("AsyncGetCallTrace"));
     Asgct::SetIsGCActive(Accessors::GetJvmFunction<IsGCActiveType>("IsGCActive"));
 
-    GlobalCtx::metrics_registry = new medida::MetricsRegistry();
-    GlobalCtx::ctx_reg = new PerfCtx::Registry();
-    GlobalCtx::prob_pct = new ProbPct();
-
-    formatter = new MetricFormatter::SyslogTsdbFormatter(tsdb_tags());
-    metrics_reporter = new medida::reporting::UdpReporter(*GlobalCtx::metrics_registry, *formatter, CONFIGURATION->metrics_dst_port);
-    metrics_reporter->start();
+    formatter = new MetricFormatter::SyslogTsdbFormatter(tsdb_tags(), CONFIGURATION->stats_syslog_tag);
+    metrics_reporter = new medida::reporting::UdpReporter(metrics_registry, *formatter, CONFIGURATION->metrics_dst_port);
+    abort_metrics_poll.store(false, std::memory_order_relaxed);
     
-    controller = new Controller(jvm, jvmti, threadMap, *CONFIGURATION);
+    controller = new Controller(jvm, jvmti, thread_map, *CONFIGURATION);
 
     return 0;
 }
@@ -331,25 +341,28 @@ AGENTEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved
 AGENTEXPORT void JNICALL Agent_OnUnload(JavaVM *vm) {
     IMPLICITLY_USE(vm);
 
+    abort_metrics_poll.store(true, std::memory_order_relaxed);
     controller->stop();
+    await_thd_death(metrics_thd);
 
     delete controller;
     delete metrics_reporter;
     delete formatter;
-    delete GlobalCtx::ctx_reg;
-    delete GlobalCtx::prob_pct;
-    delete GlobalCtx::metrics_registry;
     delete CONFIGURATION;
 }
 
-void logError(const char *__restrict format, ...) {
-    va_list arg;
-
-    va_start(arg, format);
-    vfprintf(stderr, format, arg);
-    va_end(arg);
+ThreadMap& get_thread_map() {
+    return thread_map;
 }
 
-ThreadMap& get_thread_map() {
-    return threadMap;
+medida::MetricsRegistry& get_metrics_registry() {
+    return metrics_registry;
+}
+
+ProbPct& get_prob_pct() {
+    return prob_pct;
+}
+
+PerfCtx::Registry& get_ctx_reg() {
+    return ctx_reg;
 }
