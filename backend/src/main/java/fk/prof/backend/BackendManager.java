@@ -21,12 +21,10 @@ import fk.prof.storage.AsyncStorage;
 import fk.prof.storage.S3AsyncStorage;
 import fk.prof.storage.S3ClientFactory;
 import fk.prof.storage.buffer.ByteBufferPoolFactory;
-import io.vertx.core.*;
 import io.vertx.core.Future;
-import fk.prof.backend.model.policy.impl.ZKWithCachePolicyStore;
+import fk.prof.backend.model.policy.impl.ZKWithCacheBasedPolicyStore;
 import fk.prof.backend.model.slot.WorkSlotPool;
 import io.vertx.core.CompositeFuture;
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
@@ -166,10 +164,11 @@ public class BackendManager {
 
     this.bufferPool = new GenericObjectPool<>(new ByteBufferPoolFactory(bufferPoolConfig.getInteger("buffer.size"), false), poolConfig);
   }
+
   private PolicyStore createPolicyStore(CuratorFramework curatorClient) {
     JsonObject policyConfig = configManager.getPolicyConfig();
     String policyPath = policyConfig.getString("policy.path", "/policy");
-    return new ZKWithCachePolicyStore(curatorClient, policyPath);
+    return new ZKWithCacheBasedPolicyStore(curatorClient, policyPath);
   }
 
 

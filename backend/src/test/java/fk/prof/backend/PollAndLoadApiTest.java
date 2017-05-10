@@ -15,7 +15,7 @@ import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
 import fk.prof.backend.model.policy.PolicyStore;
-import fk.prof.backend.model.policy.impl.ZKWithCachePolicyStore;
+import fk.prof.backend.model.policy.impl.ZKWithCacheBasedPolicyStore;
 import fk.prof.backend.model.slot.WorkSlotPool;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.util.BitOperationUtil;
@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -98,7 +99,7 @@ public class PollAndLoadApiTest {
     associatedProcessGroups = new AssociatedProcessGroupsImpl(configManager.getRecorderDefunctThresholdInSeconds());
     workSlotPool = new WorkSlotPool(configManager.getSlotPoolCapacity());
     activeAggregationWindows = new ActiveAggregationWindowsImpl();
-    policyStore = spy(new ZKWithCachePolicyStore(curatorClient, policyPath));
+    policyStore = spy(new ZKWithCacheBasedPolicyStore(curatorClient, policyPath));
     aggregationWindowStorage = mock(AggregationWindowStorage.class);
 
     VerticleDeployer backendHttpVerticleDeployer = new BackendHttpVerticleDeployer(vertx, configManager, leaderStore,
@@ -233,7 +234,7 @@ public class PollAndLoadApiTest {
     Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId("1").setCluster("1").setProcName("1").build();
     policyStore.putRecordingPolicy(processGroup, buildRecordingPolicy(1));
     CountDownLatch latch = new CountDownLatch(1);
-    when(policyStore.get(processGroup)).then(invocationOnMock -> {
+    when(policyStore.getRecordingPolicy(processGroup)).then(invocationOnMock -> {
       //Induce delay here so that before work is fetched, poll request of recorder succeeds and it gets marked healthy
       latch.await(8, TimeUnit.SECONDS);
       return invocationOnMock.callRealMethod();

@@ -93,7 +93,7 @@ public class LeaderPolicyApiTest {
     vertx = Vertx.vertx(new VertxOptions(configManager.getVertxConfig()));
     leaderPort = configManager.getLeaderHttpPort();
 
-    BackendAssociationStore backendAssociationStore = new ZookeeperBasedBackendAssociationStore(vertx, curatorClient, "/assoc", 1, 1, configManager.getBackendHttpPort(), new ProcessGroupCountBasedBackendComparator());
+    BackendAssociationStore backendAssociationStore = new ZookeeperBasedBackendAssociationStore(vertx, curatorClient, "/assoc", 1, 1, new ProcessGroupCountBasedBackendComparator());
     policyStore = mock(PolicyStore.class);
 
     client = vertx.createHttpClient();

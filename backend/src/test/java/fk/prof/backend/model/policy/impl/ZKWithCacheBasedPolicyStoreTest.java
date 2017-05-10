@@ -22,11 +22,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Test for ZKWithCachePolicyStore
+ * Test for ZKWithCacheBasedPolicyStore
  * Created by rohit.patiyal on 09/03/17.
  */
 @RunWith(VertxUnitRunner.class)
-public class ZKWithCachePolicyStoreTest {
+public class ZKWithCacheBasedPolicyStoreTest {
 
   private static final String policyPath = "/policy";
   private static List<Recorder.ProcessGroup> mockProcessGroups;
@@ -64,7 +64,8 @@ public class ZKWithCachePolicyStoreTest {
     curatorClient.start();
     curatorClient.blockUntilConnected(10, TimeUnit.SECONDS);
     curatorClient.create().forPath(policyPath);
-    policyStore = new ZKWithCachePolicyStore(curatorClient, policyPath);
+    policyStore = new ZKWithCacheBasedPolicyStore(curatorClient, policyPath);
+    policyStore.init();
   }
 
   @After
@@ -288,7 +289,8 @@ public class ZKWithCachePolicyStoreTest {
     CompletableFuture f3 = policyStore.setUserPolicy(mockProcessGroups.get(2), mockPolicies.get(2));
 
     CompletableFuture.allOf(f1, f2, f3).whenCompleteAsync((aVoid, throwable) -> {
-      ZKWithCachePolicyStore anotherPolicyStore = new ZKWithCachePolicyStore(curatorClient, policyPath);
+      ZKWithCacheBasedPolicyStore anotherPolicyStore = new ZKWithCacheBasedPolicyStore(curatorClient, policyPath);
+      anotherPolicyStore.init();
       //TESTS
       try {
         Thread.sleep(2000);   //Waiting for the cache to get populated

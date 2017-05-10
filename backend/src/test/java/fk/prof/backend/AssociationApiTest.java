@@ -38,13 +38,12 @@ import java.time.LocalDateTime;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
 public class AssociationApiTest {
-  private final String backendAssociationPath = "/assoc";
-  private static final String policyPath = "/policy";
   private Vertx vertx;
   private Integer port;
   private int leaderPort;
@@ -57,6 +56,7 @@ public class AssociationApiTest {
   private ConfigManager configManager;
 
   private final String backendAssociationPath = "/assoc";
+  private static final String policyPath = "/policy";
 
   @Before
   public void setBefore() throws Exception {

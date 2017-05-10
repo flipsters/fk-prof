@@ -12,6 +12,8 @@ import java.util.concurrent.CompletableFuture;
  * Created by rohit.patiyal on 07/03/17.
  */
 public interface PolicyStore {
+  void init();
+
   PolicyDetails getUserPolicy(Recorder.ProcessGroup processGroup);
 
   Map<String, Map<String, Map<String, PolicyDetails>>> getUserPolicies(String appId);
