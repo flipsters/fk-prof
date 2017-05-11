@@ -84,8 +84,8 @@ public class BackendHttpVerticle extends AbstractVerticle {
     Router router = setupRouting();
     workIdsInPipeline = vertx.sharedData().getLocalMap("WORK_ID_PIPELINE");
     vertx.createHttpServer(HttpHelper.getHttpServerOptions(configManager.getBackendHttpServerConfig()))
-      .requestHandler(router::accept)
-      .listen(configManager.getBackendHttpPort(), http -> completeStartup(http, fut));
+        .requestHandler(router::accept)
+        .listen(configManager.getBackendHttpPort(), http -> completeStartup(http, fut));
   }
 
   private Router setupRouting() {
@@ -93,13 +93,13 @@ public class BackendHttpVerticle extends AbstractVerticle {
     router.route().handler(LoggerHandler.create());
 
     HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.AGGREGATOR_POST_PROFILE,
-      this::handlePostProfile);
+        this::handlePostProfile);
 
     HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.BACKEND_POST_ASSOCIATION,
-      BodyHandler.create().setBodyLimit(1024 * 10), this::handlePostAssociation);
+        BodyHandler.create().setBodyLimit(1024 * 10), this::handlePostAssociation);
 
     HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.BACKEND_POST_POLL,
-      BodyHandler.create().setBodyLimit(1024 * 100), this::handlePostPoll);
+        BodyHandler.create().setBodyLimit(1024 * 100), this::handlePostPoll);
 
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_HEALTHCHECK, this::handleGetHealthCheck);
 
@@ -124,11 +124,11 @@ public class BackendHttpVerticle extends AbstractVerticle {
 
   private void handlePostProfile(RoutingContext context) {
     RecordedProfileProcessor profileProcessor = new RecordedProfileProcessor(
-      context,
-      aggregationWindowDiscoveryContext,
-      new SharedMapBasedSingleProcessingOfProfileGate(workIdsInPipeline),
-      config().getJsonObject("parser").getInteger("recordingheader.max.bytes", 1024),
-      config().getJsonObject("parser").getInteger("wse.max.bytes", 1024 * 1024));
+        context,
+        aggregationWindowDiscoveryContext,
+        new SharedMapBasedSingleProcessingOfProfileGate(workIdsInPipeline),
+        config().getJsonObject("parser").getInteger("recordingheader.max.bytes", 1024),
+        config().getJsonObject("parser").getInteger("wse.max.bytes", 1024 * 1024));
 
     context.response().endHandler(v -> {
       try {
@@ -139,25 +139,25 @@ public class BackendHttpVerticle extends AbstractVerticle {
     });
 
     context.request()
-      .handler(profileProcessor)
-      .exceptionHandler(th -> {
-        HttpFailure httpFailure = HttpFailure.failure(th);
-        HttpHelper.handleFailure(context, httpFailure);
-      })
-      .endHandler(v -> {
-        try {
-          if (!context.response().ended()) {
-            if (profileProcessor.isProcessed()) {
-              context.response().end();
-            } else {
-              throw new AggregationFailure("Incomplete profile received: " + profileProcessor);
-            }
-          }
-        } catch (Exception ex) {
-          HttpFailure httpFailure = HttpFailure.failure(ex);
+        .handler(profileProcessor)
+        .exceptionHandler(th -> {
+          HttpFailure httpFailure = HttpFailure.failure(th);
           HttpHelper.handleFailure(context, httpFailure);
-        }
-      });
+        })
+        .endHandler(v -> {
+          try {
+            if (!context.response().ended()) {
+              if (profileProcessor.isProcessed()) {
+                context.response().end();
+              } else {
+                throw new AggregationFailure("Incomplete profile received: " + profileProcessor);
+              }
+            }
+          } catch (Exception ex) {
+            HttpFailure httpFailure = HttpFailure.failure(ex);
+            HttpHelper.handleFailure(context, httpFailure);
+          }
+        });
   }
 
   private void handlePostPoll(RoutingContext context) {
@@ -184,17 +184,17 @@ public class BackendHttpVerticle extends AbstractVerticle {
         if (aggregationWindow == null) {
           ctrWinMiss.inc();
           throw new BadRequestException(String.format("workId=%d not found, cannot associate recorder info with aggregated profile. aborting send of work assignment",
-            nextWorkAssignment.getWorkId()));
+              nextWorkAssignment.getWorkId()));
         }
         aggregationWindow.updateRecorderInfo(nextWorkAssignment.getWorkId(), pollReq.getRecorderInfo());
       }
 
       Recorder.PollRes.Builder pollResBuilder = Recorder.PollRes.newBuilder()
-        .setControllerVersion(backendVersion)
-        .setControllerId(Ints.fromByteArray(ipAddress.getBytes("UTF-8")))
-        .setLocalTime(nextWorkAssignment == null
-          ? LocalDateTime.now(Clock.systemUTC()).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-          : nextWorkAssignment.getIssueTime());
+          .setControllerVersion(backendVersion)
+          .setControllerId(Ints.fromByteArray(ipAddress.getBytes("UTF-8")))
+          .setLocalTime(nextWorkAssignment == null
+              ? LocalDateTime.now(Clock.systemUTC()).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+              : nextWorkAssignment.getIssueTime());
       if (nextWorkAssignment != null) {
         pollResBuilder.setAssignment(nextWorkAssignment);
       }
@@ -341,6 +341,15 @@ public class BackendHttpVerticle extends AbstractVerticle {
     }
   }
 
+  private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestPostAssociation(BackendDTO.LeaderDetail leaderDetail, Recorder.RecorderInfo payload)
+      throws IOException {
+    Buffer payloadAsBuffer = ProtoUtil.buildBufferFromProto(payload);
+    return httpClient.requestAsyncWithRetry(
+        HttpMethod.POST,
+        leaderDetail.getHost(), leaderDetail.getPort(), ApiPathConstants.LEADER_POST_ASSOCIATION,
+        payloadAsBuffer);
+  }
+
   private void handleGetHealthCheck(RoutingContext routingContext) {
     JsonObject response = new JsonObject();
     String responseStr = leaderReadContext.getLeader() == null ? null : leaderReadContext.getLeader().getHost() + ":" + leaderReadContext.getLeader().getPort();
@@ -348,60 +357,50 @@ public class BackendHttpVerticle extends AbstractVerticle {
     routingContext.response().setStatusCode(200).end(response.encode());
   }
 
-  private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestPostAssociation(BackendDTO.LeaderDetail leaderDetail, Recorder.RecorderInfo payload)
-    throws IOException {
-    Buffer payloadAsBuffer = ProtoUtil.buildBufferFromProto(payload);
-    return httpClient.requestAsyncWithRetry(
-      HttpMethod.POST,
-      leaderDetail.getHost(), leaderDetail.getPort(), ApiPathConstants.LEADER_POST_ASSOCIATION,
-      payloadAsBuffer);
-  }
-
-
   private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestGetPolicyGivenAppId(BackendDTO.LeaderDetail leaderDetail, String appId)
-    throws IOException {
+      throws IOException {
     String path = ApiPathConstants.LEADER_POLICIES + ApiPathConstants.DELIMITER + appId;
     return httpClient.requestAsyncWithRetry(
-      HttpMethod.GET,
-      leaderDetail.getHost(), leaderDetail.getPort(),
-      path, null);
+        HttpMethod.GET,
+        leaderDetail.getHost(), leaderDetail.getPort(),
+        path, null);
   }
 
   private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestGetPolicyGivenAppIdClusterId(BackendDTO.LeaderDetail leaderDetail, String appId, String clusterId)
-    throws IOException {
+      throws IOException {
     String path = ApiPathConstants.LEADER_POLICIES + ApiPathConstants.DELIMITER + appId + ApiPathConstants.DELIMITER + clusterId;
     return httpClient.requestAsyncWithRetry(
-      HttpMethod.GET,
-      leaderDetail.getHost(), leaderDetail.getPort(),
-      path, null);
+        HttpMethod.GET,
+        leaderDetail.getHost(), leaderDetail.getPort(),
+        path, null);
   }
 
   private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestGetPolicyGivenAppIdClusterIdProcess(BackendDTO.LeaderDetail leaderDetail, String appId, String clusterId, String process)
-    throws IOException {
+      throws IOException {
     String path = ApiPathConstants.LEADER_POLICIES + ApiPathConstants.DELIMITER + appId + ApiPathConstants.DELIMITER + clusterId + ApiPathConstants.DELIMITER + process;
     return httpClient.requestAsyncWithRetry(
-      HttpMethod.GET,
-      leaderDetail.getHost(), leaderDetail.getPort(),
-      path, null);
+        HttpMethod.GET,
+        leaderDetail.getHost(), leaderDetail.getPort(),
+        path, null);
   }
 
   private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestPutPolicy(BackendDTO.LeaderDetail leaderDetail, Recorder.ProcessGroup processGroup, PolicyDetails policyDetails)
-    throws IOException {
+      throws IOException {
     Buffer payloadAsBuffer = ProtoUtil.buildBufferFromProto(policyDetails);
     String path = ApiPathConstants.LEADER_POLICIES + ApiPathConstants.DELIMITER + processGroup.getAppId() + ApiPathConstants.DELIMITER + processGroup.getCluster() + ApiPathConstants.DELIMITER + processGroup.getProcName();
     return httpClient.requestAsyncWithRetry(
-      HttpMethod.PUT,
-      leaderDetail.getHost(), leaderDetail.getPort(),
-      path, payloadAsBuffer);
+        HttpMethod.PUT,
+        leaderDetail.getHost(), leaderDetail.getPort(),
+        path, payloadAsBuffer);
   }
 
   private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestDeletePolicy(BackendDTO.LeaderDetail leaderDetail, Recorder.ProcessGroup processGroup, JsonObject policyAdminJson)
-    throws IOException {
+      throws IOException {
     Buffer payloadAsBuffer = Buffer.buffer(policyAdminJson.toString());
     String path = ApiPathConstants.LEADER_POLICIES + ApiPathConstants.DELIMITER + processGroup.getAppId() + ApiPathConstants.DELIMITER + processGroup.getCluster() + ApiPathConstants.DELIMITER + processGroup.getProcName();
     return httpClient.requestAsyncWithRetry(
-      HttpMethod.DELETE,
-      leaderDetail.getHost(), leaderDetail.getPort(),
-      path, payloadAsBuffer);
+        HttpMethod.DELETE,
+        leaderDetail.getHost(), leaderDetail.getPort(),
+        path, payloadAsBuffer);
   }
 }
