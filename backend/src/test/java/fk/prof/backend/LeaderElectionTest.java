@@ -133,7 +133,8 @@ public class LeaderElectionTest {
     VerticleDeployer backendVerticleDeployer = new BackendHttpVerticleDeployer(vertx, configManager, leaderStore, activeAggregationWindows, associatedProcessGroups);
     backendVerticleDeployer.deploy().setHandler(asyncResult -> {
       if (asyncResult.succeeded()) {
-        backendDeployments.addAll(asyncResult.result().list());
+        List<String> resultList = asyncResult.result().list();
+        backendDeployments.addAll(resultList);
         aggDepLatch.countDown();
       } else {
         testContext.fail(asyncResult.cause());
