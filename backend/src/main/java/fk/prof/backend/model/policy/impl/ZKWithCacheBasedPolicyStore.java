@@ -25,6 +25,7 @@ public class ZKWithCacheBasedPolicyStore implements PolicyStore {
     private static final String DELIMITER = "/";
     private final CuratorFramework curatorClient;
     private boolean initialized;
+
     private String policyPath;
     private CachePolicyStore cachedPolicies = new CachePolicyStore();
     private final Map<Recorder.ProcessGroup, BackendDTO.RecordingPolicy> recordingPolicyStore = new HashMap<>();
@@ -57,6 +58,10 @@ public class ZKWithCacheBasedPolicyStore implements PolicyStore {
 
     private static String encode(String str) {
         return BaseEncoding.base32().encode(str.getBytes(Charset.forName("utf-8")));
+    }
+    
+    public String getPolicyPath() {
+        return policyPath;
     }
 
     @Override

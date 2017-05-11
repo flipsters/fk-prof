@@ -166,8 +166,7 @@ public class BackendManager {
   }
 
   private PolicyStore createPolicyStore(CuratorFramework curatorClient) {
-    JsonObject policyConfig = configManager.getPolicyConfig();
-    String policyPath = policyConfig.getString("policy.path", "/policy");
+    String policyPath = configManager.getPolicyPath();
     return new ZKWithCacheBasedPolicyStore(curatorClient, policyPath);
   }
 

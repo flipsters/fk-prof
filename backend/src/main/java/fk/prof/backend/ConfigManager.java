@@ -41,6 +41,7 @@ public class ConfigManager {
   private static final String POLICY_OPTIONS_KEY = "policyOptions";
 
   public static final String METRIC_REGISTRY = "backend-metric-registry";
+  private static final String POLICY_PATH_KEY = "policy.path";
 
   private final JsonObject config;
 
@@ -130,8 +131,12 @@ public class ConfigManager {
     return deploymentConfig;
   }
 
-  public JsonObject getPolicyConfig() {
+  private JsonObject getPolicyConfig() {
     return config.getJsonObject(POLICY_OPTIONS_KEY, new JsonObject());
+  }
+
+  String getPolicyPath() {
+    return getPolicyConfig().getString(POLICY_PATH_KEY, "/policy");
   }
 
   public static void setDefaultSystemProperties() {
