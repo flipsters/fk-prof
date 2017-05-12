@@ -5,4 +5,4 @@ jdk:
 branches:
   only:
   - eval-travis-ci
-
+script: ./travis_build.sh
