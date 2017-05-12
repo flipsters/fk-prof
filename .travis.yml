@@ -16,7 +16,7 @@ addons:
       - cmake-data
       - gcc-4.9
       - g++-4.9
-
+      - libunittest++-dev
 env:
   global:
     - CXX=g++-4.9
