@@ -17,6 +17,8 @@ addons:
       - gcc-4.9
       - g++-4.9
       - libunittest++-dev
+      - libprotobuf-dev
+      - boost
 env:
   global:
     - CXX=g++-4.9
