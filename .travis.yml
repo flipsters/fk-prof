@@ -17,6 +17,11 @@ addons:
       - gcc-4.9
       - g++-4.9
 
+env:
+  global:
+    - CXX=g++-4.9
+    - CC=gcc-4.9
+
 install: true
 
 before_script:
