@@ -29,6 +29,8 @@ env:
 install: true
 
 before_script:
+  - protoc --version
+  - apt-cache policy libprotobuf-dev
   - git clone https://github.com/efficient/libcuckoo.git
   - pushd libcuckoo && cmake . && sudo make install && popd
   - git clone https://github.com/janmejay/medida.git
