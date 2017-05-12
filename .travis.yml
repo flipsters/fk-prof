@@ -8,6 +8,11 @@ branches:
 
 dist: trusty
 
+env:
+  global:
+    export PROTOBUF_BASE_DIR=/opt/protobuf
+    export PROTOBUF_LIB_DIR=/opt/protobuf/lib
+
 install:
   - sudo apt-get -qq update
   - sudo apt-get install -y cmake libunittest++-dev libboost-all-dev protobuf-compiler
