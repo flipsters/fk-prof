@@ -10,14 +10,15 @@ dist: trusty
 
 install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y cmake libunittest++-dev libboost-all-dev libprotobuf-dev protobuf-compiler libcityhash-dev
+  - sudo apt-get install -y cmake libunittest++-dev libboost-all-dev libprotobuf-dev protobuf-compiler
 
 before_script:
   - git clone https://github.com/efficient/libcuckoo.git
   - pushd libcuckoo && cmake . && sudo make install && popd
   - git clone https://github.com/janmejay/medida.git
-  - pushd medida && cmake CMakeLists.txt && sudo make install && sudo ldconfig && popd
-  
+  - pushd medida && cmake CMakeLists.txt && sudo make install && popd
+  - git clone https://github.com/google/cityhash.git
+  - pushd cityhash && ./configure && make all check CXXFLAGS="-g -O3" && sudo make install && sudo ldconfig && popd
 script:
   - pushd recorder && cmake CMakeLists.txt && make && popd
   - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
