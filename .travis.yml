@@ -8,7 +8,7 @@ branches:
 
 install: true
 before_script:
-  - git clone git@github.com:efficient/libcuckoo.git
+  - git clone https://github.com/efficient/libcuckoo.git
   - pushd libcuckoo && cmake && make install && popd
 script:
   - pushd recorder && cmake CMakeLists.txt && make && popd
