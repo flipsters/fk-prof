@@ -6,6 +6,10 @@ branches:
   only:
   - eval-travis-ci
 
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y cmake
+
 install: true
 before_script:
   - git clone https://github.com/efficient/libcuckoo.git
