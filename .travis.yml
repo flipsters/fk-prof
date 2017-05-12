@@ -8,14 +8,9 @@ branches:
 
 dist: trusty
 
-env:
-  global:
-    - CXX=g++-4.9
-    - CC=gcc-4.9
-
 install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y libunittest++-dev libboost-all-dev protobuf-compiler
+  - sudo apt-get install -y cmake libunittest++-dev libboost-all-dev protobuf-compiler
 
 before_script:
   - protoc --version
