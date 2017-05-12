@@ -18,6 +18,7 @@ install:
   - sudo apt-get install -y cmake libunittest++-dev libboost-all-dev protobuf-compiler
 
 before_script:
+  - which protoc
   - protoc --version
   - apt-cache policy libprotobuf-dev
   - git clone https://github.com/efficient/libcuckoo.git
