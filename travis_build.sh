@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-cd fk-prof/recorder
+cd recorder
      cmake CMakeLists.txt
      make
 cd -
