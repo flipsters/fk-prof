@@ -6,25 +6,16 @@ branches:
   only:
   - eval-travis-ci
 
-addons:
-  apt:
-    sources:
-      - george-edison55-precise-backports # cmake 3.2.3 / doxygen 1.8.3
-      - ubuntu-toolchain-r-test
-    packages:
-      - cmake
-      - cmake-data
-      - gcc-4.9
-      - g++-4.9
-      - libunittest++-dev
-      - libprotobuf-dev
-      - protobuf-compiler
-      - libboost-all-dev
+dist: trusty
 
 env:
   global:
     - CXX=g++-4.9
     - CC=gcc-4.9
+
+pre_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libunittest++-dev libboost-all-dev protobuf-compiler
 
 install: true
 
