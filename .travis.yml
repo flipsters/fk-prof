@@ -6,11 +6,16 @@ branches:
   only:
   - eval-travis-ci
 
-before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y cmake
+addons:
+  apt:
+    sources:
+      - george-edison55-precise-backports # cmake 3.2.3 / doxygen 1.8.3
+    packages:
+      - cmake
+      - cmake-data
 
 install: true
+
 before_script:
   - git clone https://github.com/efficient/libcuckoo.git
   - pushd libcuckoo && cmake . && make install && popd
