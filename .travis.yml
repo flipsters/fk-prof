@@ -34,7 +34,7 @@ before_script:
   - git clone https://github.com/janmejay/medida.git
   - pushd medida && cmake CMakeLists.txt && sudo make install && popd
   - git clone https://github.com/google/cityhash.git
-  - pushd && ./configure && make all check CXXFLAGS="-g -O3" && sudo make install && popd
+  - pushd cityhash && ./configure && make all check CXXFLAGS="-g -O3" && sudo make install && popd
 script:
   - pushd recorder && cmake CMakeLists.txt && make && popd
   - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
