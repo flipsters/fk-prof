@@ -9,7 +9,7 @@ branches:
 install: true
 before_script:
   - git clone https://github.com/efficient/libcuckoo.git
-  - pushd libcuckoo && cmake && make install && popd
+  - pushd libcuckoo && cmake install && make install && popd
 script:
   - pushd recorder && cmake CMakeLists.txt && make && popd
   - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
