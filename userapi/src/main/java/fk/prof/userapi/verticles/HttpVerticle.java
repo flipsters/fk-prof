@@ -4,11 +4,10 @@ import fk.prof.aggregation.AggregatedProfileNamingStrategy;
 import fk.prof.aggregation.proto.AggregatedProfileModel;
 import fk.prof.storage.StreamTransformer;
 import fk.prof.userapi.UserapiConfigManager;
-import fk.prof.userapi.api.ProfileStoreAPI;
+import fk.prof.userapi.api.ProfileAPI;
 import fk.prof.userapi.http.UserapiApiPathConstants;
 import fk.prof.userapi.model.AggregatedProfileInfo;
 import fk.prof.userapi.model.AggregationWindowSummary;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -42,12 +41,12 @@ public class HttpVerticle extends AbstractVerticle {
     private static String baseDir = "profiles";
     private static int aggregationWindowDurationInSecs = 1800;
 
-    private ProfileStoreAPI profileStoreAPI;
+    private ProfileAPI profileAPI;
     private UserapiConfigManager userapiConfigManager;
 
-    public HttpVerticle(UserapiConfigManager userapiConfigManager, ProfileStoreAPI profileStoreAPI) {
+    public HttpVerticle(UserapiConfigManager userapiConfigManager, ProfileAPI profileAPI) {
         this.userapiConfigManager = userapiConfigManager;
-        this.profileStoreAPI = profileStoreAPI;
+        this.profileAPI = profileAPI;
     }
 
     private Router configureRouter() {
@@ -87,7 +86,7 @@ public class HttpVerticle extends AbstractVerticle {
             prefix = "";
         }
         Future<Set<String>> future = Future.future();
-        profileStoreAPI.getAppIdsWithPrefix(future.setHandler(result -> setResponse(result, routingContext)),
+        profileAPI.getAppIdsWithPrefix(future.setHandler(result -> setResponse(result, routingContext)),
             baseDir, prefix);
     }
 
@@ -98,7 +97,7 @@ public class HttpVerticle extends AbstractVerticle {
             prefix = "";
         }
         Future<Set<String>> future = Future.future();
-        profileStoreAPI.getClusterIdsWithPrefix(future.setHandler(result -> setResponse(result, routingContext)),
+        profileAPI.getClusterIdsWithPrefix(future.setHandler(result -> setResponse(result, routingContext)),
             baseDir, appId, prefix);
     }
 
@@ -110,7 +109,7 @@ public class HttpVerticle extends AbstractVerticle {
             prefix = "";
         }
         Future<Set<String>> future = Future.future();
-        profileStoreAPI.getProcsWithPrefix(future.setHandler(result -> setResponse(result, routingContext)),
+        profileAPI.getProcsWithPrefix(future.setHandler(result -> setResponse(result, routingContext)),
             baseDir, appId, clusterId, prefix);
     }
 
@@ -138,7 +137,7 @@ public class HttpVerticle extends AbstractVerticle {
             for (AggregatedProfileNamingStrategy filename: result.result()) {
                 Future<AggregationWindowSummary> summary = Future.future();
 
-                profileStoreAPI.loadSummary(summary, filename);
+                profileAPI.loadSummary(summary, filename);
                 profileSummaries.add(summary);
             }
 
@@ -181,7 +180,7 @@ public class HttpVerticle extends AbstractVerticle {
             });
         });
 
-        profileStoreAPI.getProfilesInTimeWindow(foundProfiles,
+        profileAPI.getProfilesInTimeWindow(foundProfiles,
             baseDir, appId, clusterId, proc, startTime, duration);
     }
 
@@ -210,7 +209,7 @@ public class HttpVerticle extends AbstractVerticle {
                 setResponse(result, routingContext);
             }
         });
-        profileStoreAPI.load(future, filename);
+        profileAPI.load(future, filename);
     }
 
     private void handleGetHealth(RoutingContext routingContext) {

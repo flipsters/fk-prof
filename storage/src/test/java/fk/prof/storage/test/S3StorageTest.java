@@ -2,7 +2,7 @@ package fk.prof.storage.test;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
-import fk.prof.storage.S3AsyncStorage;
+import fk.prof.storage.impl.S3AsyncStorage;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;

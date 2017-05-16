@@ -1,4 +1,4 @@
-package fk.prof.userapi.api;
+package fk.prof.userapi.api.impl;
 
 
 import com.google.common.cache.Cache;
@@ -6,6 +6,9 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.io.BaseEncoding;
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
 import fk.prof.storage.AsyncStorage;
+import fk.prof.storage.api.ProcessGroupAPI;
+import fk.prof.userapi.api.AggregatedProfileLoader;
+import fk.prof.userapi.api.ProfileAPI;
 import fk.prof.userapi.model.AggregatedProfileInfo;
 import fk.prof.userapi.model.AggregationWindowSummary;
 import io.vertx.core.*;
@@ -23,7 +26,7 @@ import java.util.stream.Collectors;
  * Interacts with the {@link AsyncStorage} based on invocations from controller
  * Created by rohit.patiyal on 19/01/17.
  */
-public class ProfileStoreAPIImpl implements ProfileStoreAPI {
+public class AsyncStorageBasedProfileAPI implements ProfileAPI, ProcessGroupAPI {
 
     private static final String VERSION = "v0001";
     private static final String DELIMITER = "/";
@@ -33,7 +36,7 @@ public class ProfileStoreAPIImpl implements ProfileStoreAPI {
     public static final int DEFAULT_LOAD_TIMEOUT = 10000;   // in ms
     private int loadTimeout = DEFAULT_LOAD_TIMEOUT;
 
-    private static org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ProfileStoreAPIImpl.class);
+    private static org.slf4j.Logger LOGGER = LoggerFactory.getLogger(AsyncStorageBasedProfileAPI.class);
 
     private Vertx vertx;
     private AsyncStorage asyncStorage;
@@ -49,7 +52,7 @@ public class ProfileStoreAPIImpl implements ProfileStoreAPI {
     * is in progress, this map will contain its corresponding key */
     private Map<String, FuturesList<Object>> futuresForLoadingFiles;
 
-    public ProfileStoreAPIImpl(Vertx vertx, AsyncStorage asyncStorage, int maxIdleRetentionInMin) {
+    public AsyncStorageBasedProfileAPI(Vertx vertx, AsyncStorage asyncStorage, int maxIdleRetentionInMin) {
         this.vertx = vertx;
         this.asyncStorage = asyncStorage;
         this.profileLoader = new AggregatedProfileLoader(this.asyncStorage);
@@ -75,13 +78,12 @@ public class ProfileStoreAPIImpl implements ProfileStoreAPI {
         return splits[splits.length - 1];
     }
 
-    @Override
-    public void getAppIdsWithPrefix(Future<Set<String>> appIds, String baseDir, String appIdPrefix) {
+    public void getAppIdsWithPrefix(CompletableFuture<Set<String>> appIds, String baseDir, String appIdPrefix) {
         /* TODO: move this prefix creation to {@link AggregatedProfileNamingStrategy} */
         getListingAtLevelWithPrefix(appIds, baseDir + DELIMITER + VERSION + DELIMITER, appIdPrefix, true);
     }
 
-    private void getListingAtLevelWithPrefix(Future<Set<String>> listings, String level, String objPrefix, boolean encoded) {
+    private void getListingAtLevelWithPrefix(CompletableFuture<Set<String>> listings, String level, String objPrefix, boolean encoded) {
         CompletableFuture<Set<String>> commonPrefixesFuture = asyncStorage.listAsync(level, false);
         commonPrefixesFuture.thenApply(commonPrefixes -> {
             Set<String> objs = new HashSet<>();
@@ -97,14 +99,12 @@ public class ProfileStoreAPIImpl implements ProfileStoreAPI {
         }).whenComplete((result, error) -> completeFuture(result, error, listings));
     }
 
-    @Override
-    public void getClusterIdsWithPrefix(Future<Set<String>> clusterIds, String baseDir, String appId, String clusterIdPrefix) {
+    public void getClusterIdsWithPrefix(CompletableFuture<Set<String>> clusterIds, String baseDir, String appId, String clusterIdPrefix) {
         getListingAtLevelWithPrefix(clusterIds, baseDir + DELIMITER + VERSION + DELIMITER + encode(appId) + DELIMITER,
                 clusterIdPrefix, true);
     }
 
-    @Override
-    public void getProcsWithPrefix(Future<Set<String>> procIds, String baseDir, String appId, String clusterId, String procPrefix) {
+    public void getProcNamesWithPrefix(CompletableFuture<Set<String>> procIds, String baseDir, String appId, String clusterId, String procPrefix) {
         getListingAtLevelWithPrefix(procIds, baseDir + DELIMITER + VERSION + DELIMITER + encode(appId) + DELIMITER + encode(clusterId) + DELIMITER,
                 procPrefix, true);
     }
@@ -219,7 +219,14 @@ public class ProfileStoreAPIImpl implements ProfileStoreAPI {
             future.fail(error);
         }
     }
-
+    private <T> void completeFuture(T result, Throwable error, CompletableFuture<T> future) {
+        if(error == null) {
+            future.complete(result);
+        }
+        else {
+            future.completeExceptionally(error);
+        }
+    }
     private String encode(String str) {
         return BaseEncoding.base32().encode(str.getBytes(Charset.forName("utf-8")));
     }

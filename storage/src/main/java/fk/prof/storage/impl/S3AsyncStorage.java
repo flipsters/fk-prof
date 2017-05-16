@@ -1,4 +1,4 @@
-package fk.prof.storage;
+package fk.prof.storage.impl;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
@@ -7,6 +7,9 @@ import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import fk.prof.storage.AsyncStorage;
+import fk.prof.storage.ObjectNotFoundException;
+import fk.prof.storage.StorageException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

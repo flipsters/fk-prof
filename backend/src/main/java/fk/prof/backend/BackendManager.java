@@ -19,7 +19,7 @@ import fk.prof.backend.model.aggregation.impl.ActiveAggregationWindowsImpl;
 import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.metrics.MetricName;
 import fk.prof.storage.AsyncStorage;
-import fk.prof.storage.S3AsyncStorage;
+import fk.prof.storage.impl.S3AsyncStorage;
 import fk.prof.storage.S3ClientFactory;
 import fk.prof.storage.buffer.ByteBufferPoolFactory;
 import io.vertx.core.*;

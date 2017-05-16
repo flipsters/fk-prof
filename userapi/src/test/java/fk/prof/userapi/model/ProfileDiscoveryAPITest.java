@@ -1,10 +1,9 @@
 package fk.prof.userapi.model;
 
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
-import fk.prof.aggregation.proto.AggregatedProfileModel;
 import fk.prof.storage.AsyncStorage;
-import fk.prof.userapi.api.ProfileStoreAPI;
-import fk.prof.userapi.api.ProfileStoreAPIImpl;
+import fk.prof.userapi.api.ProfileAPI;
+import fk.prof.userapi.api.impl.AsyncStorageBasedProfileAPI;
 import fk.prof.userapi.model.json.ProtoSerializers;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -22,7 +21,6 @@ import org.mockito.internal.util.collections.Sets;
 
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
@@ -33,7 +31,7 @@ import static org.mockito.Mockito.when;
 
 
 /**
- * Tests for {@link ProfileStoreAPIImpl} using mocked behaviour of listAysnc {@link AsyncStorage} API
+ * Tests for {@link AsyncStorageBasedProfileAPI} using mocked behaviour of listAysnc {@link AsyncStorage} API
  * Created by rohit.patiyal on 24/01/17.
  */
 
@@ -43,7 +41,7 @@ public class ProfileDiscoveryAPITest {
     private static final String DELIMITER = "/";
     private static final String BASE_DIR = "profiles";
 
-    private ProfileStoreAPI profileDiscoveryAPI;
+    private ProfileAPI profileDiscoveryAPI;
     private AsyncStorage asyncStorage;
     private Vertx vertx;
 
@@ -83,7 +81,7 @@ public class ProfileDiscoveryAPITest {
     public void setUp() throws Exception {
         vertx = Vertx.vertx();
         asyncStorage = mock(AsyncStorage.class);
-        profileDiscoveryAPI = new ProfileStoreAPIImpl(vertx, asyncStorage, 30);
+        profileDiscoveryAPI = new AsyncStorageBasedProfileAPI(vertx, asyncStorage, 30);
 
         when(asyncStorage.listAsync(anyString(), anyBoolean())).thenAnswer(invocation -> {
             String path1 = invocation.getArgument(0);

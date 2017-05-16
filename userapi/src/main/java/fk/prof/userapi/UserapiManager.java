@@ -11,10 +11,10 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.base.Preconditions;
 import fk.prof.storage.AsyncStorage;
-import fk.prof.storage.S3AsyncStorage;
+import fk.prof.storage.impl.S3AsyncStorage;
 import fk.prof.storage.S3ClientFactory;
-import fk.prof.userapi.api.ProfileStoreAPI;
-import fk.prof.userapi.api.ProfileStoreAPIImpl;
+import fk.prof.userapi.api.ProfileAPI;
+import fk.prof.userapi.api.impl.AsyncStorageBasedProfileAPI;
 import fk.prof.userapi.deployer.VerticleDeployer;
 import fk.prof.userapi.deployer.impl.UserapiHttpVerticleDeployer;
 import fk.prof.userapi.http.UserapiApiPathConstants;
@@ -81,8 +81,8 @@ public class UserapiManager {
     registerSerializers(Json.mapper);
     registerSerializers(Json.prettyMapper);
 
-    ProfileStoreAPI profileStoreAPI = new ProfileStoreAPIImpl(vertx, this.storage, userapiConfigManager.getProfileRetentionDuration());
-    VerticleDeployer userapiHttpVerticleDeployer = new UserapiHttpVerticleDeployer(vertx, userapiConfigManager, profileStoreAPI);
+    ProfileAPI profileAPI = new AsyncStorageBasedProfileAPI(vertx, this.storage, userapiConfigManager.getProfileRetentionDuration());
+    VerticleDeployer userapiHttpVerticleDeployer = new UserapiHttpVerticleDeployer(vertx, userapiConfigManager, profileAPI);
 
     userapiHttpVerticleDeployer.deploy().setHandler(verticleDeployCompositeResult -> {
       if (verticleDeployCompositeResult.succeeded()) {

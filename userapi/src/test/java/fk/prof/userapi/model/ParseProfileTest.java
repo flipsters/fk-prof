@@ -6,10 +6,10 @@ import fk.prof.aggregation.proto.AggregatedProfileModel;
 import fk.prof.aggregation.serialize.Serializer;
 import fk.prof.storage.AsyncStorage;
 import fk.prof.storage.ObjectNotFoundException;
-import fk.prof.storage.S3AsyncStorage;
+import fk.prof.storage.impl.S3AsyncStorage;
 import fk.prof.userapi.Deserializer;
-import fk.prof.userapi.api.ProfileStoreAPI;
-import fk.prof.userapi.api.ProfileStoreAPIImpl;
+import fk.prof.userapi.api.ProfileAPI;
+import fk.prof.userapi.api.impl.AsyncStorageBasedProfileAPI;
 import fk.prof.userapi.model.json.ProtoSerializers;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -41,7 +41,7 @@ import static org.mockito.Mockito.*;
 @RunWith(VertxUnitRunner.class)
 public class ParseProfileTest {
 
-    ProfileStoreAPI profileDiscoveryAPI;
+    ProfileAPI profileDiscoveryAPI;
     AsyncStorage asyncStorage;
     Vertx vertx;
 
@@ -65,7 +65,7 @@ public class ParseProfileTest {
     public void testSetUp(TestContext context) {
         vertx = Vertx.vertx();
         asyncStorage = mock(AsyncStorage.class);
-        profileDiscoveryAPI = new ProfileStoreAPIImpl(vertx, asyncStorage, 30);
+        profileDiscoveryAPI = new AsyncStorageBasedProfileAPI(vertx, asyncStorage, 30);
     }
 
     @After
@@ -88,7 +88,7 @@ public class ParseProfileTest {
             throw new ObjectNotFoundException("not found");
         }));
 
-        profileDiscoveryAPI = new ProfileStoreAPIImpl(vertx, storage, 30);
+        profileDiscoveryAPI = new AsyncStorageBasedProfileAPI(vertx, storage, 30);
 
         Future<AggregatedProfileInfo> future1 = Future.future();
         Future<AggregatedProfileInfo> future2 = Future.future();

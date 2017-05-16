@@ -3,7 +3,7 @@ package fk.prof.userapi.verticles;
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
 import fk.prof.aggregation.proto.AggregatedProfileModel;
 import fk.prof.userapi.UserapiConfigManager;
-import fk.prof.userapi.api.ProfileStoreAPIImpl;
+import fk.prof.userapi.api.impl.AsyncStorageBasedProfileAPI;
 import fk.prof.userapi.deployer.VerticleDeployer;
 import fk.prof.userapi.deployer.impl.UserapiHttpVerticleDeployer;
 import fk.prof.userapi.model.AggregationWindowSummary;
@@ -41,7 +41,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 
 /**
- * Tests for {@link HttpVerticle} using mocked behaviour of ProfileStoreAPIImpl
+ * Tests for {@link HttpVerticle} using mocked behaviour of AsyncStorageBasedProfileAPI
  * Created by rohit.patiyal on 27/01/17.
  */
 @RunWith(VertxUnitRunner.class)
@@ -75,7 +75,7 @@ public class RouterVerticleTest {
     private HttpVerticle routerVerticle;
 
     @Mock
-    private ProfileStoreAPIImpl profileDiscoveryAPI;
+    private AsyncStorageBasedProfileAPI profileDiscoveryAPI;
 
     @Before
     public void setUp(TestContext testContext) throws Exception {
@@ -86,7 +86,7 @@ public class RouterVerticleTest {
         socket.close();
 
       UserapiConfigManager.setDefaultSystemProperties();
-        UserapiConfigManager userapiConfigManager = new UserapiConfigManager(ProfileStoreAPIImpl.class.getClassLoader().getResource("userapi-conf.json").getFile());
+        UserapiConfigManager userapiConfigManager = new UserapiConfigManager(AsyncStorageBasedProfileAPI.class.getClassLoader().getResource("userapi-conf.json").getFile());
       vertx = Vertx.vertx();
       port = userapiConfigManager.getUserapiHttpPort();
         client = vertx.createHttpClient();
@@ -276,19 +276,19 @@ public class RouterVerticleTest {
         doAnswer(invocation -> {
             CompletableFuture.supplyAsync(() -> Sets.newSet(P_PROC)).whenComplete((res, error) -> completeFuture(res, error, invocation.getArgument(0)));
             return null;
-        }).when(profileDiscoveryAPI).getProcsWithPrefix(any(), any(), eq(P_APP_ID), eq(P_CLUSTER_ID), ArgumentMatchers.matches(pPrefixSet));
+        }).when(profileDiscoveryAPI).getProcNamesWithPrefix(any(), any(), eq(P_APP_ID), eq(P_CLUSTER_ID), ArgumentMatchers.matches(pPrefixSet));
         doAnswer(invocation -> {
             CompletableFuture.supplyAsync(Sets::<String>newSet).whenComplete((res, error) -> completeFuture(res, error, invocation.getArgument(0)));
             return null;
-        }).when(profileDiscoveryAPI).getProcsWithPrefix(any(), any(), eq(P_APP_ID), eq(P_CLUSTER_ID), ArgumentMatchers.matches(npPrefixSet));
+        }).when(profileDiscoveryAPI).getProcNamesWithPrefix(any(), any(), eq(P_APP_ID), eq(P_CLUSTER_ID), ArgumentMatchers.matches(npPrefixSet));
         doAnswer(invocation -> {
             CompletableFuture.supplyAsync(Sets::<String>newSet).whenComplete((res, error) -> completeFuture(res, error, invocation.getArgument(0)));
             return null;
-        }).when(profileDiscoveryAPI).getProcsWithPrefix(any(), any(), eq(NP_APP_ID), eq(NP_CLUSTER_ID), ArgumentMatchers.matches(pPrefixSet));
+        }).when(profileDiscoveryAPI).getProcNamesWithPrefix(any(), any(), eq(NP_APP_ID), eq(NP_CLUSTER_ID), ArgumentMatchers.matches(pPrefixSet));
         doAnswer(invocation -> {
             CompletableFuture.supplyAsync(Sets::<String>newSet).whenComplete((res, error) -> completeFuture(res, error, invocation.getArgument(0)));
             return null;
-        }).when(profileDiscoveryAPI).getProcsWithPrefix(any(), any(), eq(NP_APP_ID), eq(NP_CLUSTER_ID), ArgumentMatchers.matches(npPrefixSet));
+        }).when(profileDiscoveryAPI).getProcNamesWithPrefix(any(), any(), eq(NP_APP_ID), eq(NP_CLUSTER_ID), ArgumentMatchers.matches(npPrefixSet));
 
         Future<Void> pAndCorrectPrefix = Future.future();
         Future<Void> pAndIncorrectPrefix = Future.future();

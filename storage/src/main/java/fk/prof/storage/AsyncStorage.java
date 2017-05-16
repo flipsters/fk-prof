@@ -1,5 +1,6 @@
 package fk.prof.storage;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -18,6 +19,17 @@ public interface AsyncStorage {
      * @return Future to indicate completion
      */
     CompletableFuture<Void> storeAsync(String path, InputStream content, long length);
+
+    /**
+     * Store the content to the specified path. StorageException while storing
+     * needs to be taken care of by the implementation.
+     * @param path path where the content is to stored
+     * @param content the content as byte array
+     * @return Future to indicate completion
+     */
+    default CompletableFuture<Void> storeAsync(String path, byte[] content){
+        return storeAsync(path, new ByteArrayInputStream(content), content.length);
+    }
 
     /**
      * Retrieves the content from the specified path.
