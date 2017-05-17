@@ -38,7 +38,6 @@ public interface AsyncStorage {
      */
     CompletableFuture<InputStream> fetchAsync(String path);
 
-
     /**
      * Lists all objects from the specified prefix of the path with options to list recursively
      *

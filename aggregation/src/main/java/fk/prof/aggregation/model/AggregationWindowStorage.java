@@ -7,7 +7,7 @@ import fk.prof.aggregation.serialize.Serializer;
 import fk.prof.metrics.MetricName;
 import fk.prof.metrics.ProcessGroupTag;
 import fk.prof.storage.AsyncStorage;
-import fk.prof.storage.StreamTransformer;
+import fk.prof.storage.util.StreamTransformer;
 import fk.prof.storage.buffer.StorageBackedOutputStream;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.slf4j.Logger;

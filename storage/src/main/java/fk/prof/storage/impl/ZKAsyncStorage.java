@@ -2,6 +2,7 @@ package fk.prof.storage.impl;
 
 import fk.prof.storage.AsyncStorage;
 import fk.prof.storage.StorageException;
+import fk.prof.storage.util.DataConverterUtil;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
@@ -9,8 +10,7 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
+import java.io.*;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -33,7 +33,14 @@ public class ZKAsyncStorage implements AsyncStorage {
 
   @Override
   public CompletableFuture<Void> storeAsync(String path, InputStream content, long length) {
-    return storeAsync(path, content.toString().getBytes());
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    try {
+      future = storeAsync(path, DataConverterUtil.inputStreamToByteArray(content));
+    } catch (IOException e) {
+      logger.error("Error from ZK for while storing at node path = " + path + " with error =" + e);
+      future.completeExceptionally(e);
+    }
+    return future;
   }
 
   @Override

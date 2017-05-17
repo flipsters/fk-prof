@@ -2,7 +2,7 @@ package fk.prof.userapi.verticles;
 
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
 import fk.prof.aggregation.proto.AggregatedProfileModel;
-import fk.prof.storage.StreamTransformer;
+import fk.prof.storage.util.StreamTransformer;
 import fk.prof.userapi.UserapiConfigManager;
 import fk.prof.userapi.api.ProfileAPI;
 import fk.prof.userapi.http.UserapiApiPathConstants;
