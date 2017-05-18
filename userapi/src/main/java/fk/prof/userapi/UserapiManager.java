@@ -11,9 +11,11 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.base.Preconditions;
 import fk.prof.storage.AsyncStorage;
+import fk.prof.storage.api.ProcessGroupAPI;
 import fk.prof.storage.impl.S3AsyncStorage;
 import fk.prof.storage.S3ClientFactory;
 import fk.prof.userapi.api.ProfileAPI;
+import fk.prof.userapi.api.impl.AsyncStorageBasedProcessGroupAPI;
 import fk.prof.userapi.api.impl.AsyncStorageBasedProfileAPI;
 import fk.prof.userapi.deployer.VerticleDeployer;
 import fk.prof.userapi.deployer.impl.UserapiHttpVerticleDeployer;
@@ -82,7 +84,8 @@ public class UserapiManager {
     registerSerializers(Json.prettyMapper);
 
     ProfileAPI profileAPI = new AsyncStorageBasedProfileAPI(vertx, this.storage, userapiConfigManager.getProfileRetentionDuration());
-    VerticleDeployer userapiHttpVerticleDeployer = new UserapiHttpVerticleDeployer(vertx, userapiConfigManager, profileAPI);
+    ProcessGroupAPI processGroupAPI = new AsyncStorageBasedProcessGroupAPI(this.storage);
+    VerticleDeployer userapiHttpVerticleDeployer = new UserapiHttpVerticleDeployer(vertx, userapiConfigManager, profileAPI, processGroupAPI);
 
     userapiHttpVerticleDeployer.deploy().setHandler(verticleDeployCompositeResult -> {
       if (verticleDeployCompositeResult.succeeded()) {

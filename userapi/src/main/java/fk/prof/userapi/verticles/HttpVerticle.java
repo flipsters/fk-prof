@@ -2,9 +2,11 @@ package fk.prof.userapi.verticles;
 
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
 import fk.prof.aggregation.proto.AggregatedProfileModel;
+import fk.prof.storage.api.ProcessGroupAPI;
 import fk.prof.storage.util.StreamTransformer;
 import fk.prof.userapi.UserapiConfigManager;
 import fk.prof.userapi.api.ProfileAPI;
+import fk.prof.userapi.api.impl.AsyncStorageBasedProfileAPI;
 import fk.prof.userapi.http.UserapiApiPathConstants;
 import fk.prof.userapi.model.AggregatedProfileInfo;
 import fk.prof.userapi.model.AggregationWindowSummary;
@@ -29,6 +31,7 @@ import java.nio.charset.Charset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Routes requests to their respective handlers
@@ -42,11 +45,13 @@ public class HttpVerticle extends AbstractVerticle {
     private static int aggregationWindowDurationInSecs = 1800;
 
     private ProfileAPI profileAPI;
+    private ProcessGroupAPI processGroupAPI;
     private UserapiConfigManager userapiConfigManager;
 
-    public HttpVerticle(UserapiConfigManager userapiConfigManager, ProfileAPI profileAPI) {
+    public HttpVerticle(UserapiConfigManager userapiConfigManager, ProfileAPI profileAPI, ProcessGroupAPI processGroupAPI) {
         this.userapiConfigManager = userapiConfigManager;
         this.profileAPI = profileAPI;
+        this.processGroupAPI = processGroupAPI;
     }
 
     private Router configureRouter() {
@@ -85,8 +90,8 @@ public class HttpVerticle extends AbstractVerticle {
         if (prefix == null) {
             prefix = "";
         }
-        Future<Set<String>> future = Future.future();
-        profileAPI.getAppIdsWithPrefix(future.setHandler(result -> setResponse(result, routingContext)),
+        CompletableFuture<Set<String>> future = new CompletableFuture<>();
+        processGroupAPI.getAppIdsWithPrefix(future.whenComplete((result, throwable) -> setResponse(result, throwable, routingContext, false)),
             baseDir, prefix);
     }
 
@@ -96,8 +101,8 @@ public class HttpVerticle extends AbstractVerticle {
         if (prefix == null) {
             prefix = "";
         }
-        Future<Set<String>> future = Future.future();
-        profileAPI.getClusterIdsWithPrefix(future.setHandler(result -> setResponse(result, routingContext)),
+        CompletableFuture<Set<String>> future = new CompletableFuture<>();
+        processGroupAPI.getClusterIdsWithPrefix(future.whenComplete((result, throwable) -> setResponse(result, throwable,  routingContext, false)),
             baseDir, appId, prefix);
     }
 
@@ -108,8 +113,8 @@ public class HttpVerticle extends AbstractVerticle {
         if (prefix == null) {
             prefix = "";
         }
-        Future<Set<String>> future = Future.future();
-        profileAPI.getProcsWithPrefix(future.setHandler(result -> setResponse(result, routingContext)),
+        CompletableFuture<Set<String>> future = new CompletableFuture<>();
+        processGroupAPI.getProcNamesWithPrefix(future.whenComplete((result, throwable) -> setResponse(result, throwable,  routingContext, false)),
             baseDir, appId, clusterId, prefix);
     }
 
@@ -218,6 +223,47 @@ public class HttpVerticle extends AbstractVerticle {
 
     private <T> void setResponse(AsyncResult<T> result, RoutingContext routingContext) {
         setResponse(result, routingContext, false);
+    }
+
+    private <T> void setResponse(T result, Throwable throwable, RoutingContext routingContext, Boolean gzipped) {
+        if(routingContext.response().ended()) {
+            return;
+        }
+        if(throwable != null) {
+            LOGGER.error(routingContext.request().uri(), throwable);
+
+            if(throwable instanceof FileNotFoundException) {
+                endResponseWithError(routingContext.response(), throwable, 404);
+            }
+            else if(throwable instanceof IllegalArgumentException) {
+                endResponseWithError(routingContext.response(), throwable, 400);
+            }
+            else {
+                endResponseWithError(routingContext.response(), throwable, 500);
+            }
+        }
+        else {
+            String encodedResponse = Json.encode(result);
+            HttpServerResponse response = routingContext.response();
+
+            response.putHeader("content-type", "application/json");
+            if(gzipped && safeContains(routingContext.request().getHeader("Accept-Encoding"), "gzip")) {
+                Buffer compressedBuf;
+                try {
+                    compressedBuf = Buffer.buffer(StreamTransformer.compress(encodedResponse.getBytes(Charset.forName("utf-8"))));
+                }
+                catch(IOException e) {
+                    setResponse(Future.failedFuture(e), routingContext, false);
+                    return;
+                }
+
+                response.putHeader("Content-Encoding", "gzip");
+                response.end(compressedBuf);
+            }
+            else {
+                response.end(encodedResponse);
+            }
+        }
     }
 
     private <T> void setResponse(AsyncResult<T> result, RoutingContext routingContext, boolean gzipped) {

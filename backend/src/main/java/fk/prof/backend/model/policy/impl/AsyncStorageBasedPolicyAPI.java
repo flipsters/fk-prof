@@ -20,9 +20,9 @@ import java.util.concurrent.locks.ReentrantLock;
  * Zookeeper based implementation of the policy store
  * Created by rohit.patiyal on 15/05/17.
  */
-public class ZookeeperBasedPolicyStoreAPI implements PolicyStoreAPI {
+public class AsyncStorageBasedPolicyAPI implements PolicyStoreAPI {
   private static final String POLICY_NODE_PREFIX = "v";
-  private static Logger logger = LoggerFactory.getLogger(ZookeeperBasedPolicyStoreAPI.class);
+  private static Logger logger = LoggerFactory.getLogger(AsyncStorageBasedPolicyAPI.class);
   private static final String DELIMITER = "/";
   private final CuratorFramework curatorClient;
   private boolean initialized;
@@ -31,7 +31,7 @@ public class ZookeeperBasedPolicyStoreAPI implements PolicyStoreAPI {
   private ZKAsyncStorage zkAsyncStorage;
   private final ReentrantLock setPolicyLock = new ReentrantLock();
 
-  public ZookeeperBasedPolicyStoreAPI(CuratorFramework curatorClient, String policyPath) {
+  public AsyncStorageBasedPolicyAPI(CuratorFramework curatorClient, String policyPath) {
     if (curatorClient == null) {
       throw new IllegalStateException("Curator client is required");
     }

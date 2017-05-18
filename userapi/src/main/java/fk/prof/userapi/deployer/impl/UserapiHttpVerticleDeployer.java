@@ -1,6 +1,7 @@
 package fk.prof.userapi.deployer.impl;
 
 import com.google.common.base.Preconditions;
+import fk.prof.storage.api.ProcessGroupAPI;
 import fk.prof.userapi.UserapiConfigManager;
 import fk.prof.userapi.api.ProfileAPI;
 import fk.prof.userapi.deployer.VerticleDeployer;
@@ -12,10 +13,13 @@ import io.vertx.core.Vertx;
 public class UserapiHttpVerticleDeployer extends VerticleDeployer {
 
   private final ProfileAPI profileAPI;
+  private final ProcessGroupAPI processGroupAPI;
 
-  public UserapiHttpVerticleDeployer(Vertx vertx, UserapiConfigManager userapiConfigManager, ProfileAPI profileAPI) {
+  public UserapiHttpVerticleDeployer(Vertx vertx, UserapiConfigManager userapiConfigManager, ProfileAPI profileAPI, ProcessGroupAPI processGroupAPI) {
     super(vertx, userapiConfigManager);
     this.profileAPI = Preconditions.checkNotNull(profileAPI);
+    this.processGroupAPI = Preconditions.checkNotNull(processGroupAPI);
+
   }
 
   @Override
@@ -25,7 +29,7 @@ public class UserapiHttpVerticleDeployer extends VerticleDeployer {
 
   @Override
   protected Verticle buildVerticle() {
-    return new HttpVerticle(getConfigManager(), profileAPI);
+    return new HttpVerticle(getConfigManager(), profileAPI, processGroupAPI);
   }
 
 }
