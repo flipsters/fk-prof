@@ -131,7 +131,7 @@ public class CpuSamplingTest {
 
         PollReqWithTime[] pollReqs = stubRecorderInteraction(profileEntries, hdr, profileCalledSecondTime, cpuSamplingWorkIssueTime, WorkHandlingTest.CPU_SAMPLING_MAX_FRAMES);
 
-        runner = new AgentRunner(Burn20And80PctCpu.class.getCanonicalName(), USUAL_RECORDER_ARGS);
+        runner = new AgentRunner(JniBurn.class.getCanonicalName(), USUAL_RECORDER_ARGS);
         runner.start();
 
         assocAction[0].get(4, TimeUnit.SECONDS);

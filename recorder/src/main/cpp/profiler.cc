@@ -34,32 +34,32 @@ void Profiler::handle(int signum, siginfo_t *info, void *context) {
             do_record = ctx_tracker->in_ctx() ? ctx_tracker->should_record() : get_prob_pct().on(current_sampling_attempt, noctx_cov_pct);
         }
         if (! do_record) {
-            return;
+            //return;
         }
     }
 
     std::uint8_t bt_flags = 0;
 
-    if (jniEnv != NULL) {
-        STATIC_ARRAY(frames, JVMPI_CallFrame, capture_stack_depth(), MAX_FRAMES_TO_CAPTURE);
-        JVMPI_CallTrace trace;
-        trace.env_id = jniEnv;
-        trace.frames = frames;
-        ASGCTType asgct = Asgct::GetAsgct();
-        (*asgct)(&trace, capture_stack_depth(), context);
-        if (trace.num_frames > 0) {
-            bt_flags |= CT_JVMPI;
-            buffer->push(trace, bt_flags, thread_info);
-            return; // we got java trace, so bail-out
-        }
-        if (trace.num_frames <= 0) {
-            bt_flags |= CT_JVMPI_ERROR;
-            s_c_cpu_samp_err_unexpected.inc();
-        }
-    } else {
-        bt_flags |= CT_NO_JNI_ENV;
-        s_c_cpu_samp_err_no_jni.inc();
-    }
+    // if (jniEnv != NULL) {
+    //     STATIC_ARRAY(frames, JVMPI_CallFrame, capture_stack_depth(), MAX_FRAMES_TO_CAPTURE);
+    //     JVMPI_CallTrace trace;
+    //     trace.env_id = jniEnv;
+    //     trace.frames = frames;
+    //     ASGCTType asgct = Asgct::GetAsgct();
+    //     (*asgct)(&trace, capture_stack_depth(), context);
+    //     if (trace.num_frames > 0) {
+    //         bt_flags |= CT_JVMPI;
+    //         buffer->push(trace, bt_flags, thread_info);
+    //         return; // we got java trace, so bail-out
+    //     }
+    //     if (trace.num_frames <= 0) {
+    //         bt_flags |= CT_JVMPI_ERROR;
+    //         s_c_cpu_samp_err_unexpected.inc();
+    //     }
+    // } else {
+    //     bt_flags |= CT_NO_JNI_ENV;
+    //     s_c_cpu_samp_err_no_jni.inc();
+    // }
 
     STATIC_ARRAY(native_trace, NativeFrame, capture_stack_depth(), MAX_FRAMES_TO_CAPTURE);
 

@@ -15,3 +15,7 @@ bt.so: $(err_bt_f1) $(err_bt_f2) Makefile BtPrinter.h
 
 jni_bt: bt.so
 	java BtPrinter
+
+burner.so:
+	clang++ -std=c++11 -shared -fPIC -o burner.so burner.cc -I/usr/lib/jvm/oracle-jdk-bin-1.8/include -I/usr/lib/jvm/oracle-jdk-bin-1.8/include/linux
+	cp burner.so /tmp/
