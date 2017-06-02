@@ -387,7 +387,7 @@ public class ZookeeperBasedPolicyStoreAPITest {
         final Async async = context.async();
         List<Future> futures = new ArrayList<>();
         for (Recorder.ProcessGroup pG : MockPolicyData.mockProcessGroups) {
-            futures.add(policyStoreAPI.createVersionedPolicy(pG, MockPolicyData.mockVersionedPolicyDetails.get(1)));
+            futures.add(policyStoreAPI.createVersionedPolicy(pG, MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(2), -1)));
         }
         Map<List<String>, Set<String>> testPairs = new HashMap<List<String>, Set<String>>() {{
             put(Arrays.asList("a1", "c1"), new HashSet<>(Arrays.asList("c1")));
@@ -424,7 +424,7 @@ public class ZookeeperBasedPolicyStoreAPITest {
         final Async async = context.async();
         List<Future> futures = new ArrayList<>();
         for (Recorder.ProcessGroup pG : MockPolicyData.mockProcessGroups) {
-            futures.add(policyStoreAPI.createVersionedPolicy(pG, MockPolicyData.mockVersionedPolicyDetails.get(2)));
+            futures.add(policyStoreAPI.createVersionedPolicy(pG, MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(2), -1)));
         }
         Map<List<String>, Set<String>> testPairs = new HashMap<List<String>, Set<String>>() {{
             put(Arrays.asList("a1", "c1", "p1"), new HashSet<>(Arrays.asList("p1")));

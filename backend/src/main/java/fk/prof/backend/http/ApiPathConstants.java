@@ -14,4 +14,17 @@ public final class ApiPathConstants {
   public static final String BACKEND_POST_ASSOCIATION = "/association";
   public static final String BACKEND_POST_POLL = "/poll";
   public static final String BACKEND_HEALTHCHECK = "/health";
+
+    public static final String LEADER_POLICY = "/leader/policy";
+
+    public static final String APPIDS = "/appIds";
+    public static final String CLUSTERIDS = "/clusterIds";
+    public static final String PROCNAMES = "/procNames";
+
+
+    public static String getPathGivenProcessGroup(String path) {
+        return path + "/:appId/:clusterId/:procName";
+    }
+
+
 }

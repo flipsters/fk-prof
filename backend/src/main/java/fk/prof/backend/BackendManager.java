@@ -1,6 +1,9 @@
 package fk.prof.backend;
 
-import com.codahale.metrics.*;
+import com.codahale.metrics.InstrumentedExecutorService;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.SharedMetricRegistries;
 import com.google.common.base.Preconditions;
 import fk.prof.aggregation.model.AggregationWindowStorage;
 import fk.prof.backend.deployer.VerticleDeployer;
@@ -8,22 +11,26 @@ import fk.prof.backend.deployer.impl.*;
 import fk.prof.backend.http.ApiPathConstants;
 import fk.prof.backend.leader.election.LeaderElectedTask;
 import fk.prof.backend.model.aggregation.ActiveAggregationWindows;
+import fk.prof.backend.model.aggregation.impl.ActiveAggregationWindowsImpl;
 import fk.prof.backend.model.assignment.AssociatedProcessGroups;
 import fk.prof.backend.model.assignment.impl.AssociatedProcessGroupsImpl;
-import fk.prof.backend.model.slot.WorkSlotPool;
 import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator;
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
-import fk.prof.backend.model.aggregation.impl.ActiveAggregationWindowsImpl;
 import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.model.policy.PolicyStoreAPI;
+import fk.prof.backend.model.policy.ZookeeperBasedPolicyStoreAPI;
+import fk.prof.backend.model.slot.WorkSlotPool;
 import fk.prof.metrics.MetricName;
 import fk.prof.storage.AsyncStorage;
 import fk.prof.storage.S3AsyncStorage;
 import fk.prof.storage.S3ClientFactory;
 import fk.prof.storage.buffer.ByteBufferPoolFactory;
-import io.vertx.core.*;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.metrics.MetricsOptions;
@@ -111,7 +118,8 @@ public class BackendManager {
           BackendAssociationStore backendAssociationStore = createBackendAssociationStore(vertx, curatorClient);
           PolicyStore policyStore = new PolicyStore(curatorClient);
 
-          VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore);
+          PolicyStoreAPI policyStoreAPI = createPolicyStoreAPI(vertx, curatorClient);
+          VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore, policyStoreAPI);
           Runnable leaderElectedTask = createLeaderElectedTask(vertx, leaderHttpVerticleDeployer, backendDeployments, backendAssociationStore, policyStore);
 
           VerticleDeployer leaderElectionParticipatorVerticleDeployer = new LeaderElectionParticipatorVerticleDeployer(
@@ -189,6 +197,10 @@ public class BackendManager {
     int loadMissTolerance = config.associationsConfig.loadMissTolerance;
     return new ZookeeperBasedBackendAssociationStore(vertx, curatorClient, backendAssociationPath,
         loadReportIntervalInSeconds, loadMissTolerance, new ProcessGroupCountBasedBackendComparator());
+  }
+
+  private PolicyStoreAPI createPolicyStoreAPI(Vertx vertx, CuratorFramework curatorClient) {
+    return new ZookeeperBasedPolicyStoreAPI(vertx, curatorClient, config.policyBaseDir, config.policyVersion);
   }
 
   public static Runnable createLeaderElectedTask(Vertx vertx, VerticleDeployer leaderHttpVerticleDeployer, List<String> backendDeployments,

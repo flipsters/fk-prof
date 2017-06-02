@@ -40,8 +40,7 @@ public class ZookeeperBasedPolicyStoreAPI implements PolicyStoreAPI {
     private final Map<String, Map<String, ConcurrentHashMap.KeySetView<String, Boolean>>> processGroupAsTree = new ConcurrentHashMap<>();
     private boolean initialized;
 
-
-    ZookeeperBasedPolicyStoreAPI(Vertx vertx, CuratorFramework curatorClient, String policyBaseDir, String policyVersion) {
+    public ZookeeperBasedPolicyStoreAPI(Vertx vertx, CuratorFramework curatorClient, String policyBaseDir, String policyVersion) {
         if (vertx == null) {
             throw new IllegalArgumentException("Vertx instance is required");
         }
@@ -163,6 +162,9 @@ public class ZookeeperBasedPolicyStoreAPI implements PolicyStoreAPI {
                     }
                     if (v != null && v.getVersion() != requestedVersionedPolicyDetails.getVersion()) {
                         throw new PolicyException("Failing update of policy, policy version mismatch, current version = " + v.getVersion() + ", your version = " + requestedVersionedPolicyDetails.getVersion() + ", for ProcessGroup = " + RecorderProtoUtil.processGroupCompactRepr(processGroup), true);
+                    }
+                    if (v == null && requestedVersionedPolicyDetails.getVersion() != -1) {
+                        throw new PolicyException("Failing create of policy, initial version must be -1, requested version = " + requestedVersionedPolicyDetails.getVersion(), false);
                     }
                     try {
                         String res = curatorClient.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT_SEQUENTIAL).

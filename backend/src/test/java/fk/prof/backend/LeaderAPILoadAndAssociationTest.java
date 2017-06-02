@@ -6,6 +6,7 @@ import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator;
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.model.policy.PolicyStoreAPI;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.util.ProtoUtil;
 import io.vertx.core.Future;
@@ -31,6 +32,8 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import static org.mockito.Mockito.mock;
 
 @RunWith(VertxUnitRunner.class)
 public class LeaderAPILoadAndAssociationTest {
@@ -70,8 +73,8 @@ public class LeaderAPILoadAndAssociationTest {
         config.associationsConfig.loadMissTolerance,
         new ProcessGroupCountBasedBackendComparator());
     PolicyStore policyStore = new PolicyStore(curatorClient);
-
-    VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore);
+      PolicyStoreAPI policyStoreAPI = mock(PolicyStoreAPI.class);
+      VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore, policyStoreAPI);
     leaderHttpDeployer.deploy();
     //Wait for some time for deployment to complete
     Thread.sleep(1000);

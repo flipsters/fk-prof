@@ -8,6 +8,7 @@ import fk.prof.backend.deployer.impl.LeaderHttpVerticleDeployer;
 import fk.prof.backend.leader.election.LeaderElectedTask;
 import fk.prof.backend.mock.MockLeaderStores;
 import fk.prof.backend.model.aggregation.ActiveAggregationWindows;
+import fk.prof.backend.model.aggregation.impl.ActiveAggregationWindowsImpl;
 import fk.prof.backend.model.assignment.AssociatedProcessGroups;
 import fk.prof.backend.model.assignment.impl.AssociatedProcessGroupsImpl;
 import fk.prof.backend.model.association.BackendAssociationStore;
@@ -15,10 +16,13 @@ import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.LeaderWriteContext;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
-import fk.prof.backend.model.aggregation.impl.ActiveAggregationWindowsImpl;
 import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.model.policy.PolicyStoreAPI;
 import fk.prof.backend.proto.BackendDTO;
-import io.vertx.core.*;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.impl.CompositeFutureImpl;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -34,14 +38,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import recording.Recorder;
 
-import static org.mockito.Mockito.*;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import static org.mockito.Mockito.*;
 
 @RunWith(VertxUnitRunner.class)
 public class LeaderElectionTest {
@@ -212,7 +216,8 @@ public class LeaderElectionTest {
 
           // get the httpVerticleDeployedFuture for reference.
           MutableObject<Future> httpVerticleDeployedFuture = new MutableObject<>();
-          VerticleDeployer leaderHttpVerticleDeployer = spy(new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore));
+          PolicyStoreAPI policyStoreAPI = mock(PolicyStoreAPI.class);
+          VerticleDeployer leaderHttpVerticleDeployer = spy(new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore, policyStoreAPI));
           when(leaderHttpVerticleDeployer.deploy()).thenAnswer(inv -> {
             httpVerticleDeployedFuture.setValue((Future) inv.callRealMethod());
             return httpVerticleDeployedFuture.getValue();

@@ -9,7 +9,9 @@ import fk.prof.backend.Configuration;
 import fk.prof.backend.exception.HttpFailure;
 import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.model.policy.PolicyStoreAPI;
 import fk.prof.backend.proto.BackendDTO;
+import fk.prof.backend.proto.PolicyDTO;
 import fk.prof.backend.util.ProtoUtil;
 import fk.prof.backend.util.proto.RecorderProtoUtil;
 import fk.prof.metrics.BackendTag;
@@ -33,15 +35,17 @@ public class LeaderHttpVerticle extends AbstractVerticle {
   private final Configuration config;
   private final BackendAssociationStore backendAssociationStore;
   private final PolicyStore policyStore;
-
   private final MetricRegistry metricRegistry = SharedMetricRegistries.getOrCreate(ConfigManager.METRIC_REGISTRY);
+  private final PolicyStoreAPI policyStoreAPI;
 
   public LeaderHttpVerticle(Configuration config,
                             BackendAssociationStore backendAssociationStore,
-                            PolicyStore policyStore) {
+                            PolicyStore policyStore,
+                            PolicyStoreAPI policyStoreAPI) {
     this.config = config;
     this.backendAssociationStore = backendAssociationStore;
     this.policyStore = policyStore;
+    this.policyStoreAPI = policyStoreAPI;
   }
 
   @Override
@@ -71,6 +75,20 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     String apiPathForUpdatingPolicy = ApiPathConstants.LEADER_POST_POLICY + "/:appId/:clusterId/:procName";
     HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, apiPathForUpdatingPolicy,
             BodyHandler.create().setBodyLimit(1024 * 100), this::handlePostPolicy);
+
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
+            ApiPathConstants.getPathGivenProcessGroup(ApiPathConstants.LEADER_POLICY), this::handleGetPolicy);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT,
+            ApiPathConstants.getPathGivenProcessGroup(ApiPathConstants.LEADER_POLICY),
+            BodyHandler.create().setBodyLimit(1024), this::handleUpdatePolicy);
+    //TODO: Uncomment line below when above TODO is done
+//        HttpHelper.attachHandlersToRoute(router, HttpMethod.POST,
+//            ApiPathConstants.getPathGivenProcessGroup(ApiPathConstants.LEADER_POLICY),
+//            BodyHandler.create().setBodyLimit(1024), this::handleCreatePolicy);
+    //TODO: Need to add listing API here
+//    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.APPIDS, this::handleGetAppIds);
+//    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.APPIDS + ApiPathConstants.GIVEN_APPID, this::handleGetClusterIds);
+//    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.APPIDS + ApiPathConstants.GIVEN_APPID, this::handleGetClusterIds);
 
     return router;
   }
@@ -200,5 +218,72 @@ public class LeaderHttpVerticle extends AbstractVerticle {
       HttpFailure httpFailure = HttpFailure.failure(ex);
       HttpHelper.handleFailure(context, httpFailure);
     }
+  }
+
+  private void handleGetPolicy(RoutingContext context) {
+    try {
+      Recorder.ProcessGroup pG = parseProcessGroup(context);
+      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = policyStoreAPI.getVersionedPolicy(pG);
+      if (versionedPolicyDetails == null) {
+        context.response().setStatusCode(400).end("Policy not found for ProcessGroup " + RecorderProtoUtil.processGroupCompactRepr(pG));
+      } else {
+        context.response().end(versionedPolicyDetails.toString());
+      }
+    } catch (Exception ex) {
+      HttpFailure httpFailure = HttpFailure.failure(ex);
+      HttpHelper.handleFailure(context, httpFailure);
+    }
+  }
+
+  private void handleCreatePolicy(RoutingContext context) {
+    try {
+      Recorder.ProcessGroup pG = parseProcessGroup(context);
+      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionPolicyFromPayload(context);
+      policyStoreAPI.createVersionedPolicy(pG, versionedPolicyDetails).setHandler(result -> {
+        if (result.succeeded()) {
+          context.response().setStatusCode(201).end();
+        } else {
+          HttpFailure httpFailure = HttpFailure.failure(result.cause());
+          HttpHelper.handleFailure(context, httpFailure);
+        }
+      });
+    } catch (Exception ex) {
+      HttpFailure httpFailure = HttpFailure.failure(ex);
+      HttpHelper.handleFailure(context, httpFailure);
+    }
+  }
+
+  private void handleUpdatePolicy(RoutingContext context) {
+    try {
+      Recorder.ProcessGroup pG = parseProcessGroup(context);
+      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionPolicyFromPayload(context);
+
+      policyStoreAPI.updateVersionedPolicy(pG, versionedPolicyDetails).setHandler(result -> {
+        if (result.succeeded()) {
+          context.response().setStatusCode(204).end();
+        } else {
+          System.out.println("EXCEPTION " + result.cause());
+          HttpFailure httpFailure = HttpFailure.failure(result.cause());
+          HttpHelper.handleFailure(context, httpFailure);
+        }
+      });
+    } catch (Exception ex) {
+      System.out.println("EXCEPTION " + ex.getClass());
+      HttpFailure httpFailure = HttpFailure.failure(ex);
+      HttpHelper.handleFailure(context, httpFailure);
+    }
+  }
+
+  private PolicyDTO.VersionedPolicyDetails parseVersionPolicyFromPayload(RoutingContext context) throws Exception {
+    byte[] payload = context.getBody().getBytes();
+    return PolicyDTO.VersionedPolicyDetails.parseFrom(payload);
+  }
+
+  private Recorder.ProcessGroup parseProcessGroup(RoutingContext context) throws Exception {
+    String appId = context.request().getParam("appId");
+    String clusterId = context.request().getParam("clusterId");
+    String procName = context.request().getParam("procName");
+
+    return Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).setProcName(procName).build();
   }
 }
