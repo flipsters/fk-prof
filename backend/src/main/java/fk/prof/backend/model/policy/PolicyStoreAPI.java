@@ -4,11 +4,45 @@ import fk.prof.backend.proto.PolicyDTO;
 import io.vertx.core.Future;
 import recording.Recorder;
 
+import java.util.Set;
+
 /**
  * Interface for accessing the store containing policy information
  * Created by rohit.patiyal on 18/05/17.
  */
 public interface PolicyStoreAPI {
+
+    /**
+     * Returns appIds of the processGroups corresponding to policies in the policyStore
+     *
+     * @param prefix string to filter the appIds
+     * @return Set of appIds
+     * @throws Exception
+     */
+    Set<String> getAppIds(String prefix) throws Exception;
+
+    /**
+     * /**
+     * Returns clusterIds from the processGroups corresponding to policies in the policyStore
+     *
+     * @param appId  for which the clusterIds are to be found
+     * @param prefix string to filter the clusterIds
+     * @return Set of clusterIds
+     * @throws Exception
+     */
+    Set<String> getClusterIds(String appId, String prefix) throws Exception;
+
+    /**
+     * Returns procNames from the processGroups corresponding to policies in the policyStore
+     *
+     * @param appId     for which the procNames are to be found
+     * @param clusterId for which the procNames are to be found
+     * @param prefix    string to filter the procNames
+     * @return Set of procNames
+     * @throws Exception
+     */
+    Set<String> getProcNames(String appId, String clusterId, String prefix) throws Exception;
+
     /**
      * Gets VersionedPolicyDetails currently stored for the processGroup
      *

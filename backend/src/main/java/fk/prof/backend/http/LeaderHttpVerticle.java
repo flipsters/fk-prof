@@ -23,6 +23,7 @@ import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.Json;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -85,12 +86,51 @@ public class LeaderHttpVerticle extends AbstractVerticle {
 //        HttpHelper.attachHandlersToRoute(router, HttpMethod.POST,
 //            ApiPathConstants.getPathGivenProcessGroup(ApiPathConstants.LEADER_POLICY),
 //            BodyHandler.create().setBodyLimit(1024), this::handleCreatePolicy);
-    //TODO: Need to add listing API here
-//    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.APPIDS, this::handleGetAppIds);
-//    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.APPIDS + ApiPathConstants.GIVEN_APPID, this::handleGetClusterIds);
-//    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.APPIDS + ApiPathConstants.GIVEN_APPID, this::handleGetClusterIds);
+
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.APPIDS, this::handleGetAppIds);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.CLUSTERIDS, this::handleGetClusterIds);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.PROCNAMES, this::handleGetProcNames);
 
     return router;
+  }
+
+  private void handleGetAppIds(RoutingContext context) {
+    try {
+      final String prefix = context.request().getParam("prefix");
+      context.response().end(Json.encode(policyStoreAPI.getAppIds(prefix)));
+    } catch (Exception ex) {
+      HttpFailure httpFailure = HttpFailure.failure(ex);
+      HttpHelper.handleFailure(context, httpFailure);
+    }
+  }
+
+  private void handleGetClusterIds(RoutingContext context) {
+    try {
+      final String appId = context.request().getParam("appId");
+      String prefix = context.request().getParam("prefix");
+      if (prefix == null) {
+        prefix = "";
+      }
+      context.response().end(Json.encode(policyStoreAPI.getClusterIds(appId, prefix)));
+    } catch (Exception ex) {
+      HttpFailure httpFailure = HttpFailure.failure(ex);
+      HttpHelper.handleFailure(context, httpFailure);
+    }
+  }
+
+  private void handleGetProcNames(RoutingContext context) {
+    try {
+      final String appId = context.request().getParam("appId");
+      final String clusterId = context.request().getParam("clusterId");
+      String prefix = context.request().getParam("prefix");
+      if (prefix == null) {
+        prefix = "";
+      }
+      context.response().end(Json.encode(policyStoreAPI.getProcNames(appId, clusterId, prefix)));
+    } catch (Exception ex) {
+      HttpFailure httpFailure = HttpFailure.failure(ex);
+      HttpHelper.handleFailure(context, httpFailure);
+    }
   }
 
   private void completeStartup(AsyncResult<HttpServer> http, Future<Void> fut) {
