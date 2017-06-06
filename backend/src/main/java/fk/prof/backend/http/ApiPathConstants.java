@@ -15,13 +15,11 @@ public final class ApiPathConstants {
   public static final String BACKEND_POST_POLL = "/poll";
   public static final String BACKEND_HEALTHCHECK = "/health";
 
-  public static final String LEADER_POLICY = "/leader/policy";
-
+  public static final String LEADER = "/leader";
   public static final String APPIDS = "/appIds";
-  public static final String CLUSTERIDS = "/clusterIds/:appId";
-  public static final String PROCNAMES = "/procNames/:appId/:clusterId";
+  public static final String CLUSTERIDS_GIVEN_APPID = "/clusterIds/:appId";
+  public static final String PROCNAMES_GIVEN_APPID_CLUSTERID = "/procNames/:appId/:clusterId";
+  public static final String POLICY_GIVEN_APPID_CLUSTERID_PROCNAME = "/policy/:appId/:clusterId/:procName";
+  public static final String POLICY = "/policy";
 
-  public static String getPathGivenProcessGroup(String path) {
-        return path + "/:appId/:clusterId/:procName";
-    }
 }

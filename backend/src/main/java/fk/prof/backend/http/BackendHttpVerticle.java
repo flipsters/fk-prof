@@ -11,13 +11,13 @@ import fk.prof.backend.aggregator.AggregationWindow;
 import fk.prof.backend.exception.AggregationFailure;
 import fk.prof.backend.exception.BadRequestException;
 import fk.prof.backend.exception.HttpFailure;
+import fk.prof.backend.model.aggregation.AggregationWindowDiscoveryContext;
 import fk.prof.backend.model.assignment.ProcessGroupContextForPolling;
 import fk.prof.backend.model.assignment.ProcessGroupDiscoveryContext;
 import fk.prof.backend.model.election.LeaderReadContext;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.request.profile.RecordedProfileProcessor;
 import fk.prof.backend.request.profile.impl.SharedMapBasedSingleProcessingOfProfileGate;
-import fk.prof.backend.model.aggregation.AggregationWindowDiscoveryContext;
 import fk.prof.backend.util.ProtoUtil;
 import fk.prof.backend.util.proto.RecorderProtoUtil;
 import fk.prof.metrics.MetricName;
@@ -39,7 +39,6 @@ import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import recording.Recorder;
 
-import java.io.IOException;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -91,7 +90,6 @@ public class BackendHttpVerticle extends AbstractVerticle {
   private Router setupRouting() {
     Router router = Router.router(vertx);
     router.route().handler(LoggerHandler.create());
-
     HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.AGGREGATOR_POST_PROFILE,
         this::handlePostProfile);
 
@@ -103,7 +101,24 @@ public class BackendHttpVerticle extends AbstractVerticle {
 
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_HEALTHCHECK, this::handleGetHealthCheck);
 
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.APPIDS, this::redirectToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.CLUSTERIDS_GIVEN_APPID, this::redirectToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.PROCNAMES_GIVEN_APPID_CLUSTERID, this::redirectToLeader);
+
     return router;
+  }
+
+  private void redirectToLeader(RoutingContext context) {
+    BackendDTO.LeaderDetail leaderDetail = verifyLeaderAvailabilityOrFail(context.response());
+    if (leaderDetail != null) {
+      try {
+        makeRequestToLeader(leaderDetail, context.request().method(), context.normalisedPath(), context.getBody(), false)
+                .setHandler(ar -> handleLeaderResponse(context, ar));
+      } catch (Exception ex) {
+        HttpFailure httpFailure = HttpFailure.failure(ex);
+        HttpHelper.handleFailure(context, httpFailure);
+      }
+    }
   }
 
   private void completeStartup(AsyncResult<HttpServer> http, Future<Void> fut) {
@@ -216,20 +231,25 @@ public class BackendHttpVerticle extends AbstractVerticle {
           return;
         }
 
+        Buffer recorderInfoAsBuffer = ProtoUtil.buildBufferFromProto(recorderInfo);
+
         //Proxy request to leader if self(backend) is not associated with the recorder
-        makeRequestPostAssociation(leaderDetail, recorderInfo).setHandler(ar -> {
-          if(ar.succeeded()) {
-            context.response().setStatusCode(ar.result().getStatusCode());
-            context.response().end(ar.result().getResponse());
-          } else {
-            HttpFailure httpFailure = HttpFailure.failure(ar.cause());
-            HttpHelper.handleFailure(context, httpFailure);
-          }
-        });
+        makeRequestToLeader(leaderDetail, HttpMethod.POST, ApiPathConstants.LEADER_POST_ASSOCIATION, recorderInfoAsBuffer, true)
+          .setHandler(ar -> handleLeaderResponse(context, ar));
       } catch (Exception ex) {
         HttpFailure httpFailure = HttpFailure.failure(ex);
         HttpHelper.handleFailure(context, httpFailure);
       }
+    }
+  }
+
+  private void handleLeaderResponse(RoutingContext context, AsyncResult<ProfHttpClient.ResponseWithStatusTuple> ar) {
+    if(ar.succeeded()) {
+      context.response().setStatusCode(ar.result().getStatusCode());
+      context.response().end(ar.result().getResponse());
+    } else {
+      HttpFailure httpFailure = HttpFailure.failure(ar.cause());
+      HttpHelper.handleFailure(context, httpFailure);
     }
   }
 
@@ -250,13 +270,12 @@ public class BackendHttpVerticle extends AbstractVerticle {
     }
   }
 
-  private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestPostAssociation(BackendDTO.LeaderDetail leaderDetail, Recorder.RecorderInfo payload)
-      throws IOException {
-    Buffer payloadAsBuffer = ProtoUtil.buildBufferFromProto(payload);
-    return httpClient.requestAsyncWithRetry(
-        HttpMethod.POST,
-        leaderDetail.getHost(), leaderDetail.getPort(), ApiPathConstants.LEADER_POST_ASSOCIATION,
-        payloadAsBuffer);
+  private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestToLeader(BackendDTO.LeaderDetail leaderDetail, HttpMethod method, String path, Buffer payloadAsBuffer, boolean withRetry) {
+    if(withRetry){
+      return httpClient.requestAsyncWithRetry(method, leaderDetail.getHost(), leaderDetail.getPort(), path, payloadAsBuffer);
+    }else{
+      return httpClient.requestAsync(method, leaderDetail.getHost(), leaderDetail.getPort(), path, payloadAsBuffer);
+    }
   }
 
   private void handleGetHealthCheck(RoutingContext routingContext) {
