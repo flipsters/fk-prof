@@ -26,7 +26,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static fk.prof.backend.util.ZookeeperUtil.DELIMITER;
@@ -79,14 +78,6 @@ public class BackendPolicyAPITest {
                 HttpServerRequest r2 = requestsQ.poll();
                 Buffer b1 = bufferQ.poll();
                 Buffer b2 = bufferQ.poll();
-                for (Map.Entry h : r1.headers().entries()) {
-                    System.out.println("R1 " + h.getKey() + " : " + h.getValue());
-                }
-                for (Map.Entry h : r2.headers().entries()) {
-                    System.out.println("R2 " + h.getKey() + " : " + h.getValue());
-                }
-//                if(!(r1.params().isEmpty() && r2.params().isEmpty()))
-//                context.assertEquals(r1.params(), r2.params());
                 context.assertEquals(b1, b2);
                 async.complete();
             }
