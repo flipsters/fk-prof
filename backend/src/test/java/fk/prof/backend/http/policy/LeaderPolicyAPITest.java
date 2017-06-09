@@ -1,7 +1,6 @@
 package fk.prof.backend.http.policy;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import fk.prof.backend.AssociationApiTest;
 import fk.prof.backend.ConfigManager;
 import fk.prof.backend.Configuration;
 import fk.prof.backend.deployer.VerticleDeployer;
@@ -23,7 +22,6 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.apache.curator.test.TestingServer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,8 +39,6 @@ import static org.mockito.Mockito.when;
  */
 @RunWith(VertxUnitRunner.class)
 public class LeaderPolicyAPITest {
-
-    private TestingServer testingServer;
     private PolicyStoreAPI policyStoreAPI;
     private Vertx vertx;
     private HttpClient client;
@@ -51,9 +47,8 @@ public class LeaderPolicyAPITest {
     @Before
     public void setUp() throws Exception {
         ConfigManager.setDefaultSystemProperties();
-        testingServer = new TestingServer();
 
-        Configuration config = ConfigManager.loadConfig(AssociationApiTest.class.getClassLoader().getResource("config.json").getFile());
+        Configuration config = ConfigManager.loadConfig(LeaderPolicyAPITest.class.getClassLoader().getResource("config.json").getFile());
         vertx = Vertx.vertx(new VertxOptions(config.vertxOptions));
         leaderPort = config.leaderHttpServerOpts.getPort();
 
@@ -62,6 +57,7 @@ public class LeaderPolicyAPITest {
         PolicyStore policyStore = mock(PolicyStore.class);
         client = vertx.createHttpClient();
         VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore, policyStoreAPI);
+
         leaderHttpVerticleDeployer.deploy();
         //Wait for some time for deployment to complete
         Thread.sleep(1000);
@@ -195,7 +191,6 @@ public class LeaderPolicyAPITest {
     public void tearDown(TestContext context) throws Exception {
         final Async async = context.async();
         client.close();
-        testingServer.close();
         vertx.close(result -> {
             if (result.succeeded()) {
                 async.complete();

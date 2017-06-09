@@ -297,12 +297,10 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     try {
       Recorder.ProcessGroup pG = parseProcessGroup(context);
       PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionPolicyFromPayload(context);
-
       policyStoreAPI.updateVersionedPolicy(pG, versionedPolicyDetails).setHandler(result -> {
         if (result.succeeded()) {
           context.response().setStatusCode(204).end();
         } else {
-          System.out.println("EXCEPTION " + result.cause());
           HttpFailure httpFailure = HttpFailure.failure(result.cause());
           HttpHelper.handleFailure(context, httpFailure);
         }

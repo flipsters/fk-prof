@@ -73,8 +73,8 @@ public class LeaderAPILoadAndAssociationTest {
         config.associationsConfig.loadMissTolerance,
         new ProcessGroupCountBasedBackendComparator());
     PolicyStore policyStore = new PolicyStore(curatorClient);
-      PolicyStoreAPI policyStoreAPI = mock(PolicyStoreAPI.class);
-      VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore, policyStoreAPI);
+    PolicyStoreAPI policyStoreAPI = mock(PolicyStoreAPI.class);
+    VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore, policyStoreAPI);
     leaderHttpDeployer.deploy();
     //Wait for some time for deployment to complete
     Thread.sleep(1000);
