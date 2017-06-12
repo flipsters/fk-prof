@@ -64,7 +64,7 @@ public class LeaderPolicyAPITest {
     }
 
     @Test
-    public void testPolicy(TestContext context) throws Exception {
+    public void testGetPolicy(TestContext context) throws Exception {
         final Async async = context.async();
         //PRESENT
         when(policyStoreAPI.getVersionedPolicy(MockPolicyData.mockProcessGroups.get(0))).thenAnswer(invocation -> MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0));

@@ -11,13 +11,13 @@ import fk.prof.backend.aggregator.AggregationWindow;
 import fk.prof.backend.exception.AggregationFailure;
 import fk.prof.backend.exception.BadRequestException;
 import fk.prof.backend.exception.HttpFailure;
+import fk.prof.backend.model.aggregation.AggregationWindowDiscoveryContext;
 import fk.prof.backend.model.assignment.ProcessGroupContextForPolling;
 import fk.prof.backend.model.assignment.ProcessGroupDiscoveryContext;
 import fk.prof.backend.model.election.LeaderReadContext;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.request.profile.RecordedProfileProcessor;
 import fk.prof.backend.request.profile.impl.SharedMapBasedSingleProcessingOfProfileGate;
-import fk.prof.backend.model.aggregation.AggregationWindowDiscoveryContext;
 import fk.prof.backend.util.ProtoUtil;
 import fk.prof.backend.util.proto.RecorderProtoUtil;
 import fk.prof.metrics.MetricName;
@@ -239,7 +239,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
     BackendDTO.LeaderDetail leaderDetail = verifyLeaderAvailabilityOrFail(context.response());
     if (leaderDetail != null) {
       try {
-        makeRequestToLeader(leaderDetail, context.request().method(), context.normalisedPath(), context.getBody(), false)
+        makeRequestToLeader(leaderDetail, context.request().method(), ApiPathConstants.LEADER + context.normalisedPath(), context.getBody(), false)
                 .setHandler(ar -> handleLeaderResponse(context, ar));
       } catch (Exception ex) {
         HttpFailure httpFailure = HttpFailure.failure(ex);

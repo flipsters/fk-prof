@@ -281,7 +281,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
       PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionPolicyFromPayload(context);
       policyStoreAPI.createVersionedPolicy(pG, versionedPolicyDetails).setHandler(result -> {
         if (result.succeeded()) {
-          context.response().setStatusCode(201).end();
+          context.response().setStatusCode(201).end(result.result().toString());
         } else {
           HttpFailure httpFailure = HttpFailure.failure(result.cause());
           HttpHelper.handleFailure(context, httpFailure);
@@ -299,7 +299,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
       PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionPolicyFromPayload(context);
       policyStoreAPI.updateVersionedPolicy(pG, versionedPolicyDetails).setHandler(result -> {
         if (result.succeeded()) {
-          context.response().setStatusCode(204).end();
+          context.response().setStatusCode(204).end(result.result().toString());
         } else {
           HttpFailure httpFailure = HttpFailure.failure(result.cause());
           HttpHelper.handleFailure(context, httpFailure);
