@@ -11,6 +11,10 @@ import java.util.Set;
  * Created by rohit.patiyal on 18/05/17.
  */
 public interface PolicyStoreAPI {
+    /**
+     * Method to allow delayed initialization. Calling other methods before init may result in undefined behaviour.
+     */
+    void init() throws Exception;
 
     /**
      * Returns appIds of the processGroups corresponding to policies in the policyStore

@@ -6,6 +6,7 @@ import fk.prof.backend.deployer.VerticleDeployer;
 import fk.prof.backend.deployer.impl.*;
 import fk.prof.backend.http.ProfHttpClient;
 import fk.prof.backend.leader.election.LeaderElectedTask;
+import fk.prof.backend.mock.MockPolicyData;
 import fk.prof.backend.model.aggregation.ActiveAggregationWindows;
 import fk.prof.backend.model.aggregation.impl.ActiveAggregationWindowsImpl;
 import fk.prof.backend.model.assignment.AssociatedProcessGroups;
@@ -14,7 +15,6 @@ import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator;
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
-import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.model.policy.PolicyStoreAPI;
 import fk.prof.backend.model.slot.WorkSlotPool;
 import fk.prof.backend.proto.BackendDTO;
@@ -37,8 +37,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import recording.Recorder;
 
 import java.io.File;
@@ -46,7 +44,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -64,11 +61,8 @@ public class PollAndLoadApiTest {
   private ActiveAggregationWindows activeAggregationWindows;
   private WorkSlotPool workSlotPool;
   private BackendAssociationStore backendAssociationStore;
-  private PolicyStore policyStore;
   private AggregationWindowStorage aggregationWindowStorage;
-
-  private String backendDaemonVerticleDeployment;
-  private List<String> backendHttpVerticleDeployments;
+  private PolicyStoreAPI policyStoreAPI;
 
   @Before
   public void setBefore(TestContext context) throws Exception {
@@ -97,7 +91,6 @@ public class PollAndLoadApiTest {
     associatedProcessGroups = new AssociatedProcessGroupsImpl(this.config.recorderDefunctThresholdSecs);
     workSlotPool = new WorkSlotPool(this.config.scheduleSlotPoolCapacity);
     activeAggregationWindows = new ActiveAggregationWindowsImpl();
-    policyStore = spy(new PolicyStore(curatorClient));
     aggregationWindowStorage = mock(AggregationWindowStorage.class);
 
     VerticleDeployer backendHttpVerticleDeployer = new BackendHttpVerticleDeployer(vertx, this.config, leaderStore,
@@ -109,12 +102,9 @@ public class PollAndLoadApiTest {
         context.fail(ar.result().cause());
       }
       try {
-        backendHttpVerticleDeployments = ((CompositeFuture)ar.result().list().get(0)).list();
-        backendDaemonVerticleDeployment = (String)((CompositeFuture)ar.result().list().get(0)).list().get(0);
-
-        PolicyStoreAPI policyStoreAPI = mock(PolicyStoreAPI.class);
-        VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, this.config, backendAssociationStore, policyStore, policyStoreAPI);
-        Runnable leaderElectedTask = LeaderElectedTask.newBuilder().build(vertx, leaderHttpVerticleDeployer, backendAssociationStore, policyStore);
+        policyStoreAPI = mock(PolicyStoreAPI.class);
+        VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, this.config, backendAssociationStore, policyStoreAPI);
+        Runnable leaderElectedTask = LeaderElectedTask.newBuilder().build(vertx, leaderHttpVerticleDeployer, backendAssociationStore, policyStoreAPI);
         VerticleDeployer leaderElectionParticipatorVerticleDeployer = new LeaderElectionParticipatorVerticleDeployer(
             vertx, this.config, curatorClient, leaderElectedTask);
         VerticleDeployer leaderElectionWatcherVerticleDeployer = new LeaderElectionWatcherVerticleDeployer(vertx, this.config, curatorClient, leaderStore);
@@ -192,14 +182,11 @@ public class PollAndLoadApiTest {
   public void testFetchForWorkForAggregationWindow(TestContext context) throws Exception {
     final Async async = context.async();
     Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId("1").setCluster("1").setProcName("1").build();
-    policyStore.put(processGroup, buildRecordingPolicy(1));
+    policyStoreAPI.createVersionedPolicy(processGroup, MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),-1));
     CountDownLatch latch = new CountDownLatch(1);
-    when(policyStore.get(processGroup)).then(new Answer<BackendDTO.RecordingPolicy>() {
-      @Override
-      public BackendDTO.RecordingPolicy answer(InvocationOnMock invocationOnMock) throws Throwable {
-        latch.countDown();
-        return (BackendDTO.RecordingPolicy)invocationOnMock.callRealMethod();
-      }
+    when(policyStoreAPI.getVersionedPolicy(processGroup)).then(invocationOnMock -> {
+      latch.countDown();
+      return invocationOnMock.callRealMethod();
     });
 
     //Wait for sometime for load to get reported twice, so that backend gets marked as available
@@ -234,9 +221,9 @@ public class PollAndLoadApiTest {
   public void testAggregationWindowSetupAndPollResponse(TestContext context) throws Exception {
     final Async async = context.async();
     Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId("1").setCluster("1").setProcName("1").build();
-    policyStore.put(processGroup, buildRecordingPolicy(1));
+    policyStoreAPI.createVersionedPolicy(processGroup, MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),-1));
     CountDownLatch latch = new CountDownLatch(1);
-    when(policyStore.get(processGroup)).then(invocationOnMock -> {
+    when(policyStoreAPI.getVersionedPolicy(processGroup)).then(invocationOnMock -> {
       //Induce delay here so that before work is fetched, poll request of recorder succeeds and it gets marked healthy
       latch.await(8, TimeUnit.SECONDS);
       return invocationOnMock.callRealMethod();

@@ -7,7 +7,6 @@ import fk.prof.backend.deployer.VerticleDeployer;
 import fk.prof.backend.deployer.impl.LeaderHttpVerticleDeployer;
 import fk.prof.backend.http.ApiPathConstants;
 import fk.prof.backend.model.association.BackendAssociationStore;
-import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.model.policy.PolicyStoreAPI;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.CompositeFuture;
@@ -64,9 +63,8 @@ public class LeaderProcessGroupListingAPITest {
 
         BackendAssociationStore backendAssociationStore = mock(BackendAssociationStore.class);
         policyStoreAPI = mock(PolicyStoreAPI.class);
-        PolicyStore policyStore = mock(PolicyStore.class);
         client = vertx.createHttpClient();
-        VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore, policyStoreAPI);
+        VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStoreAPI);
         leaderHttpVerticleDeployer.deploy();
         //Wait for some time for deployment to complete
         Thread.sleep(1000);

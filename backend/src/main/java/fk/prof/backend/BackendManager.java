@@ -18,7 +18,6 @@ import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator;
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
-import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.model.policy.PolicyStoreAPI;
 import fk.prof.backend.model.policy.ZookeeperBasedPolicyStoreAPI;
 import fk.prof.backend.model.slot.WorkSlotPool;
@@ -116,11 +115,10 @@ public class BackendManager {
               .collect(Collectors.toList());
 
           BackendAssociationStore backendAssociationStore = createBackendAssociationStore(vertx, curatorClient);
-          PolicyStore policyStore = new PolicyStore(curatorClient);
 
           PolicyStoreAPI policyStoreAPI = createPolicyStoreAPI(vertx, curatorClient);
-          VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore, policyStoreAPI);
-          Runnable leaderElectedTask = createLeaderElectedTask(vertx, leaderHttpVerticleDeployer, backendDeployments, backendAssociationStore, policyStore);
+          VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStoreAPI);
+          Runnable leaderElectedTask = createLeaderElectedTask(vertx, leaderHttpVerticleDeployer, backendDeployments, backendAssociationStore, policyStoreAPI);
 
           VerticleDeployer leaderElectionParticipatorVerticleDeployer = new LeaderElectionParticipatorVerticleDeployer(
               vertx, config, curatorClient, leaderElectedTask);
@@ -204,10 +202,10 @@ public class BackendManager {
   }
 
   public static Runnable createLeaderElectedTask(Vertx vertx, VerticleDeployer leaderHttpVerticleDeployer, List<String> backendDeployments,
-                                                 BackendAssociationStore associationStore, PolicyStore policyStore) {
+                                                 BackendAssociationStore associationStore, PolicyStoreAPI policyStoreAPI) {
     LeaderElectedTask.Builder builder = LeaderElectedTask.newBuilder();
     builder.disableBackend(backendDeployments);
-    return builder.build(vertx, leaderHttpVerticleDeployer, associationStore, policyStore);
+    return builder.build(vertx, leaderHttpVerticleDeployer, associationStore, policyStoreAPI);
   }
 
   private MetricsOptions buildMetricsOptions() {

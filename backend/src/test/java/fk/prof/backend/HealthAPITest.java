@@ -9,7 +9,6 @@ import fk.prof.backend.model.aggregation.impl.ActiveAggregationWindowsImpl;
 import fk.prof.backend.model.assignment.AssociatedProcessGroups;
 import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
-import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.model.policy.PolicyStoreAPI;
 import fk.prof.backend.model.slot.WorkSlotPool;
 import io.vertx.core.CompositeFuture;
@@ -111,10 +110,9 @@ public class HealthAPITest {
         List<String> backendDeployments = new ArrayList<String>(((CompositeFuture)ar.result().list().get(0)).list());
         backendDeployments.add((String)((CompositeFuture)ar.result().list().get(1)).list().get(0));
 
-        PolicyStore policyStore = mock(PolicyStore.class);
         PolicyStoreAPI policyStoreAPI = mock(PolicyStoreAPI.class);
-        VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore, policyStoreAPI);
-        Runnable leaderElectedTask = BackendManager.createLeaderElectedTask(vertx, leaderHttpVerticleDeployer, backendDeployments, backendAssociationStore, policyStore);
+        VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStoreAPI);
+        Runnable leaderElectedTask = BackendManager.createLeaderElectedTask(vertx, leaderHttpVerticleDeployer, backendDeployments, backendAssociationStore, policyStoreAPI);
         VerticleDeployer leaderElectionParticipatorVerticleDeployer = new LeaderElectionParticipatorVerticleDeployer(
             vertx, config, curatorClient, leaderElectedTask);
         VerticleDeployer leaderElectionWatcherVerticleDeployer = new LeaderElectionWatcherVerticleDeployer(vertx, config, curatorClient, inMemoryLeaderStore);

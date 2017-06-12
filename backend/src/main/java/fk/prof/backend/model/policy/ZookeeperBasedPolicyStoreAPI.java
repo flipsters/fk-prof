@@ -102,7 +102,7 @@ public class ZookeeperBasedPolicyStoreAPI implements PolicyStoreAPI {
         }
     }
 
-    void init() throws Exception {
+    public void init() throws Exception {
         synchronized (this) {
             if (!initialized) {
                 populateCacheFromZK();

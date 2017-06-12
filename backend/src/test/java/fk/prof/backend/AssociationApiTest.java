@@ -14,7 +14,6 @@ import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator;
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
-import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.model.policy.PolicyStoreAPI;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.util.ProtoUtil;
@@ -53,7 +52,6 @@ public class AssociationApiTest {
   private CuratorFramework curatorClient;
   private BackendAssociationStore backendAssociationStore;
   private AssociatedProcessGroups associatedProcessGroups;
-  private PolicyStore policyStore;
   private InMemoryLeaderStore inMemoryLeaderStore;
   private Configuration config;
 
@@ -77,7 +75,6 @@ public class AssociationApiTest {
     backendAssociationStore = new ZookeeperBasedBackendAssociationStore(vertx, curatorClient, "/assoc", 1, 1, new ProcessGroupCountBasedBackendComparator());
     inMemoryLeaderStore = spy(new InMemoryLeaderStore(config.ipAddress, config.leaderHttpServerOpts.getPort()));
     associatedProcessGroups = new AssociatedProcessGroupsImpl(config.recorderDefunctThresholdSecs);
-    policyStore = new PolicyStore(curatorClient);
 
     VerticleDeployer backendHttpVerticleDeployer = new BackendHttpVerticleDeployer(vertx, config, inMemoryLeaderStore, new ActiveAggregationWindowsImpl(), associatedProcessGroups);
     backendHttpVerticleDeployer.deploy();
@@ -169,8 +166,8 @@ public class AssociationApiTest {
     final Async async = context.async();
     CountDownLatch latch = new CountDownLatch(1);
     PolicyStoreAPI policyStoreAPI = mock(PolicyStoreAPI.class);
-    VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore, policyStoreAPI);
-    Runnable leaderElectedTask = LeaderElectedTask.newBuilder().build(vertx, leaderHttpDeployer, backendAssociationStore, policyStore);
+    VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStoreAPI);
+    Runnable leaderElectedTask = LeaderElectedTask.newBuilder().build(vertx, leaderHttpDeployer, backendAssociationStore, policyStoreAPI);
 
     VerticleDeployer leaderParticipatorDeployer = new LeaderElectionParticipatorVerticleDeployer(vertx, config, curatorClient, leaderElectedTask);
     VerticleDeployer leaderWatcherDeployer = new LeaderElectionWatcherVerticleDeployer(vertx, config, curatorClient, inMemoryLeaderStore);

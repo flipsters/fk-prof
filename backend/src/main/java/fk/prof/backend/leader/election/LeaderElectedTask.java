@@ -7,7 +7,7 @@ import com.google.common.base.Preconditions;
 import fk.prof.backend.ConfigManager;
 import fk.prof.backend.deployer.VerticleDeployer;
 import fk.prof.backend.model.association.BackendAssociationStore;
-import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.model.policy.PolicyStoreAPI;
 import fk.prof.metrics.MetricName;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -17,7 +17,6 @@ import io.vertx.core.logging.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.FutureTask;
 import java.util.function.Supplier;
 
 /**
@@ -34,11 +33,11 @@ public class LeaderElectedTask implements Runnable {
   private Supplier<CompositeFuture> backendVerticlesUndeployer = null;
   private VerticleDeployer leaderHttpVerticlesDeployer;
   private BackendAssociationStore associationStore;
-  private PolicyStore policyStore;
+  private PolicyStoreAPI policyStoreAPI;
 
   private LeaderElectedTask(Vertx vertx, VerticleDeployer leaderHttpVerticleDeployer,
                             List<String> backendDeployments, BackendAssociationStore associationStore,
-                            PolicyStore policyStore) {
+                            PolicyStoreAPI policyStoreAPI) {
 
     if (backendDeployments != null) {
       // NOTE: If backend deployments supplied, leader will not serve as backend and only do leader related operations
@@ -65,7 +64,7 @@ public class LeaderElectedTask implements Runnable {
 
     this.leaderHttpVerticlesDeployer = Preconditions.checkNotNull(leaderHttpVerticleDeployer);
     this.associationStore = associationStore;
-    this.policyStore = policyStore;
+    this.policyStoreAPI = policyStoreAPI;
   }
 
   @Override
@@ -100,7 +99,7 @@ public class LeaderElectedTask implements Runnable {
   private Future deployLeaderHttpVerticles() {
     Future future = Future.future();
     logger.info("Stores are being initialized");
-    CompositeFuture.all(runOnContext(associationStore::init), runOnContext(policyStore::init))
+    CompositeFuture.all(runOnContext(associationStore::init), runOnContext(policyStoreAPI::init))
         .compose(initResult -> {
             logger.info("Leader http verticle is being deployed");
             leaderHttpVerticlesDeployer.deploy().setHandler(future.completer());
@@ -136,12 +135,12 @@ public class LeaderElectedTask implements Runnable {
       return this;
     }
 
-    public LeaderElectedTask build(Vertx vertx, VerticleDeployer leaderHttpVerticleDeployer, BackendAssociationStore associationStore, PolicyStore policyStore) {
+    public LeaderElectedTask build(Vertx vertx, VerticleDeployer leaderHttpVerticleDeployer, BackendAssociationStore associationStore, PolicyStoreAPI policyStoreAPI) {
       Preconditions.checkNotNull(vertx);
       Preconditions.checkNotNull(leaderHttpVerticleDeployer);
       Preconditions.checkNotNull(associationStore);
-      Preconditions.checkNotNull(policyStore);
-      return new LeaderElectedTask(vertx, leaderHttpVerticleDeployer, backendDeployments, associationStore, policyStore);
+      Preconditions.checkNotNull(policyStoreAPI);
+      return new LeaderElectedTask(vertx, leaderHttpVerticleDeployer, backendDeployments, associationStore, policyStoreAPI);
     }
   }
 }

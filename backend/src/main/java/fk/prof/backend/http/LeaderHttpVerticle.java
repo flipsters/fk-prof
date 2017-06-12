@@ -3,12 +3,10 @@ package fk.prof.backend.http;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
-import com.google.protobuf.util.JsonFormat;
 import fk.prof.backend.ConfigManager;
 import fk.prof.backend.Configuration;
 import fk.prof.backend.exception.HttpFailure;
 import fk.prof.backend.model.association.BackendAssociationStore;
-import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.model.policy.PolicyStoreAPI;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.proto.PolicyDTO;
@@ -35,17 +33,14 @@ import java.io.IOException;
 public class LeaderHttpVerticle extends AbstractVerticle {
   private final Configuration config;
   private final BackendAssociationStore backendAssociationStore;
-  private final PolicyStore policyStore;
   private final MetricRegistry metricRegistry = SharedMetricRegistries.getOrCreate(ConfigManager.METRIC_REGISTRY);
   private final PolicyStoreAPI policyStoreAPI;
 
   public LeaderHttpVerticle(Configuration config,
                             BackendAssociationStore backendAssociationStore,
-                            PolicyStore policyStore,
                             PolicyStoreAPI policyStoreAPI) {
     this.config = config;
     this.backendAssociationStore = backendAssociationStore;
-    this.policyStore = policyStore;
     this.policyStoreAPI = policyStoreAPI;
   }
 
@@ -72,20 +67,14 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, apiPathForGetWork,
         BodyHandler.create().setBodyLimit(1024 * 100), this::handleGetWork);
 
-    //TODO: Rework this once policy store hack is removed
-    String apiPathForUpdatingPolicy = ApiPathConstants.LEADER_POST_POLICY + "/:appId/:clusterId/:procName";
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, apiPathForUpdatingPolicy,
-            BodyHandler.create().setBodyLimit(1024 * 100), this::handlePostPolicy);
-
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
-            ApiPathConstants.LEADER + ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, this::handleGetPolicy);
+        ApiPathConstants.LEADER + ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, this::handleGetPolicy);
     HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT,
-            ApiPathConstants.LEADER + ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
-            BodyHandler.create().setBodyLimit(1024), this::handleUpdatePolicy);
-    //TODO: Uncomment line below when above TODO is done
-//        HttpHelper.attachHandlersToRoute(router, HttpMethod.POST,
-//            ApiPathConstants.LEADER + ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
-//            BodyHandler.create().setBodyLimit(1024), this::handleCreatePolicy);
+        ApiPathConstants.LEADER + ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
+        BodyHandler.create().setBodyLimit(1024), this::handleUpdatePolicy);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.POST,
+        ApiPathConstants.LEADER + ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
+        BodyHandler.create().setBodyLimit(1024), this::handleCreatePolicy);
 
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER + ApiPathConstants.APPIDS, this::handleGetAppIds);
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER + ApiPathConstants.CLUSTERIDS_GIVEN_APPID, this::handleGetClusterIds);
@@ -221,7 +210,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
         context.response().setStatusCode(400);
         context.response().end("Calling backend=" + RecorderProtoUtil.assignedBackendCompactRepr(callingBackend) + " not assigned to process_group=" + RecorderProtoUtil.processGroupCompactRepr(processGroup));
       } else {
-        BackendDTO.RecordingPolicy recordingPolicy = this.policyStore.get(processGroup);
+        PolicyDTO.VersionedPolicyDetails recordingPolicy = this.policyStoreAPI.getVersionedPolicy(processGroup);
         if (recordingPolicy == null) {
           mtrPolicyMiss.mark();
           context.response().setStatusCode(400);
@@ -231,30 +220,6 @@ public class LeaderHttpVerticle extends AbstractVerticle {
         }
       }
     } catch (Exception ex) {
-      HttpFailure httpFailure = HttpFailure.failure(ex);
-      HttpHelper.handleFailure(context, httpFailure);
-    }
-  }
-
-  private void handlePostPolicy(RoutingContext context) {
-    try {
-      String appId = context.request().getParam("appId");
-      String clusterId = context.request().getParam("clusterId");
-      String procName = context.request().getParam("procName");
-
-      // for now expecting a json payload
-      String payload = context.getBodyAsString("utf-8");
-
-      BackendDTO.RecordingPolicy.Builder builder = BackendDTO.RecordingPolicy.newBuilder();
-      JsonFormat.parser().merge(payload, builder);
-
-      BackendDTO.RecordingPolicy policy = builder.build();
-      Recorder.ProcessGroup pg = Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).setProcName(procName).build();
-
-      policyStore.put(pg, policy);
-      context.response().end();
-    }
-    catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
       HttpHelper.handleFailure(context, httpFailure);
     }
@@ -278,7 +243,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
   private void handleCreatePolicy(RoutingContext context) {
     try {
       Recorder.ProcessGroup pG = parseProcessGroup(context);
-      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionPolicyFromPayload(context);
+      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionedPolicyFromPayload(context);
       policyStoreAPI.createVersionedPolicy(pG, versionedPolicyDetails).setHandler(result -> {
         if (result.succeeded()) {
           context.response().setStatusCode(201).end(result.result().toString());
@@ -296,7 +261,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
   private void handleUpdatePolicy(RoutingContext context) {
     try {
       Recorder.ProcessGroup pG = parseProcessGroup(context);
-      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionPolicyFromPayload(context);
+      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionedPolicyFromPayload(context);
       policyStoreAPI.updateVersionedPolicy(pG, versionedPolicyDetails).setHandler(result -> {
         if (result.succeeded()) {
           context.response().setStatusCode(204).end(result.result().toString());
@@ -306,13 +271,12 @@ public class LeaderHttpVerticle extends AbstractVerticle {
         }
       });
     } catch (Exception ex) {
-      System.out.println("EXCEPTION " + ex.getClass());
       HttpFailure httpFailure = HttpFailure.failure(ex);
       HttpHelper.handleFailure(context, httpFailure);
     }
   }
 
-  private PolicyDTO.VersionedPolicyDetails parseVersionPolicyFromPayload(RoutingContext context) throws Exception {
+  private PolicyDTO.VersionedPolicyDetails parseVersionedPolicyFromPayload(RoutingContext context) throws Exception {
     byte[] payload = context.getBody().getBytes();
     return PolicyDTO.VersionedPolicyDetails.parseFrom(payload);
   }
