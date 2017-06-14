@@ -25,7 +25,6 @@ before_script:
   - git clone https://github.com/efficient/libcuckoo.git
   - pushd libcuckoo && git checkout v0.2 
   - cmake .
-  - make
   - sudo make install
   - popd
   - git clone https://github.com/janmejay/medida.git
