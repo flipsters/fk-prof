@@ -73,6 +73,7 @@ enum WorkType {
   thread_sample_work = 1;
   monitor_contention_work = 2;
   monitor_wait_work = 3;
+  ctx_switch_trace_work = 4;
 }
 
 message Work {
@@ -81,6 +82,7 @@ message Work {
   optional ThreadSampleWork thd_sample = 3;
   optional MonitorContentionWork monitor_block = 4;
   optional MonitorWaitWork monitor_wait = 5;
+  optional CtxSwitchTraceWork ctx_switch_trace = 6;
 }
 
 message RecordingHeader {
@@ -98,6 +100,7 @@ message Wse {
   optional StackSampleWse thread_sample_entry = 4;
   optional MonitorReportWse monitor_contention_entry = 5;
   optional MonitorReportWse monitor_wait_entry = 6;
+  optional CtxSwitchTraceWse off_cpu_sample_entry = 7;
 }
 
 /* indexed data, incrementally sent  */
@@ -106,6 +109,7 @@ message IndexedData {
   repeated MethodInfo method_info = 2;
   repeated ThreadInfo thread_info = 3;
   repeated MonitorInfo monitor_info = 4;
+  repeated SyscallInfo syscall_info = 5;
 }
 
 message TraceContext {
@@ -148,6 +152,11 @@ message ThreadInfo {
 message MonitorInfo {
   required uint64 obj_id = 1;
   required string obj_str = 2;
+}
+
+message SyscallInfo {
+  required uint32 call_id = 1;
+  required string call_name = 2;
 }
 
 /* core work data */
@@ -215,6 +224,27 @@ message MonitorTrace {
   required StackSample stack = 1;
   required uint64 obj_id = 2;
   required uint64 delay_ns = 3;
+}
+
+message CtxSwitchTraceWork {
+  required uint64 min_latency_ns = 1;
+  required bool use_global_clock = 2;
+  required bool track_syscall = 3;
+  required bool track_wakeup_lag = 4;
+  optional uint32 serialization_flush_threshold = 5 [default = 100];
+}
+
+message CtxSwitchTraceWse {
+  repeated CtxSwitchTrace sample = 1;
+}
+
+message CtxSwitchTrace {
+  required StackSample stack = 1;
+  required uint64 latency_ns = 2;//both are inaccurate with local clock
+  optional uint64 wakeup_lag_ns = 3;
+  required bool voluntary = 4;
+  required bool migrated = 5;
+  optional uint32 syscall_id = 6;
 }
 
 message ProcessGroup {
