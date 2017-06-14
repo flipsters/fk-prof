@@ -76,6 +76,7 @@ public class RouterVerticleTest {
 
     @Before
     public void setUp(TestContext testContext) throws Exception {
+        final Async async = testContext.async();
         ProtoSerializers.registerSerializers(Json.mapper);
 
         UserapiConfigManager.setDefaultSystemProperties();
@@ -85,31 +86,36 @@ public class RouterVerticleTest {
         client = vertx.createHttpClient();
 
         VerticleDeployer verticleDeployer = new UserapiHttpVerticleDeployer(vertx, config, profileDiscoveryAPI);
-        verticleDeployer.deploy();
-
-        //Wait for some time for deployment to complete
-        Thread.sleep(1000);
+        CompositeFuture future = verticleDeployer.deploy();
+        future.setHandler(aR -> {
+                if (aR.succeeded()) {
+                    async.complete();
+                } else {
+                    testContext.fail();
+                }
+            }
+        );
     }
 
     @After
     public void tearDown(TestContext testContext) throws Exception {
-      vertx.close(testContext.asyncAssertSuccess());
+        vertx.close(testContext.asyncAssertSuccess());
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 5000)
     public void TestRequestTimeout(TestContext testContext) throws Exception {
         final Async async = testContext.async();
         String pPrefixSet = "(^$|a|ap|app|app1)";
         doAnswer(invocation -> {
-                    Future<Set<String>> future = invocation.getArgument(0);
-                    CompletableFuture.supplyAsync(() -> {
-                        try {
-                            Thread.sleep(MORE_THAN_TIMEOUT);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        return Sets.newSet(P_APP_ID);
-                    }).whenComplete((result ,error) -> completeFuture(result, error, future));
+            Future<Set<String>> future = invocation.getArgument(0);
+            CompletableFuture.supplyAsync(() -> {
+                try {
+                    Thread.sleep(MORE_THAN_TIMEOUT);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return Sets.newSet(P_APP_ID);
+            }).whenComplete((result, error) -> completeFuture(result, error, future));
             return null;
         }).when(profileDiscoveryAPI).getAppIdsWithPrefix(any(), any(), ArgumentMatchers.matches(pPrefixSet));
 
@@ -122,7 +128,7 @@ public class RouterVerticleTest {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 5000)
     public void TestGetAppsRoute(TestContext testContext) throws Exception {
         final Async async = testContext.async();
         String pPrefixSet = "(^$|a|ap|app|app1)";
@@ -171,7 +177,7 @@ public class RouterVerticleTest {
 
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 5000)
     public void TestHealthcheckRoute(TestContext testContext) throws Exception {
         final Async async = testContext.async();
         client.getNow(port, "localhost", "/health", httpClientResponse -> {
@@ -180,7 +186,7 @@ public class RouterVerticleTest {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 5000)
     public void TestGetClustersRoute(TestContext testContext) throws Exception {
         final Async async = testContext.async();
         String pPrefixSet = "(^$|c|cl|clu|clus|clust|cluste|cluster|cluster1)";
@@ -263,7 +269,7 @@ public class RouterVerticleTest {
         CompositeFuture.all(pAndCorrectPrefix, pAndIncorrectPrefix, pAndNoPrefix, npAndPPrefix, npAndNpPrefix, npAndNoPrefix).setHandler(compositeFutureAsyncResult -> async.complete());
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 5000)
     public void TestGetProcRoute(TestContext testContext) throws Exception {
         final Async async = testContext.async();
         String pPrefixSet = "(^$|p|pr|pro|proc|proce|proces|process|process1)";
@@ -353,7 +359,7 @@ public class RouterVerticleTest {
 
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 5000)
     public void TestGetProfilesRoute(TestContext testContext) throws Exception {
         final Async async = testContext.async();
 
@@ -401,12 +407,12 @@ public class RouterVerticleTest {
         client.getNow(port, "localhost", "/profiles/" + P_APP_ID + URL_SEPARATOR + P_CLUSTER_ID + URL_SEPARATOR + P_PROC, httpClientResponse -> {
             testContext.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.BAD_REQUEST.code());
             pAndNoPrefix.complete();
-            });
+        });
 
         CompositeFuture.all(pAndCorrectPrefix, pAndIncorrectPrefix, pAndNoPrefix).setHandler(compositeFutureAsyncResult -> async.complete());
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 5000)
     public void TestGetProfilesRoute_shouldReturnFailedProfilesIfThereIsExceptionWhenLoadingFiles(TestContext testContext) throws Exception {
         final Async async = testContext.async();
 
@@ -449,10 +455,9 @@ public class RouterVerticleTest {
     }
 
     private <T> void completeFuture(T result, Throwable error, Future<T> future) {
-        if(error == null) {
+        if (error == null) {
             future.complete(result);
-        }
-        else {
+        } else {
             future.fail(error);
         }
     }
