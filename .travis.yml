@@ -10,7 +10,7 @@ dist: trusty
 
 install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y cmake libunittest++-dev libboost-all-dev libprotobuf-dev protobuf-compiler
+  - sudo apt-get install -y cmake libunittest++-dev libboost-all-dev libprotobuf-dev protobuf-compiler libpthread-stubs0-dev
 
 before_script:
   - git clone https://github.com/efficient/libcuckoo.git
