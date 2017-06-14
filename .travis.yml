@@ -1,4 +1,4 @@
-language: java
+language: java,c
 jdk:
   - oraclejdk8
 
@@ -10,7 +10,7 @@ dist: trusty
 
 install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y cmake libunittest++-dev libboost-all-dev libprotobuf-dev protobuf-compiler libpthread-stubs0-dev
+  - sudo apt-get install -y cmake libunittest++-dev libboost-all-dev libprotobuf-dev protobuf-compiler
 
 before_script:
   - git clone https://github.com/efficient/libcuckoo.git
