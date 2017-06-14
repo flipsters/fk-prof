@@ -14,7 +14,7 @@ install:
 
 before_script:
   - git clone https://github.com/efficient/libcuckoo.git
-  - pushd libcuckoo && git checkout v0.2 && sed 's/LANGUAGES CXX/LANGUAGES C CXX/g' CMakeLists.txt &&cmake . && sudo make install && popd
+  - pushd libcuckoo && git checkout v0.2 && sed 's/LANGUAGES CXX/LANGUAGES C CXX/g' CMakeLists.txt && cmake . && sudo make install && popd
   - git clone https://github.com/janmejay/medida.git
   - pushd medida && cmake CMakeLists.txt && sudo make install && popd
   - git clone https://github.com/google/cityhash.git
