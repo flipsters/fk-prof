@@ -4,6 +4,8 @@ import com.amazonaws.auth.AnonymousAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.mashape.unirest.http.HttpResponse;
+import fk.prof.backend.ConfigManager;
+import fk.prof.backend.Configuration;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.recorder.main.Burn20And80PctCpu;
 import fk.prof.recorder.main.Burn50And50PctCpu;
@@ -25,6 +27,7 @@ import org.junit.*;
 import recording.Recorder;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -404,6 +407,9 @@ public class E2EIntegrationTest {
     }
 
     private static void ensureZkRootnodeAndData() throws Exception {
+        Path configFilePath = FileResolver.resourceFile("/conf/backend.json");
+        Configuration configuration = ConfigManager.loadConfig(configFilePath.toAbsolutePath().toString());
+        String policyStorePath = "/" + configuration.getPolicyBaseDir();
         try {
             curator.create().forPath("/" + zkNamespace);
         } catch (KeeperException.NodeExistsException ex) {

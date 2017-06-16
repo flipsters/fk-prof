@@ -198,7 +198,7 @@ public class BackendManager {
   }
 
   private PolicyStoreAPI createPolicyStoreAPI(Vertx vertx, CuratorFramework curatorClient) {
-    return new ZookeeperBasedPolicyStoreAPI(vertx, curatorClient, config.policyBaseDir, config.policyVersion);
+    return new ZookeeperBasedPolicyStoreAPI(vertx, curatorClient, config.getPolicyBaseDir(), config.getPolicyVersion());
   }
 
   public static Runnable createLeaderElectedTask(Vertx vertx, VerticleDeployer leaderHttpVerticleDeployer, List<String> backendDeployments,

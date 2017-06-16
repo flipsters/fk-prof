@@ -12,13 +12,13 @@ import fk.prof.backend.aggregator.AggregationWindow;
 import fk.prof.backend.exception.AggregationFailure;
 import fk.prof.backend.exception.BadRequestException;
 import fk.prof.backend.exception.HttpFailure;
-import fk.prof.backend.model.aggregation.AggregationWindowDiscoveryContext;
 import fk.prof.backend.model.assignment.ProcessGroupContextForPolling;
 import fk.prof.backend.model.assignment.ProcessGroupDiscoveryContext;
 import fk.prof.backend.model.election.LeaderReadContext;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.request.profile.RecordedProfileProcessor;
 import fk.prof.backend.request.profile.impl.SharedMapBasedSingleProcessingOfProfileGate;
+import fk.prof.backend.model.aggregation.AggregationWindowDiscoveryContext;
 import fk.prof.backend.util.ProtoUtil;
 import fk.prof.backend.util.proto.RecorderProtoUtil;
 import fk.prof.metrics.MetricName;
@@ -40,6 +40,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import recording.Recorder;
 
+import java.io.IOException;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -91,6 +92,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
   private Router setupRouting() {
     Router router = Router.router(vertx);
     router.route().handler(LoggerHandler.create());
+
     HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.AGGREGATOR_POST_PROFILE,
         this::handlePostProfile);
 
