@@ -16,6 +16,7 @@
 #include <random>
 #include "test_helpers.hh"
 #include <algorithm>
+#include <mapping_parser.hh>
 
 namespace std {
     template <> struct hash<std::tuple<std::int64_t, jint>> {
@@ -194,9 +195,11 @@ bool mark_default_ctx = false;
 std::random_device rd;
 std::uniform_int_distribution<int> dist(0, 10000);
 
+std::unique_ptr<Backtracer> b_tracer{nullptr};
+
 void bt_pusher() {
     STATIC_ARRAY(frames, NativeFrame, native_bt_max_depth, native_bt_max_depth);
-    auto len = Stacktraces::fill_backtrace(frames, native_bt_max_depth);
+    auto len = b_tracer->fill_in(frames, native_bt_max_depth);
     bt_q->push(frames, len, bt_err, mark_default_ctx, bt_tinfo);
 }
 
@@ -218,6 +221,8 @@ void push_native_backtrace(ThreadBucket* t, BacktraceError err, CircularQueue& q
 
 TEST(ProfileSerializer__should_write_cpu_samples_native_and_java) {
     TestEnv _;
+    auto map_file = MRegion::file();
+    b_tracer.reset(new Backtracer(map_file));
     BlockingRingBuffer buff(1024 * 1024);
     std::shared_ptr<RawWriter> raw_w_ptr(new AccumulatingRawWriter(buff));
     Buff pw_buff;
@@ -412,6 +417,8 @@ TEST(ProfileSerializer__should_write_cpu_samples_native_and_java) {
 
 TEST(ProfileSerializer__should_write_cpu_samples__with_scoped_ctx) {
     TestEnv _;
+    auto map_file = MRegion::file();
+    b_tracer.reset(new Backtracer(map_file));
     BlockingRingBuffer buff(1024 * 1024);
     std::shared_ptr<RawWriter> raw_w_ptr(new AccumulatingRawWriter(buff));
     Buff pw_buff;
@@ -537,6 +544,8 @@ TEST(ProfileSerializer__should_write_cpu_samples__with_scoped_ctx) {
 
 TEST(ProfileSerializer__should_auto_flush__at_buffering_threshold) {
     TestEnv _;
+    auto map_file = MRegion::file();
+    b_tracer.reset(new Backtracer(map_file));
     BlockingRingBuffer buff(1024 * 1024);
     std::shared_ptr<RawWriter> raw_w_ptr(new AccumulatingRawWriter(buff));
     Buff pw_buff;
@@ -651,6 +660,8 @@ TEST(ProfileSerializer__should_auto_flush__at_buffering_threshold) {
 
 TEST(ProfileSerializer__should_auto_flush_correctly__after_first_flush___and_should_incrementally_push___index_data_mapping) {
     TestEnv _;
+    auto map_file = MRegion::file();
+    b_tracer.reset(new Backtracer(map_file));
     BlockingRingBuffer buff(1024 * 1024);
     std::shared_ptr<RawWriter> raw_w_ptr(new AccumulatingRawWriter(buff));
     Buff pw_buff;
@@ -828,6 +839,8 @@ TEST(ProfileSerializer__should_auto_flush_correctly__after_first_flush___and_sho
 
 TEST(ProfileSerializer__should_auto_flush_correctly__after_first_flush___and_should_incrementally_push___index_data_mapping_for_native_frames_too) {
     TestEnv _;
+    auto map_file = MRegion::file();
+    b_tracer.reset(new Backtracer(map_file));
     BlockingRingBuffer buff(1024 * 1024);
     std::shared_ptr<RawWriter> raw_w_ptr(new AccumulatingRawWriter(buff));
     Buff pw_buff;
@@ -985,6 +998,8 @@ TEST(ProfileSerializer__should_auto_flush_correctly__after_first_flush___and_sho
 
 TEST(ProfileSerializer__should_write_cpu_samples__with_forte_error) {
     TestEnv _;
+    auto map_file = MRegion::file();
+    b_tracer.reset(new Backtracer(map_file));
     BlockingRingBuffer buff(1024 * 1024);
     std::shared_ptr<RawWriter> raw_w_ptr(new AccumulatingRawWriter(buff));
     Buff pw_buff;
@@ -1080,6 +1095,8 @@ TEST(ProfileSerializer__should_write_cpu_samples__with_forte_error) {
 
 TEST(ProfileSerializer__should_snip_short__very_long_cpu_sample_backtraces) {
     TestEnv _;
+    auto map_file = MRegion::file();
+    b_tracer.reset(new Backtracer(map_file));
     BlockingRingBuffer buff(1024 * 1024);
     std::shared_ptr<RawWriter> raw_w_ptr(new AccumulatingRawWriter(buff));
     Buff pw_buff;
@@ -1199,6 +1216,8 @@ TEST(ProfileSerializer__should_snip_short__very_long_cpu_sample_backtraces) {
 
 void play_last_flush_scenario(recording::Wse& wse1, int additional_traces) {
     BlockingRingBuffer buff(1024 * 1024);
+    auto map_file = MRegion::file();
+    b_tracer.reset(new Backtracer(map_file));
     std::shared_ptr<RawWriter> raw_w_ptr(new AccumulatingRawWriter(buff));
     Buff pw_buff;
 
@@ -1336,6 +1355,8 @@ void play_last_flush_scenario(recording::Wse& wse1, int additional_traces) {
 
 TEST(ProfileSerializer__should_report_unflushed_trace__and_EOF_after_last_flush) {
     TestEnv _;
+    auto map_file = MRegion::file();
+    b_tracer.reset(new Backtracer(map_file));
     recording::Wse last;
     play_last_flush_scenario(last, 1);
 
@@ -1374,6 +1395,8 @@ TEST(ProfileSerializer__should_report_unflushed_trace__and_EOF_after_last_flush)
 
 TEST(ProfileSerializer__should_report_all_user_tracepoints_that_were_never_reported_before__and_EOF_after_last_flush) {
     TestEnv _;
+    auto map_file = MRegion::file();
+    b_tracer.reset(new Backtracer(map_file));
     recording::Wse last;
     play_last_flush_scenario(last, 0);
 

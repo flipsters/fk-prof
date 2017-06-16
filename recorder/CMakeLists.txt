@@ -179,6 +179,8 @@ set(TEST_FILES
     ${SRC_TEST}/test_syslog_tsdb_metric_formatter.cc
     ${SRC_TEST}/test_unique_readsafe_ptr.cc
     ${SRC_TEST}/test_site_resolver.cc
+    ${SRC_TEST}/test_backtracer.cc
+    ${SRC_TEST}/mapping_helper.cc
     ${SRC_TEST}/test.cc)
 
 set(TEST_UTIL_FILES
