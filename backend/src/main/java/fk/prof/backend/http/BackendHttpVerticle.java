@@ -109,6 +109,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.APPIDS, this::proxyToLeader);
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.CLUSTERIDS_GIVEN_APPID, this::proxyToLeader);
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.PROCNAMES_GIVEN_APPID_CLUSTERID, this::proxyToLeader);
+
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, this::proxyToLeader);
     HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT, ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
             BodyHandler.create().setBodyLimit(1024 * 10), this::proxyToLeader);

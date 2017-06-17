@@ -70,6 +70,10 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, apiPathForGetWork,
         BodyHandler.create().setBodyLimit(1024 * 100), this::handleGetWork);
 
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER + ApiPathConstants.APPIDS, this::handleGetAppIds);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER + ApiPathConstants.CLUSTERIDS_GIVEN_APPID, this::handleGetClusterIds);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER + ApiPathConstants.PROCNAMES_GIVEN_APPID_CLUSTERID, this::handleGetProcNames);
+
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
         ApiPathConstants.LEADER + ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, this::handleGetPolicy);
     HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT,
@@ -78,10 +82,6 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     HttpHelper.attachHandlersToRoute(router, HttpMethod.POST,
         ApiPathConstants.LEADER + ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
         BodyHandler.create().setBodyLimit(1024), this::handleCreatePolicy);
-
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER + ApiPathConstants.APPIDS, this::handleGetAppIds);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER + ApiPathConstants.CLUSTERIDS_GIVEN_APPID, this::handleGetClusterIds);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER + ApiPathConstants.PROCNAMES_GIVEN_APPID_CLUSTERID, this::handleGetProcNames);
 
     return router;
   }
