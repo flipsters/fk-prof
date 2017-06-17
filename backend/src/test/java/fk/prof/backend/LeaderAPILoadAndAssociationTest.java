@@ -5,7 +5,7 @@ import fk.prof.backend.deployer.impl.LeaderHttpVerticleDeployer;
 import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator;
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
-import fk.prof.backend.model.policy.PolicyStoreAPI;
+import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.util.ProtoUtil;
 import io.vertx.core.CompositeFuture;
@@ -74,8 +74,8 @@ public class LeaderAPILoadAndAssociationTest {
         config.getLoadReportItvlSecs(),
         config.getAssociationsConfig().getLoadMissTolerance(),
         new ProcessGroupCountBasedBackendComparator());
-    PolicyStoreAPI policyStoreAPI = mock(PolicyStoreAPI.class);
-    VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStoreAPI);
+    PolicyStore policyStore = mock(PolicyStore.class);
+    VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore);
     leaderHttpDeployer.deploy();
     //Wait for some time for deployment to complete
     Thread.sleep(1000);

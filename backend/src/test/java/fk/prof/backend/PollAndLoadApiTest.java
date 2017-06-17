@@ -15,7 +15,7 @@ import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator;
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
-import fk.prof.backend.model.policy.PolicyStoreAPI;
+import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.model.slot.WorkSlotPool;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.util.BitOperationUtil;
@@ -64,7 +64,7 @@ public class PollAndLoadApiTest {
   private WorkSlotPool workSlotPool;
   private BackendAssociationStore backendAssociationStore;
   private AggregationWindowStorage aggregationWindowStorage;
-  private PolicyStoreAPI policyStoreAPI;
+  private PolicyStore policyStore;
 
   private final int thresholdForDefunctRecorderInSecs = 4;
 
@@ -107,11 +107,11 @@ public class PollAndLoadApiTest {
         context.fail(ar.result().cause());
       }
       try {
-        policyStoreAPI = mock(PolicyStoreAPI.class);
-        VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, this.config, backendAssociationStore, policyStoreAPI);
+        policyStore = mock(PolicyStore.class);
+        VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, this.config, backendAssociationStore, policyStore);
 
         CountDownLatch latch = new CountDownLatch(1);
-        Runnable leaderElectedTask = LeaderElectedTask.newBuilder().build(vertx, leaderHttpVerticleDeployer, backendAssociationStore, policyStoreAPI);
+        Runnable leaderElectedTask = LeaderElectedTask.newBuilder().build(vertx, leaderHttpVerticleDeployer, backendAssociationStore, policyStore);
         Runnable leaderElectedTaskWithLatch = () -> {
           leaderElectedTask.run();
           latch.countDown();
@@ -196,9 +196,9 @@ public class PollAndLoadApiTest {
   public void testFetchForWorkForAggregationWindow(TestContext context) throws Exception {
     final Async async = context.async();
     Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId("1").setCluster("1").setProcName("1").build();
-    policyStoreAPI.createVersionedPolicy(processGroup, MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),-1));
+    policyStore.createVersionedPolicy(processGroup, MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),-1));
     CountDownLatch latch = new CountDownLatch(1);
-    when(policyStoreAPI.getVersionedPolicy(processGroup)).then(invocationOnMock -> {
+    when(policyStore.getVersionedPolicy(processGroup)).then(invocationOnMock -> {
       latch.countDown();
       return invocationOnMock.callRealMethod();
     });
@@ -236,7 +236,7 @@ public class PollAndLoadApiTest {
   public void testAggregationWindowSetupAndPollResponse(TestContext context) throws Exception {
     final Async async = context.async();
     Recorder.ProcessGroup processGroup = Recorder.ProcessGroup.newBuilder().setAppId("1").setCluster("1").setProcName("1").build();
-    policyStoreAPI.createVersionedPolicy(processGroup, MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),-1));
+    policyStore.createVersionedPolicy(processGroup, MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),-1));
 
     Recorder.PollReq pollReq = Recorder.PollReq.newBuilder()
         .setRecorderInfo(buildRecorderInfo(processGroup, 1))

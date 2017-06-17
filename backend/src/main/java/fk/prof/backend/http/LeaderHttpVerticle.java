@@ -7,7 +7,7 @@ import fk.prof.backend.ConfigManager;
 import fk.prof.backend.Configuration;
 import fk.prof.backend.exception.HttpFailure;
 import fk.prof.backend.model.association.BackendAssociationStore;
-import fk.prof.backend.model.policy.PolicyStoreAPI;
+import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.proto.PolicyDTO;
 import fk.prof.backend.util.ProtoUtil;
@@ -34,14 +34,14 @@ public class LeaderHttpVerticle extends AbstractVerticle {
   private final Configuration config;
   private final BackendAssociationStore backendAssociationStore;
   private final MetricRegistry metricRegistry = SharedMetricRegistries.getOrCreate(ConfigManager.METRIC_REGISTRY);
-  private final PolicyStoreAPI policyStoreAPI;
+  private final PolicyStore policyStore;
 
   public LeaderHttpVerticle(Configuration config,
                             BackendAssociationStore backendAssociationStore,
-                            PolicyStoreAPI policyStoreAPI) {
+                            PolicyStore policyStore) {
     this.config = config;
     this.backendAssociationStore = backendAssociationStore;
-    this.policyStoreAPI = policyStoreAPI;
+    this.policyStore = policyStore;
   }
 
   @Override
@@ -89,7 +89,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
   private void handleGetAppIds(RoutingContext context) {
     try {
       final String prefix = context.request().getParam("prefix");
-      context.response().end(Json.encode(policyStoreAPI.getAppIds(prefix)));
+      context.response().end(Json.encode(policyStore.getAppIds(prefix)));
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
       HttpHelper.handleFailure(context, httpFailure);
@@ -103,7 +103,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
       if (prefix == null) {
         prefix = "";
       }
-      context.response().end(Json.encode(policyStoreAPI.getClusterIds(appId, prefix)));
+      context.response().end(Json.encode(policyStore.getClusterIds(appId, prefix)));
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
       HttpHelper.handleFailure(context, httpFailure);
@@ -118,7 +118,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
       if (prefix == null) {
         prefix = "";
       }
-      context.response().end(Json.encode(policyStoreAPI.getProcNames(appId, clusterId, prefix)));
+      context.response().end(Json.encode(policyStore.getProcNames(appId, clusterId, prefix)));
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
       HttpHelper.handleFailure(context, httpFailure);
@@ -213,7 +213,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
         context.response().setStatusCode(400);
         context.response().end("Calling backend=" + RecorderProtoUtil.assignedBackendCompactRepr(callingBackend) + " not assigned to process_group=" + RecorderProtoUtil.processGroupCompactRepr(processGroup));
       } else {
-        PolicyDTO.VersionedPolicyDetails recordingPolicy = this.policyStoreAPI.getVersionedPolicy(processGroup);
+        PolicyDTO.VersionedPolicyDetails recordingPolicy = this.policyStore.getVersionedPolicy(processGroup);
         if (recordingPolicy == null) {
           mtrPolicyMiss.mark();
           context.response().setStatusCode(400);
@@ -231,7 +231,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
   private void handleGetPolicy(RoutingContext context) {
     try {
       Recorder.ProcessGroup pG = parseProcessGroup(context);
-      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = policyStoreAPI.getVersionedPolicy(pG);
+      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = policyStore.getVersionedPolicy(pG);
       if (versionedPolicyDetails == null) {
         context.response().setStatusCode(400).end("Policy not found for ProcessGroup " + RecorderProtoUtil.processGroupCompactRepr(pG));
       } else {
@@ -247,7 +247,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     try {
       Recorder.ProcessGroup pG = parseProcessGroup(context);
       PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionedPolicyFromPayload(context);
-      policyStoreAPI.createVersionedPolicy(pG, versionedPolicyDetails).setHandler(result -> {
+      policyStore.createVersionedPolicy(pG, versionedPolicyDetails).setHandler(result -> {
         if (result.succeeded()) {
           context.response().setStatusCode(201).end(result.result().toString());
         } else {
@@ -265,7 +265,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     try {
       Recorder.ProcessGroup pG = parseProcessGroup(context);
       PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionedPolicyFromPayload(context);
-      policyStoreAPI.updateVersionedPolicy(pG, versionedPolicyDetails).setHandler(result -> {
+      policyStore.updateVersionedPolicy(pG, versionedPolicyDetails).setHandler(result -> {
         if (result.succeeded()) {
           context.response().setStatusCode(204).end(result.result().toString());
         } else {

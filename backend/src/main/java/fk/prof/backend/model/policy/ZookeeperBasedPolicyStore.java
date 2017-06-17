@@ -28,8 +28,8 @@ import static fk.prof.backend.util.ZookeeperUtil.DELIMITER;
  * Zookeeper based implementation of the policy store
  * Created by rohit.patiyal on 18/05/17.
  */
-public class ZookeeperBasedPolicyStoreAPI implements PolicyStoreAPI {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ZookeeperBasedPolicyStoreAPI.class);
+public class ZookeeperBasedPolicyStore implements PolicyStore {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ZookeeperBasedPolicyStore.class);
 
     private final CuratorFramework curatorClient;
     private final String policyPath;
@@ -39,7 +39,7 @@ public class ZookeeperBasedPolicyStoreAPI implements PolicyStoreAPI {
     private final Map<String, Map<String, ConcurrentHashMap.KeySetView<String, Boolean>>> processGroupHierarchy = new ConcurrentHashMap<>();
     private boolean initialized;
 
-    public ZookeeperBasedPolicyStoreAPI(Vertx vertx, CuratorFramework curatorClient, String policyBaseDir, String policyVersion) {
+    public ZookeeperBasedPolicyStore(Vertx vertx, CuratorFramework curatorClient, String policyBaseDir, String policyVersion) {
         if (vertx == null) {
             throw new IllegalArgumentException("Vertx instance is required");
         }

@@ -18,8 +18,8 @@ import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator;
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
-import fk.prof.backend.model.policy.PolicyStoreAPI;
-import fk.prof.backend.model.policy.ZookeeperBasedPolicyStoreAPI;
+import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.model.policy.ZookeeperBasedPolicyStore;
 import fk.prof.backend.model.slot.WorkSlotPool;
 import fk.prof.metrics.MetricName;
 import fk.prof.storage.AsyncStorage;
@@ -116,9 +116,9 @@ public class BackendManager {
 
           BackendAssociationStore backendAssociationStore = createBackendAssociationStore(vertx, curatorClient);
 
-          PolicyStoreAPI policyStoreAPI = createPolicyStoreAPI(vertx, curatorClient);
-          VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStoreAPI);
-          Runnable leaderElectedTask = createLeaderElectedTask(vertx, leaderHttpVerticleDeployer, backendDeployments, backendAssociationStore, policyStoreAPI);
+          PolicyStore policyStore = createPolicyStoreAPI(vertx, curatorClient);
+          VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore);
+          Runnable leaderElectedTask = createLeaderElectedTask(vertx, leaderHttpVerticleDeployer, backendDeployments, backendAssociationStore, policyStore);
 
           VerticleDeployer leaderElectionParticipatorVerticleDeployer = new LeaderElectionParticipatorVerticleDeployer(
               vertx, config, curatorClient, leaderElectedTask);
@@ -197,15 +197,15 @@ public class BackendManager {
         loadReportIntervalInSeconds, loadMissTolerance, new ProcessGroupCountBasedBackendComparator());
   }
 
-  private PolicyStoreAPI createPolicyStoreAPI(Vertx vertx, CuratorFramework curatorClient) {
-    return new ZookeeperBasedPolicyStoreAPI(vertx, curatorClient, config.getPolicyBaseDir(), config.getPolicyVersion());
+  private PolicyStore createPolicyStoreAPI(Vertx vertx, CuratorFramework curatorClient) {
+    return new ZookeeperBasedPolicyStore(vertx, curatorClient, config.getPolicyBaseDir(), config.getPolicyVersion());
   }
 
   public static Runnable createLeaderElectedTask(Vertx vertx, VerticleDeployer leaderHttpVerticleDeployer, List<String> backendDeployments,
-                                                 BackendAssociationStore associationStore, PolicyStoreAPI policyStoreAPI) {
+                                                 BackendAssociationStore associationStore, PolicyStore policyStore) {
     LeaderElectedTask.Builder builder = LeaderElectedTask.newBuilder();
     builder.disableBackend(backendDeployments);
-    return builder.build(vertx, leaderHttpVerticleDeployer, associationStore, policyStoreAPI);
+    return builder.build(vertx, leaderHttpVerticleDeployer, associationStore, policyStore);
   }
 
   private MetricsOptions buildMetricsOptions() {

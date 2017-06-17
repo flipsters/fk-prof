@@ -33,12 +33,12 @@ import static fk.prof.backend.util.ZookeeperUtil.DELIMITER;
  * Created by rohit.patiyal on 09/03/17.
  */
 @RunWith(VertxUnitRunner.class)
-public class ZookeeperBasedPolicyStoreAPITest {
+public class ZookeeperBasedPolicyStoreTest {
     private static final String POLICY_BASEDIR = "policy";
     private static final String POLICY_VERSION = "v0001";
     private TestingServer testingServer;
     private CuratorFramework curatorClient;
-    private ZookeeperBasedPolicyStoreAPI policyStoreAPI;
+    private ZookeeperBasedPolicyStore policyStoreAPI;
     private Vertx vertx;
 
     @Before
@@ -50,7 +50,7 @@ public class ZookeeperBasedPolicyStoreAPITest {
         curatorClient.blockUntilConnected(10, TimeUnit.SECONDS);
         curatorClient.create().forPath(DELIMITER + POLICY_BASEDIR);
         vertx = Vertx.vertx();
-        policyStoreAPI = new ZookeeperBasedPolicyStoreAPI(vertx, curatorClient, POLICY_BASEDIR, POLICY_VERSION);
+        policyStoreAPI = new ZookeeperBasedPolicyStore(vertx, curatorClient, POLICY_BASEDIR, POLICY_VERSION);
     }
 
     @After
@@ -324,7 +324,7 @@ public class ZookeeperBasedPolicyStoreAPITest {
             }
         });
         CompositeFuture.all(future1, future2).setHandler(event -> {
-            ZookeeperBasedPolicyStoreAPI anotherPolicyStore = new ZookeeperBasedPolicyStoreAPI(vertx, curatorClient, POLICY_BASEDIR, POLICY_VERSION);
+            ZookeeperBasedPolicyStore anotherPolicyStore = new ZookeeperBasedPolicyStore(vertx, curatorClient, POLICY_BASEDIR, POLICY_VERSION);
             try {
                 //GET RETURNS NULL RESULTS FROM ANOTHERSTORE BEFORE INIT
                 PolicyDTO.VersionedPolicyDetails got1 = anotherPolicyStore.getVersionedPolicy(MockPolicyData.mockProcessGroups.get(0));

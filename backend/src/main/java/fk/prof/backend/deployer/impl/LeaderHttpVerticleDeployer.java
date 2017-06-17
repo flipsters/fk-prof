@@ -5,7 +5,7 @@ import fk.prof.backend.Configuration;
 import fk.prof.backend.deployer.VerticleDeployer;
 import fk.prof.backend.http.LeaderHttpVerticle;
 import fk.prof.backend.model.association.BackendAssociationStore;
-import fk.prof.backend.model.policy.PolicyStoreAPI;
+import fk.prof.backend.model.policy.PolicyStore;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
@@ -13,15 +13,15 @@ import io.vertx.core.Vertx;
 public class LeaderHttpVerticleDeployer extends VerticleDeployer {
 
   private final BackendAssociationStore backendAssociationStore;
-  private final PolicyStoreAPI policyStoreAPI;
+  private final PolicyStore policyStore;
 
   public LeaderHttpVerticleDeployer(Vertx vertx,
                                     Configuration config,
                                     BackendAssociationStore backendAssociationStore,
-                                    PolicyStoreAPI policyStoreAPI) {
+                                    PolicyStore policyStore) {
     super(vertx, config);
     this.backendAssociationStore = Preconditions.checkNotNull(backendAssociationStore);
-    this.policyStoreAPI = Preconditions.checkNotNull(policyStoreAPI);
+    this.policyStore = Preconditions.checkNotNull(policyStore);
   }
 
   @Override
@@ -31,6 +31,6 @@ public class LeaderHttpVerticleDeployer extends VerticleDeployer {
 
   @Override
   protected Verticle buildVerticle() {
-    return new LeaderHttpVerticle(getConfig(), backendAssociationStore, policyStoreAPI);
+    return new LeaderHttpVerticle(getConfig(), backendAssociationStore, policyStore);
   }
 }

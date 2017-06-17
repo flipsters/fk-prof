@@ -9,7 +9,7 @@ import fk.prof.backend.exception.PolicyException;
 import fk.prof.backend.http.ApiPathConstants;
 import fk.prof.backend.mock.MockPolicyData;
 import fk.prof.backend.model.association.BackendAssociationStore;
-import fk.prof.backend.model.policy.PolicyStoreAPI;
+import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.proto.PolicyDTO;
 import fk.prof.backend.util.ProtoUtil;
 import fk.prof.backend.util.proto.RecorderProtoUtil;
@@ -38,7 +38,7 @@ import static org.mockito.Mockito.when;
  */
 @RunWith(VertxUnitRunner.class)
 public class LeaderPolicyAPITest {
-    private PolicyStoreAPI policyStoreAPI;
+    private PolicyStore policyStore;
     private Vertx vertx;
     private HttpClient client;
     private int leaderPort;
@@ -52,9 +52,9 @@ public class LeaderPolicyAPITest {
         leaderPort = config.leaderHttpServerOpts.getPort();
 
         BackendAssociationStore backendAssociationStore = mock(BackendAssociationStore.class);
-        policyStoreAPI = mock(PolicyStoreAPI.class);
+        policyStore = mock(PolicyStore.class);
         client = vertx.createHttpClient();
-        VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStoreAPI);
+        VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore);
 
         leaderHttpVerticleDeployer.deploy();
         //Wait for some time for deployment to complete
@@ -65,9 +65,9 @@ public class LeaderPolicyAPITest {
     public void testGetPolicy(TestContext context) throws Exception {
         final Async async = context.async();
         //PRESENT
-        when(policyStoreAPI.getVersionedPolicy(MockPolicyData.mockProcessGroups.get(0))).thenAnswer(invocation -> MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0));
+        when(policyStore.getVersionedPolicy(MockPolicyData.mockProcessGroups.get(0))).thenAnswer(invocation -> MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0));
         //NOT PRESENT
-        when(policyStoreAPI.getVersionedPolicy(MockPolicyData.mockProcessGroups.get(1))).thenAnswer(invocation -> null);
+        when(policyStore.getVersionedPolicy(MockPolicyData.mockProcessGroups.get(1))).thenAnswer(invocation -> null);
 
         CompletableFuture<Void> f1 = new CompletableFuture<>();
         CompletableFuture<Void> f2 = new CompletableFuture<>();
@@ -98,13 +98,13 @@ public class LeaderPolicyAPITest {
     @Test
     public void testCreatePolicy(TestContext context) throws Exception {
         final Async async = context.async();
-        when(policyStoreAPI.createVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), -1)))
+        when(policyStore.createVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), -1)))
                 .thenAnswer(invocation -> Future.succeededFuture());
 
-        when(policyStoreAPI.createVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), null))
+        when(policyStore.createVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), null))
                 .thenAnswer(invocation -> Future.failedFuture(new IllegalArgumentException("PolicyDetails is required")));
 
-        when(policyStoreAPI.createVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0)))
+        when(policyStore.createVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0)))
                 .thenAnswer(invocation -> {
                     PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = invocation.getArgument(1);
                     return Future.failedFuture(new PolicyException("Initial policy version must be -1, your version = " + versionedPolicyDetails.getVersion(), false));
@@ -143,13 +143,13 @@ public class LeaderPolicyAPITest {
     @Test
     public void testUpdatePolicy(TestContext context) throws Exception {
         final Async async = context.async();
-        when(policyStoreAPI.updateVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0)))
+        when(policyStore.updateVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0)))
                 .thenAnswer(invocation -> Future.succeededFuture());
 
-        when(policyStoreAPI.updateVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), null))
+        when(policyStore.updateVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), null))
                 .thenAnswer(invocation -> Future.failedFuture(new IllegalArgumentException("PolicyDetails is required")));
 
-        when(policyStoreAPI.updateVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), -1)))
+        when(policyStore.updateVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), -1)))
                 .thenAnswer(invocation -> {
                     PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = invocation.getArgument(1);
                     return Future.failedFuture(new PolicyException("Policy Version mismatch, currentVersion = 0, your version = " + versionedPolicyDetails.getVersion() + ", for ProcessGroup = " + RecorderProtoUtil.processGroupCompactRepr(MockPolicyData.mockProcessGroups.get(0)), false));

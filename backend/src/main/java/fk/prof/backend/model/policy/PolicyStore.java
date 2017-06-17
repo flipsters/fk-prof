@@ -10,7 +10,7 @@ import java.util.Set;
  * Interface for accessing the store containing policy information
  * Created by rohit.patiyal on 18/05/17.
  */
-public interface PolicyStoreAPI {
+public interface PolicyStore {
     /**
      * Method to allow delayed initialization. Calling other methods before init may result in undefined behaviour.
      */

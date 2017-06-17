@@ -16,8 +16,8 @@ import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.LeaderWriteContext;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
-import fk.prof.backend.model.policy.PolicyStoreAPI;
-import fk.prof.backend.model.policy.ZookeeperBasedPolicyStoreAPI;
+import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.model.policy.ZookeeperBasedPolicyStore;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.proto.PolicyDTO;
 import io.vertx.core.CompositeFuture;
@@ -153,7 +153,7 @@ public class LeaderElectionTest {
 
       VerticleDeployer leaderHttpDeployer = mock(LeaderHttpVerticleDeployer.class);
       when(leaderHttpDeployer.deploy()).thenReturn(CompositeFutureImpl.all(Future.succeededFuture()));
-      Runnable leaderElectedTask = LeaderElectedTask.newBuilder().disableBackend(backendDeployments).build(vertx, leaderHttpDeployer, mock(BackendAssociationStore.class), mock(PolicyStoreAPI.class));
+      Runnable leaderElectedTask = LeaderElectedTask.newBuilder().disableBackend(backendDeployments).build(vertx, leaderHttpDeployer, mock(BackendAssociationStore.class), mock(PolicyStore.class));
       Runnable wrappedLeaderElectedTask = () -> {
         leaderElectedTask.run();
         leaderElectionLatch.countDown();
@@ -219,8 +219,8 @@ public class LeaderElectionTest {
 
           // get the httpVerticleDeployedFuture for reference.
           MutableObject<Future> httpVerticleDeployedFuture = new MutableObject<>();
-          PolicyStoreAPI policyStoreAPI = mock(PolicyStoreAPI.class);
-          VerticleDeployer leaderHttpVerticleDeployer = spy(new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStoreAPI));
+          PolicyStore policyStore = mock(PolicyStore.class);
+          VerticleDeployer leaderHttpVerticleDeployer = spy(new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore));
           when(leaderHttpVerticleDeployer.deploy()).thenAnswer(inv -> {
             httpVerticleDeployedFuture.setValue((Future) inv.callRealMethod());
             return httpVerticleDeployedFuture.getValue();
@@ -230,7 +230,7 @@ public class LeaderElectionTest {
           CountDownLatch latch = new CountDownLatch(1);
           LeaderElectedTask.Builder builder = LeaderElectedTask.newBuilder();
           builder.disableBackend(Collections.emptyList());
-          Runnable leaderElectedTask = builder.build(vertx, leaderHttpVerticleDeployer, backendAssociationStore, policyStoreAPI);
+          Runnable leaderElectedTask = builder.build(vertx, leaderHttpVerticleDeployer, backendAssociationStore, policyStore);
           Runnable leaderElectedTaskWithLatch = () -> {
             System.out.println("running leader elected task");
             leaderElectedTask.run();
@@ -257,7 +257,7 @@ public class LeaderElectionTest {
           }
 
           // check the values in store
-          context.assertEquals(policyDetails, policyStoreAPI.getVersionedPolicy(pg1).getPolicyDetails(), "policy should match");
+          context.assertEquals(policyDetails, policyStore.getVersionedPolicy(pg1).getPolicyDetails(), "policy should match");
           Recorder.AssignedBackend backend1 = backendAssociationStore.getAssociatedBackend(pg1);
           context.assertEquals(cf.resultAt(0), backend1);
           Recorder.AssignedBackend backend2 = backendAssociationStore.getAssociatedBackend(pg2);
@@ -281,8 +281,8 @@ public class LeaderElectionTest {
     BackendAssociationStore backendAssociationStore = createBackendAssociationStore(vertx, curatorClient);
     backendAssociationStore.init();
 
-    PolicyStoreAPI policyStoreAPI = new ZookeeperBasedPolicyStoreAPI(vertx, curatorClient, "/policy", "v0001");
-    policyStoreAPI.init();
+    PolicyStore policyStore = new ZookeeperBasedPolicyStore(vertx, curatorClient, "/policy", "v0001");
+    policyStore.init();
 
     backendAssociationStore.reportBackendLoad(BackendDTO.LoadReportRequest.newBuilder().setCurrTick(1).setIp("1").setLoad(0.5f).setPort(1234).build());
     backendAssociationStore.reportBackendLoad(BackendDTO.LoadReportRequest.newBuilder().setCurrTick(1).setIp("2").setLoad(0.5f).setPort(1234).build());
@@ -299,7 +299,7 @@ public class LeaderElectionTest {
           }, composition);
         }, composition);
 
-    policyStoreAPI.createVersionedPolicy(pg1, PolicyDTO.VersionedPolicyDetails.newBuilder().setPolicyDetails(policy).setVersion(-1).build());
+    policyStore.createVersionedPolicy(pg1, PolicyDTO.VersionedPolicyDetails.newBuilder().setPolicyDetails(policy).setVersion(-1).build());
 
     return CompositeFuture.all(f1, f2);
   }

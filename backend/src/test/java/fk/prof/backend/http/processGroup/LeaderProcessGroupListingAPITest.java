@@ -7,7 +7,7 @@ import fk.prof.backend.deployer.VerticleDeployer;
 import fk.prof.backend.deployer.impl.LeaderHttpVerticleDeployer;
 import fk.prof.backend.http.ApiPathConstants;
 import fk.prof.backend.model.association.BackendAssociationStore;
-import fk.prof.backend.model.policy.PolicyStoreAPI;
+import fk.prof.backend.model.policy.PolicyStore;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -47,7 +47,7 @@ public class LeaderProcessGroupListingAPITest {
     private static final String NP_PROC = "main";
 
     private TestingServer testingServer;
-    private PolicyStoreAPI policyStoreAPI;
+    private PolicyStore policyStore;
     private Vertx vertx;
     private HttpClient client;
     private int leaderPort;
@@ -62,9 +62,9 @@ public class LeaderProcessGroupListingAPITest {
         leaderPort = config.leaderHttpServerOpts.getPort();
 
         BackendAssociationStore backendAssociationStore = mock(BackendAssociationStore.class);
-        policyStoreAPI = mock(PolicyStoreAPI.class);
+        policyStore = mock(PolicyStore.class);
         client = vertx.createHttpClient();
-        VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStoreAPI);
+        VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore);
         leaderHttpVerticleDeployer.deploy();
         //Wait for some time for deployment to complete
         Thread.sleep(1000);
@@ -90,8 +90,8 @@ public class LeaderProcessGroupListingAPITest {
         String pPrefixSet = "(^$|a|ap|app|app1)";
         String npPrefixSet = "(f|fo|foo)";
 
-        when(policyStoreAPI.getAppIds(ArgumentMatchers.matches(pPrefixSet))).then(invocation -> Sets.newSet(P_APP_ID));
-        when(policyStoreAPI.getAppIds(ArgumentMatchers.matches(npPrefixSet))).then(invocation -> null);
+        when(policyStore.getAppIds(ArgumentMatchers.matches(pPrefixSet))).then(invocation -> Sets.newSet(P_APP_ID));
+        when(policyStore.getAppIds(ArgumentMatchers.matches(npPrefixSet))).then(invocation -> null);
 
 
         Future<Void> pCorrectPrefix = Future.future();
@@ -134,10 +134,10 @@ public class LeaderProcessGroupListingAPITest {
         String pPrefixSet = "(^$|c|cl|clu|clus|clust|cluste|cluster|cluster1)";
         String npPrefixSet = "(b|ba|bar)";
 
-        when(policyStoreAPI.getClusterIds(eq(P_APP_ID), ArgumentMatchers.matches(pPrefixSet))).then(invocation -> Sets.newSet(P_CLUSTER_ID));
-        when(policyStoreAPI.getClusterIds(eq(P_APP_ID), ArgumentMatchers.matches(npPrefixSet))).then(invocation -> null);
-        when(policyStoreAPI.getClusterIds(eq(NP_APP_ID), ArgumentMatchers.matches(pPrefixSet))).then(invocation -> null);
-        when(policyStoreAPI.getClusterIds(eq(NP_APP_ID), ArgumentMatchers.matches(npPrefixSet))).then(invocation -> null);
+        when(policyStore.getClusterIds(eq(P_APP_ID), ArgumentMatchers.matches(pPrefixSet))).then(invocation -> Sets.newSet(P_CLUSTER_ID));
+        when(policyStore.getClusterIds(eq(P_APP_ID), ArgumentMatchers.matches(npPrefixSet))).then(invocation -> null);
+        when(policyStore.getClusterIds(eq(NP_APP_ID), ArgumentMatchers.matches(pPrefixSet))).then(invocation -> null);
+        when(policyStore.getClusterIds(eq(NP_APP_ID), ArgumentMatchers.matches(npPrefixSet))).then(invocation -> null);
 
         Future<Void> pAndCorrectPrefix = Future.future();
         Future<Void> pAndIncorrectPrefix = Future.future();
@@ -207,10 +207,10 @@ public class LeaderProcessGroupListingAPITest {
         String pPrefixSet = "(^$|p|pr|pro|proc|proce|proces|process|process1)";
         String npPrefixSet = "(m|ma|mai|main)";
 
-        when(policyStoreAPI.getProcNames(eq(P_APP_ID), eq(P_CLUSTER_ID), ArgumentMatchers.matches(pPrefixSet))).then(invocation -> Sets.newSet(P_PROC));
-        when(policyStoreAPI.getProcNames(eq(P_APP_ID), eq(P_CLUSTER_ID), ArgumentMatchers.matches(npPrefixSet))).then(invocation -> null);
-        when(policyStoreAPI.getProcNames(eq(NP_APP_ID), eq(NP_CLUSTER_ID), ArgumentMatchers.matches(pPrefixSet))).then(invocation -> null);
-        when(policyStoreAPI.getProcNames(eq(NP_APP_ID), eq(NP_CLUSTER_ID), ArgumentMatchers.matches(npPrefixSet))).then(invocation -> null);
+        when(policyStore.getProcNames(eq(P_APP_ID), eq(P_CLUSTER_ID), ArgumentMatchers.matches(pPrefixSet))).then(invocation -> Sets.newSet(P_PROC));
+        when(policyStore.getProcNames(eq(P_APP_ID), eq(P_CLUSTER_ID), ArgumentMatchers.matches(npPrefixSet))).then(invocation -> null);
+        when(policyStore.getProcNames(eq(NP_APP_ID), eq(NP_CLUSTER_ID), ArgumentMatchers.matches(pPrefixSet))).then(invocation -> null);
+        when(policyStore.getProcNames(eq(NP_APP_ID), eq(NP_CLUSTER_ID), ArgumentMatchers.matches(npPrefixSet))).then(invocation -> null);
 
         Future<Void> pAndCorrectPrefix = Future.future();
         Future<Void> pAndIncorrectPrefix = Future.future();
