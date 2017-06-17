@@ -25,7 +25,8 @@
 static std::unique_ptr<Backtracer> b_tracer {nullptr};
 
 __attribute__ ((noinline)) int foo(NativeFrame* buff, std::uint32_t sz) {
-    return b_tracer->fill_in(buff, sz);
+    bool bt_unreadable;
+    return b_tracer->fill_in(buff, sz, bt_unreadable);
 }
 
 __attribute__ ((noinline)) int caller_of_foo(NativeFrame* buff, std::uint32_t sz) {
@@ -321,8 +322,11 @@ static NativeFrame bt[BT_SZ];
 
 static std::uint64_t unmapped_address;
 
+static bool bt_unreadable;
+
 __attribute__ ((noinline)) static void capture_bt() {
-    bt_len = b_tracer->fill_in(bt, BT_SZ);
+    bt_unreadable = false;
+    bt_len = b_tracer->fill_in(bt, BT_SZ, bt_unreadable);
 }
 
 __attribute__ ((noinline)) static void bt_test_foo() {

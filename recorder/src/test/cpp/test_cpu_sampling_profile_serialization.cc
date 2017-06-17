@@ -199,8 +199,9 @@ std::unique_ptr<Backtracer> b_tracer{nullptr};
 
 void bt_pusher() {
     STATIC_ARRAY(frames, NativeFrame, native_bt_max_depth, native_bt_max_depth);
-    auto len = b_tracer->fill_in(frames, native_bt_max_depth);
-    bt_q->push(frames, len, bt_err, mark_default_ctx, bt_tinfo);
+    bool bt_unreadable;
+    auto len = b_tracer->fill_in(frames, native_bt_max_depth, bt_unreadable);
+    bt_q->push(frames, len, bt_err, mark_default_ctx, bt_unreadable, bt_tinfo);
 }
 
 void push_native_backtrace(ThreadBucket* t, BacktraceError err, CircularQueue& q, bool default_ctx = false, int capture_bt_at = 4) {

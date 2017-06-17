@@ -32,6 +32,8 @@ TEST(Backtracer__should_not_fill_anything_when_native_backtracing_is_disabled) {
     const std::uint32_t buff_sz = 100;
     NativeFrame buff[buff_sz];
     buff[0] = 1;
-    CHECK_EQUAL(0, btracer.fill_in(buff, buff_sz));
+    bool bt_unreadable = true;
+    CHECK_EQUAL(0, btracer.fill_in(buff, buff_sz, bt_unreadable));
+    CHECK_EQUAL(false, bt_unreadable);
     CHECK_EQUAL(1, buff[0]); //its unchanged
 }

@@ -24,7 +24,8 @@ static bool compare(const Backtracer::Entry& one, const Backtracer::Entry& other
     return one.second < other.second;
 }
 
-std::uint32_t Backtracer::fill_in(NativeFrame* buff, std::uint32_t capacity) {//TODO: write me 3 tests { (capacity > stack), (stack > capacity) and (stack == capacity) }
+std::uint32_t Backtracer::fill_in(NativeFrame* buff, std::uint32_t capacity, bool& bt_unreadable) {//TODO: write me 3 tests { (capacity > stack), (stack > capacity) and (stack == capacity) }
+    bt_unreadable = false;
     if (! enabled) return 0;
     std::uint64_t rbp, rpc;
     asm("movq %%rbp, %%rax;"
@@ -41,7 +42,10 @@ std::uint32_t Backtracer::fill_in(NativeFrame* buff, std::uint32_t capacity) {//
     while ((capacity - i) > 0) {
         key.second = rbp;
         auto it = std::lower_bound(start, end, key, compare);
-        if (it == end || it->first > rbp || it->second < (rbp + 16)) break;
+        if (it == end || it->first > rbp || it->second < (rbp + 16)) {
+            bt_unreadable = true;
+            break;
+        }
         rpc = *reinterpret_cast<std::uint64_t*>(rbp + 8);
         buff[i] = rpc;
         rbp = *reinterpret_cast<std::uint64_t*>(rbp);

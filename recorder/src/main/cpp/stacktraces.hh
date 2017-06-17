@@ -145,7 +145,7 @@ public:
 
     Backtracer(const std::string& path, bool enabled = true);
     
-    std::uint32_t fill_in(NativeFrame* buff, std::uint32_t capacity);
+    std::uint32_t fill_in(NativeFrame* buff, std::uint32_t capacity, bool& bt_unreadable);
     
 private:
     std::vector<Entry> mapped;//TODO: rename this NativeFrame to NativeAddr (because it really isn't a frame, its an address)
