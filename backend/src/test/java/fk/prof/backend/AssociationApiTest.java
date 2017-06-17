@@ -41,6 +41,7 @@ import java.time.LocalDateTime;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -55,6 +56,7 @@ public class AssociationApiTest {
   private AssociatedProcessGroups associatedProcessGroups;
   private InMemoryLeaderStore inMemoryLeaderStore;
   private Configuration config;
+  private PolicyStore policyStore = mock(PolicyStore.class);
 
   private final String backendAssociationPath = "/assoc";
 
@@ -166,7 +168,6 @@ public class AssociationApiTest {
   public void getAssociationProxiedToLeader(TestContext context) throws InterruptedException, IOException {
     final Async async = context.async();
     CountDownLatch latch = new CountDownLatch(1);
-    PolicyStore policyStore = mock(PolicyStore.class);
     VerticleDeployer leaderHttpDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore);
     Runnable leaderElectedTask = LeaderElectedTask.newBuilder().build(vertx, leaderHttpDeployer, backendAssociationStore, policyStore);
 

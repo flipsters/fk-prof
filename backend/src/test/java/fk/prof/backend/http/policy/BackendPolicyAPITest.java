@@ -54,14 +54,14 @@ public class BackendPolicyAPITest {
         ConfigManager.setDefaultSystemProperties();
         Configuration config = ConfigManager.loadConfig(BackendPolicyAPITest.class.getClassLoader().getResource("config.json").getFile());
         profHttpClient = mock(ProfHttpClient.class);
-        vertx = Vertx.vertx(new VertxOptions(config.vertxOptions));
+        vertx = Vertx.vertx(new VertxOptions(config.getVertxOptions()));
 
         client = vertx.createHttpClient();
         leaderServer = vertx.createHttpServer();
-        backendPort = config.backendHttpServerOpts.getPort();
-        leaderPort = config.leaderHttpServerOpts.getPort();
-        inMemoryLeaderStore = spy(new InMemoryLeaderStore(config.ipAddress, config.leaderHttpServerOpts.getPort()));
-        AssociatedProcessGroups associatedProcessGroups = new AssociatedProcessGroupsImpl(config.recorderDefunctThresholdSecs);
+        backendPort = config.getBackendHttpServerOpts().getPort();
+        leaderPort = config.getLeaderHttpServerOpts().getPort();
+        inMemoryLeaderStore = spy(new InMemoryLeaderStore(config.getIpAddress(), config.getLeaderHttpServerOpts().getPort()));
+        AssociatedProcessGroups associatedProcessGroups = new AssociatedProcessGroupsImpl(config.getRecorderDefunctThresholdSecs());
         VerticleDeployer backendHttpVerticleDeployer = new BackendHttpVerticleDeployer(vertx, config, inMemoryLeaderStore, new ActiveAggregationWindowsImpl(), associatedProcessGroups);
         backendHttpVerticleDeployer.deploy();
     }

@@ -58,8 +58,8 @@ public class LeaderProcessGroupListingAPITest {
         testingServer = new TestingServer();
 
         Configuration config = ConfigManager.loadConfig(AssociationApiTest.class.getClassLoader().getResource("config.json").getFile());
-        vertx = Vertx.vertx(new VertxOptions(config.vertxOptions));
-        leaderPort = config.leaderHttpServerOpts.getPort();
+        vertx = Vertx.vertx(new VertxOptions(config.getVertxOptions()));
+        leaderPort = config.getLeaderHttpServerOpts().getPort();
 
         BackendAssociationStore backendAssociationStore = mock(BackendAssociationStore.class);
         policyStore = mock(PolicyStore.class);
