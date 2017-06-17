@@ -99,7 +99,7 @@ public class LeaderPolicyAPITest {
     public void testCreatePolicy(TestContext context) throws Exception {
         final Async async = context.async();
         when(policyStore.createVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), -1)))
-                .thenAnswer(invocation -> Future.succeededFuture());
+                .thenAnswer(invocation -> Future.succeededFuture(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0)));
 
         when(policyStore.createVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), null))
                 .thenAnswer(invocation -> Future.failedFuture(new IllegalArgumentException("PolicyDetails is required")));
@@ -117,7 +117,11 @@ public class LeaderPolicyAPITest {
         client.post(leaderPort, "localhost", ApiPathConstants.LEADER + ApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
             context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.CREATED.code());
             httpClientResponse.bodyHandler(buffer -> {
-                context.assertTrue(buffer.toString().isEmpty());
+                try {
+                    context.assertEquals(PolicyDTO.VersionedPolicyDetails.parseFrom(buffer.getBytes()), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),0));
+                } catch (InvalidProtocolBufferException e) {
+                    f1.completeExceptionally(e);
+                }
                 f1.complete(null);
             });
         }).end(ProtoUtil.buildBufferFromProto(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), -1)));
@@ -144,7 +148,7 @@ public class LeaderPolicyAPITest {
     public void testUpdatePolicy(TestContext context) throws Exception {
         final Async async = context.async();
         when(policyStore.updateVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0)))
-                .thenAnswer(invocation -> Future.succeededFuture());
+                .thenAnswer(invocation -> Future.succeededFuture(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 1)));
 
         when(policyStore.updateVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), null))
                 .thenAnswer(invocation -> Future.failedFuture(new IllegalArgumentException("PolicyDetails is required")));
@@ -160,9 +164,13 @@ public class LeaderPolicyAPITest {
         CompletableFuture<Void> f3 = new CompletableFuture<>();
 
         client.put(leaderPort, "localhost", ApiPathConstants.LEADER + ApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
-            context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.NO_CONTENT.code());
+            context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.CREATED.code());
             httpClientResponse.bodyHandler(buffer -> {
-                context.assertTrue(buffer.toString().isEmpty());
+                try {
+                    context.assertEquals(PolicyDTO.VersionedPolicyDetails.parseFrom(buffer.getBytes()), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),1));
+                } catch (InvalidProtocolBufferException e) {
+                    f1.completeExceptionally(e);
+                }
                 f1.complete(null);
             });
         }).end(ProtoUtil.buildBufferFromProto(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0)));
