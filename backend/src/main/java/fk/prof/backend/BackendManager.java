@@ -216,9 +216,11 @@ public class BackendManager {
         .setRegistryName(ConfigManager.METRIC_REGISTRY)
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.AGGREGATOR_POST_PROFILE).setType(MatchType.EQUALS))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_POST_POLL).setType(MatchType.EQUALS))
-        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_POST_ASSOCIATION).setType(MatchType.EQUALS))
-        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_POST_ASSOCIATION).setType(MatchType.EQUALS))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.POST_ASSOCIATION).setType(MatchType.EQUALS))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER + ApiPathConstants.POST_ASSOCIATION).setType(MatchType.EQUALS))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_POST_LOAD).setType(MatchType.EQUALS))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.POLICY).setType(MatchType.EQUALS))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER + ApiPathConstants.POLICY).setType(MatchType.EQUALS))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_GET_WORK + ".*").setAlias(ApiPathConstants.LEADER_GET_WORK).setType(MatchType.REGEX));
     return metricsOptions;
   }
