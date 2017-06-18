@@ -88,13 +88,11 @@ public class RouterVerticleTest {
         VerticleDeployer verticleDeployer = new UserapiHttpVerticleDeployer(vertx, config, profileDiscoveryAPI);
         CompositeFuture future = verticleDeployer.deploy();
         future.setHandler(aR -> {
-                    if (aR.succeeded()) {
-                        async.complete();
-                    } else {
-                        testContext.fail();
-                    }
-                }
-        );
+            if (aR.succeeded())
+                async.complete();
+            else
+                testContext.fail();
+        });
     }
 
     @After

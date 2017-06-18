@@ -53,7 +53,8 @@ public class LeaderProcessGroupListingAPITest {
     private int leaderPort;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp(TestContext context) throws Exception {
+        final Async async = context.async();
         ConfigManager.setDefaultSystemProperties();
         testingServer = new TestingServer();
 
@@ -65,9 +66,13 @@ public class LeaderProcessGroupListingAPITest {
         policyStore = mock(PolicyStore.class);
         client = vertx.createHttpClient();
         VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore);
-        leaderHttpVerticleDeployer.deploy();
-        //Wait for some time for deployment to complete
-        Thread.sleep(1000);
+        CompositeFuture future = leaderHttpVerticleDeployer.deploy();
+        future.setHandler(aR -> {
+            if (aR.succeeded())
+                async.complete();
+            else
+                context.fail();
+        });
     }
 
     @After

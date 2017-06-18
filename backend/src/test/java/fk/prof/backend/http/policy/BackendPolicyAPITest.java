@@ -16,6 +16,7 @@ import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.proto.PolicyDTO;
 import fk.prof.backend.util.ProtoUtil;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
@@ -41,7 +42,6 @@ import static org.mockito.Mockito.*;
 public class BackendPolicyAPITest {
 
     private HttpServer leaderServer;
-    private ProfHttpClient profHttpClient;
     private HttpClient client;
     private static int backendPort;
     private static int leaderPort;
@@ -50,10 +50,10 @@ public class BackendPolicyAPITest {
     private static Vertx vertx;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp(TestContext context) throws Exception {
+        final Async async = context.async();
         ConfigManager.setDefaultSystemProperties();
         Configuration config = ConfigManager.loadConfig(BackendPolicyAPITest.class.getClassLoader().getResource("config.json").getFile());
-        profHttpClient = mock(ProfHttpClient.class);
         vertx = Vertx.vertx(new VertxOptions(config.getVertxOptions()));
 
         client = vertx.createHttpClient();
@@ -63,7 +63,13 @@ public class BackendPolicyAPITest {
         inMemoryLeaderStore = spy(new InMemoryLeaderStore(config.getIpAddress(), config.getLeaderHttpServerOpts().getPort()));
         AssociatedProcessGroups associatedProcessGroups = new AssociatedProcessGroupsImpl(config.getRecorderDefunctThresholdSecs());
         VerticleDeployer backendHttpVerticleDeployer = new BackendHttpVerticleDeployer(vertx, config, inMemoryLeaderStore, new ActiveAggregationWindowsImpl(), associatedProcessGroups);
-        backendHttpVerticleDeployer.deploy();
+        CompositeFuture future = backendHttpVerticleDeployer.deploy();
+        future.setHandler(aR -> {
+            if (aR.succeeded())
+                async.complete();
+            else
+                context.fail();
+        });
     }
 
     @After

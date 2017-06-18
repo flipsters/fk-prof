@@ -14,6 +14,7 @@ import fk.prof.backend.proto.PolicyDTO;
 import fk.prof.backend.util.ProtoUtil;
 import fk.prof.backend.util.proto.RecorderProtoUtil;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
@@ -44,7 +45,8 @@ public class LeaderPolicyAPITest {
     private int leaderPort;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp(TestContext context) throws Exception {
+        final Async async = context.async();
         ConfigManager.setDefaultSystemProperties();
 
         Configuration config = ConfigManager.loadConfig(LeaderPolicyAPITest.class.getClassLoader().getResource("config.json").getFile());
@@ -56,9 +58,13 @@ public class LeaderPolicyAPITest {
         client = vertx.createHttpClient();
         VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore);
 
-        leaderHttpVerticleDeployer.deploy();
-        //Wait for some time for deployment to complete
-        Thread.sleep(1000);
+        CompositeFuture future = leaderHttpVerticleDeployer.deploy();
+        future.setHandler(aR -> {
+            if (aR.succeeded())
+                async.complete();
+            else
+                context.fail();
+        });
     }
 
     @Test
