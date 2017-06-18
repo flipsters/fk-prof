@@ -56,10 +56,7 @@ __attribute__ ((noinline)) void fn_corge(int p, int q, int bt_capture_depth) {
 }
 
 std::string my_executable() {
-    char link_path[PATH_MAX];
-    auto path_len = readlink("/proc/self/exe", link_path, PATH_MAX);
-    link_path[path_len] = '\0';
-    return {link_path};
+    return readlink_path("/proc/self/exe");
 }
 
 std::string my_test_helper_lib() {
@@ -69,4 +66,15 @@ std::string my_test_helper_lib() {
     std::string dir_name_str {dir_name};
     dir_name_str += LIB_TEST_UTIL;
     return dir_name_str;
+}
+
+std::string readlink_path(const std::string& path) {
+    char link_path[PATH_MAX];
+    auto path_len = readlink(path.c_str(), link_path, PATH_MAX);
+    if (path_len < 0) {
+        assert(errno == EINVAL);
+        return path;
+    }
+    link_path[path_len] = '\0';
+    return {link_path};
 }

@@ -45,12 +45,7 @@ TEST(SiteResolver__should_resolve_backtrace) {
         });
     CHECK(bt_len > 4);
 
-    auto max_path_sz = 1024;
-    std::unique_ptr<char[]> link_path(new char[max_path_sz]);
-    auto path_len = readlink("/proc/self/exe", link_path.get(), max_path_sz);
-    CHECK((path_len > 0) && (path_len < max_path_sz));//ensure we read link correctly
-    link_path.get()[path_len] = '\0';
-    std::string path = link_path.get();
+    std::string path = my_executable();
 
     SiteResolver::SymInfo s_info;
     std::string fn_name;
@@ -72,7 +67,7 @@ TEST(SiteResolver__should_resolve_backtrace) {
     auto it = fn_files.find("some_lambda_caller(std::function<void ()>)");
     CHECK(it != std::end(fn_files));//this symbol comes from a shared-lib (aim is to ensure it works well with relocatable symbols)
 
-    CHECK_EQUAL(my_test_helper_lib(), it->second);
+    CHECK_EQUAL(readlink_path(it->second), my_test_helper_lib());
 }
 
 TEST(SiteResolver__should_call_out_unknown_mapping) {
