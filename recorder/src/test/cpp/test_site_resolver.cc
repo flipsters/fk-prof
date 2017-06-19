@@ -321,19 +321,19 @@ TEST(SiteResolver__should_handle_mapping_changes_between___mmap_parse___and___dl
                                                                         \
         s_info.site_for(bt[0] , file_name, fn_name, pc_offset);         \
         CHECK_EQUAL("capture_bt(Backtracer&, unsigned long*, unsigned long, bool&)", fn_name); \
-        CHECK_EQUAL(path, file_name);                                   \
+        CHECK_EQUAL(path, abs_path(file_name));                         \
                                                                         \
         s_info.site_for(bt[1] , file_name, fn_name, pc_offset);         \
         CHECK_EQUAL("bt_test_foo(Backtracer&, unsigned long*, unsigned long, bool&)", fn_name); \
-        CHECK_EQUAL(path, file_name);                                   \
+        CHECK_EQUAL(path, abs_path(file_name));                         \
                                                                         \
         s_info.site_for(bt[2] , file_name, fn_name, pc_offset);         \
         CHECK_EQUAL("bt_test_bar(Backtracer&, unsigned long*, unsigned long, bool&, unsigned long)", fn_name); \
-        CHECK_EQUAL(path, file_name);                                   \
+        CHECK_EQUAL(path, abs_path(file_name));                         \
                                                                         \
         s_info.site_for(bt[3] , file_name, fn_name, pc_offset);         \
         CHECK_EQUAL("bt_test_baz(Backtracer&, unsigned long*, unsigned long, bool&, unsigned long)", fn_name); \
-        CHECK_EQUAL(path, file_name);                                   \
+        CHECK_EQUAL(path, abs_path(file_name));                         \
     }
 //observe there is no bt_test_quux above, hence limited length.
 
