@@ -154,3 +154,27 @@ void map_one_anon_executable_page_between_executable_and_testlib(void **mmap_reg
     }
     CHECK(buff_mapped); //otherwise this test can't proceed (unlucky shot, please try again)
 }
+
+void find_atleast_16_bytes_wide_unmapped_range(std::uint64_t& start, std::uint64_t& end) {
+    CurrMappings curr_mappings;
+    iterate_mapping([&curr_mappings](SiteResolver::Addr start, SiteResolver::Addr end, const MRegion::Event& e) {
+            if (e.perms.find('w') == std::string::npos) return;
+            curr_mappings.emplace_back(start, end);
+        });
+
+    MappableRanges mappable_ranges;
+
+    find_mappable_ranges_between(curr_mappings, 0, std::numeric_limits<SiteResolver::Addr>::max(), mappable_ranges);
+
+    CHECK(mappable_ranges.size() > 1);
+    auto it = mappable_ranges.begin();
+    auto prev_it = it;
+    it++;
+    while (prev_it != std::end(mappable_ranges) && (((it->second - it->first) <= 16) || ((prev_it->second - it->first - 2) >= 16))) {
+        prev_it = it++;
+    }
+    assert(it != std::end(mappable_ranges));
+
+    start = it->first;
+    end = it->second;
+}

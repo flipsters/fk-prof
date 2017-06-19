@@ -11,3 +11,5 @@ void find_mappable_ranges_between(const CurrMappings& curr_mappings, SiteResolve
 void iterate_mapping(std::function<void(SiteResolver::Addr start, SiteResolver::Addr end, const MRegion::Event& e)> cb);
 
 void map_one_anon_executable_page_between_executable_and_testlib(void **mmap_region, long& pg_sz, std::string path);
+
+void find_atleast_16_bytes_wide_unmapped_range(std::uint64_t& start, std::uint64_t& end);

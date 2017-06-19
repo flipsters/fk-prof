@@ -307,155 +307,96 @@ TEST(SiteResolver__should_handle_mapping_changes_between___mmap_parse___and___dl
     CHECK_EQUAL(lib_path, file_name);
 }
 
-static std::uint32_t bt_len = 0;
-
 #define BT_SZ 64
 
-static NativeFrame bt[BT_SZ];
-
-static std::uint64_t unmapped_address;
-
-static bool bt_unreadable;
-
-__attribute__ ((noinline)) static void capture_bt() {
-    bt_unreadable = false;
-    bt_len = b_tracer->fill_in(bt, BT_SZ, bt_unreadable);
-}
-
-__attribute__ ((noinline)) static void bt_test_foo() {
-    capture_bt();
-}
-
-__attribute__ ((noinline)) static void bt_test_bar() {
-    std::uint64_t rbp, old_rbp;
-    asm("movq %%rbp, %%rax;"
-        "movq %%rax, %0;"
-        : "=r"(rbp)
-        :
-        : "rax");
-
-    std::uint64_t* rbp_ptr = reinterpret_cast<std::uint64_t*>(rbp);
-
-    old_rbp = *rbp_ptr;
-
-    *rbp_ptr = unmapped_address;
-    
-    bt_test_foo();
-
-    *rbp_ptr = old_rbp;
-}
-
-__attribute__ ((noinline)) static void bt_test_baz() {
-    bt_test_bar();
-}
-
-__attribute__ ((noinline)) static void bt_test_quux() {
-    bt_test_baz();
-}
-
-void find_atleast_16_bytes_wide_unmapped_range(std::uint64_t& start, std::uint64_t& end) {
-    auto maps_file = MRegion::file();
-    b_tracer.reset(new Backtracer(maps_file));
-
-    CurrMappings curr_mappings;
-    iterate_mapping([&curr_mappings](SiteResolver::Addr start, SiteResolver::Addr end, const MRegion::Event& e) {
-            if (e.perms.find('w') == std::string::npos) return;
-            curr_mappings.emplace_back(start, end);
-        });
-
-    MappableRanges mappable_ranges;
-
-    find_mappable_ranges_between(curr_mappings, 0, std::numeric_limits<SiteResolver::Addr>::max(), mappable_ranges);
-
-    CHECK(mappable_ranges.size() > 1);
-    auto it = mappable_ranges.begin();
-    auto prev_it = it;
-    it++;
-    while (prev_it != std::end(mappable_ranges) && (((it->second - it->first) <= 16) || ((prev_it->second - it->first - 2) >= 16))) {
-        prev_it = it++;
-    }
-    assert(it != std::end(mappable_ranges));
-
-    start = it->first;
-    end = it->second;
-}
-
-#define ASSERT_GOT_LIMITED_LENGTH_BACKTRACE                     \
-    {                                                           \
-        CHECK_EQUAL(4, bt_len);                                 \
-                                                                \
-        SiteResolver::SymInfo s_info;                           \
-        std::string fn_name;                                    \
-        std::string file_name;                                  \
-        SiteResolver::Addr pc_offset;                           \
-        auto path = my_executable();                            \
-                                                                \
-        s_info.site_for(bt[0] , file_name, fn_name, pc_offset); \
-        CHECK_EQUAL("capture_bt()", fn_name);                   \
-        CHECK_EQUAL(path, file_name);                           \
-                                                                \
-        s_info.site_for(bt[1] , file_name, fn_name, pc_offset); \
-        CHECK_EQUAL("bt_test_foo()", fn_name);                  \
-        CHECK_EQUAL(path, file_name);                           \
-                                                                \
-        s_info.site_for(bt[2] , file_name, fn_name, pc_offset); \
-        CHECK_EQUAL("bt_test_bar()", fn_name);                  \
-        CHECK_EQUAL(path, file_name);                           \
-                                                                \
-        s_info.site_for(bt[3] , file_name, fn_name, pc_offset); \
-        CHECK_EQUAL("bt_test_baz()", fn_name);                  \
-        CHECK_EQUAL(path, file_name);                           \
+#define ASSERT_GOT_LIMITED_LENGTH_BACKTRACE(bt, bt_len)                 \
+    {                                                                   \
+        CHECK_EQUAL(4, bt_len);                                         \
+                                                                        \
+        SiteResolver::SymInfo s_info;                                   \
+        std::string fn_name;                                            \
+        std::string file_name;                                          \
+        SiteResolver::Addr pc_offset;                                   \
+        auto path = my_test_helper_lib();                               \
+                                                                        \
+        s_info.site_for(bt[0] , file_name, fn_name, pc_offset);         \
+        CHECK_EQUAL("capture_bt(Backtracer&, unsigned long*, unsigned long, bool&)", fn_name); \
+        CHECK_EQUAL(path, file_name);                                   \
+                                                                        \
+        s_info.site_for(bt[1] , file_name, fn_name, pc_offset);         \
+        CHECK_EQUAL("bt_test_foo(Backtracer&, unsigned long*, unsigned long, bool&)", fn_name); \
+        CHECK_EQUAL(path, file_name);                                   \
+                                                                        \
+        s_info.site_for(bt[2] , file_name, fn_name, pc_offset);         \
+        CHECK_EQUAL("bt_test_bar(Backtracer&, unsigned long*, unsigned long, bool&, unsigned long)", fn_name); \
+        CHECK_EQUAL(path, file_name);                                   \
+                                                                        \
+        s_info.site_for(bt[3] , file_name, fn_name, pc_offset);         \
+        CHECK_EQUAL("bt_test_baz(Backtracer&, unsigned long*, unsigned long, bool&, unsigned long)", fn_name); \
+        CHECK_EQUAL(path, file_name);                                   \
     }
 //observe there is no bt_test_quux above, hence limited length.
 
 TEST(Backtracer__should_not_dereference__when_rbp_is_entirely_an_unmapped_quad_word) {
     TestEnv _;
+    auto maps_file = MRegion::file();
+    b_tracer.reset(new Backtracer(maps_file));
+    std::uint32_t bt_len = 0;
+    NativeFrame bt[BT_SZ];
+    bool bt_unreadable;
 
     std::uint64_t start, end;
     find_atleast_16_bytes_wide_unmapped_range(start, end);
 
-    unmapped_address = start;
-
-    bt_test_quux();
+    bt_len = bt_test_quux(*b_tracer, bt, BT_SZ, bt_unreadable, start);
     
-    ASSERT_GOT_LIMITED_LENGTH_BACKTRACE;
+    ASSERT_GOT_LIMITED_LENGTH_BACKTRACE(bt, bt_len);
 }
 
 TEST(Backtracer__should_not_dereference__when_return_address_is_entirely_not_mapped) {
     TestEnv _;
-
+    auto maps_file = MRegion::file();
+    b_tracer.reset(new Backtracer(maps_file));
+    std::uint32_t bt_len = 0;
+    NativeFrame bt[BT_SZ];
+    bool bt_unreadable;
+    
     std::uint64_t start, end;
     find_atleast_16_bytes_wide_unmapped_range(start, end);
 
-    unmapped_address = start - 8;
-
-    bt_test_quux();
+    bt_len = bt_test_quux(*b_tracer, bt, BT_SZ, bt_unreadable, start - 8);
     
-    ASSERT_GOT_LIMITED_LENGTH_BACKTRACE;
+    ASSERT_GOT_LIMITED_LENGTH_BACKTRACE(bt, bt_len);
 }
 
 TEST(Backtracer__should_not_dereference__when_rbp_is_a_partly_unmapped_quad_word) {
     TestEnv _;
-
+    auto maps_file = MRegion::file();
+    b_tracer.reset(new Backtracer(maps_file));
+    std::uint32_t bt_len = 0;
+    NativeFrame bt[BT_SZ];
+    bool bt_unreadable;
+    
     std::uint64_t start, end;
     find_atleast_16_bytes_wide_unmapped_range(start, end);
 
-    unmapped_address = start - 7;
-
-    bt_test_quux();
+    bt_len = bt_test_quux(*b_tracer, bt, BT_SZ, bt_unreadable, start - 7);
     
-    ASSERT_GOT_LIMITED_LENGTH_BACKTRACE;
+    ASSERT_GOT_LIMITED_LENGTH_BACKTRACE(bt, bt_len);
 }
 
 TEST(Backtracer__should_not_dereference__when_return_address_is_partly_unmapped) {
     TestEnv _;
-
+    auto maps_file = MRegion::file();
+    b_tracer.reset(new Backtracer(maps_file));
+    std::uint32_t bt_len = 0;
+    NativeFrame bt[BT_SZ];
+    bool bt_unreadable;
+    
     std::uint64_t start, end;
     find_atleast_16_bytes_wide_unmapped_range(start, end);
 
-    unmapped_address = start - 15;
-
-    bt_test_quux();
+    bt_len = bt_test_quux(*b_tracer, bt, BT_SZ, bt_unreadable, start - 15);
     
-    ASSERT_GOT_LIMITED_LENGTH_BACKTRACE;
+    ASSERT_GOT_LIMITED_LENGTH_BACKTRACE(bt, bt_len);
 }

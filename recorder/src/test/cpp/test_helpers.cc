@@ -121,3 +121,41 @@ std::string abs_path(const std::string& path) {
     }
     return curr_path.str();
 }
+
+__attribute__ ((noinline)) std::uint32_t capture_bt(Backtracer& b_tracer, NativeFrame* bt, std::size_t capacity, bool& bt_unreadable) {
+    bt_unreadable = false;
+    return b_tracer.fill_in(bt, capacity, bt_unreadable);
+}
+
+__attribute__ ((noinline)) std::uint32_t bt_test_foo(Backtracer& b_tracer, NativeFrame* bt, std::size_t capacity, bool& bt_unreadable) {
+    return capture_bt(b_tracer, bt, capacity, bt_unreadable);
+}
+
+__attribute__ ((noinline)) std::uint32_t bt_test_bar(Backtracer& b_tracer, NativeFrame* bt, std::size_t capacity, bool& bt_unreadable, std::uint64_t unmapped_address) {
+    std::uint64_t rbp, old_rbp;
+    asm("movq %%rbp, %%rax;"
+        "movq %%rax, %0;"
+        : "=r"(rbp)
+        :
+        : "rax");
+
+    std::uint64_t* rbp_ptr = reinterpret_cast<std::uint64_t*>(rbp);
+
+    old_rbp = *rbp_ptr;
+
+    *rbp_ptr = unmapped_address;
+
+    auto len = bt_test_foo(b_tracer, bt, capacity, bt_unreadable);
+
+    *rbp_ptr = old_rbp;
+
+    return len;
+}
+
+__attribute__ ((noinline)) std::uint32_t bt_test_baz(Backtracer& b_tracer, NativeFrame* bt, std::size_t capacity, bool& bt_unreadable, std::uint64_t unmapped_address) {
+    return bt_test_bar(b_tracer, bt, capacity, bt_unreadable, unmapped_address);
+}
+
+__attribute__ ((noinline)) std::uint32_t bt_test_quux(Backtracer& b_tracer, NativeFrame* bt, std::size_t capacity, bool& bt_unreadable, std::uint64_t unmapped_address) {
+    return bt_test_baz(b_tracer, bt, capacity, bt_unreadable, unmapped_address);
+}

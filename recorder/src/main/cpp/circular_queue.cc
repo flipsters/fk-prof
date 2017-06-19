@@ -97,7 +97,7 @@ bool CircularQueue::pop() {
         usleep(1);
     }
 
-    listener_.record(buffer[current_output].trace, buffer[current_output].info, buffer[current_output].ctx_len, &buffer[current_output].ctx, buffer[current_output].default_ctx);
+    listener_.record(buffer[current_output].trace, buffer[current_output].info, buffer[current_output].ctx_len, &buffer[current_output].ctx, buffer[current_output].default_ctx, buffer[current_output].unreadable_bt);
     
     // ensure that the record is ready to be written to
     buffer[current_output].is_committed.store(UNCOMMITTED, std::memory_order_release);
