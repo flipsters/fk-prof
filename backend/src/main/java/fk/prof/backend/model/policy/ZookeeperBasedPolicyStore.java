@@ -4,7 +4,7 @@ import fk.prof.backend.exception.PolicyException;
 import fk.prof.backend.proto.PolicyDTO;
 import fk.prof.backend.util.PathNamingUtil;
 import fk.prof.backend.util.ZookeeperUtil;
-import fk.prof.backend.util.proto.PolicyProtoUtil;
+import fk.prof.backend.util.proto.PolicyDTOProtoUtil;
 import fk.prof.backend.util.proto.RecorderProtoUtil;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -152,7 +152,7 @@ public class ZookeeperBasedPolicyStore implements PolicyStore {
             try {
                 PolicyDTO.VersionedPolicyDetails newVersionedPolicy = policyCache.compute(processGroup, (k, v) -> {
                     if (v != null && create) {
-                        throw new PolicyException(String.format("Failing create of policy, Policy for ProcessGroup = %s already exists, policyDetails = %s", RecorderProtoUtil.processGroupCompactRepr(processGroup), PolicyProtoUtil.versionedPolicyDetailsCompactRepr(getVersionedPolicy(processGroup))), true);
+                        throw new PolicyException(String.format("Failing create of policy, Policy for ProcessGroup = %s already exists, policyDetails = %s", RecorderProtoUtil.processGroupCompactRepr(processGroup), PolicyDTOProtoUtil.versionedPolicyDetailsCompactRepr(getVersionedPolicy(processGroup))), true);
                     }
                     if (v == null && !create) {
                         throw new PolicyException(String.format("Failing update of policy, Policy for ProcessGroup = %s does not exist", RecorderProtoUtil.processGroupCompactRepr(processGroup)), true);
