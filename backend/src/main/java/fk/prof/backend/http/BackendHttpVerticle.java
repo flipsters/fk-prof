@@ -106,15 +106,15 @@ public class BackendHttpVerticle extends AbstractVerticle {
 
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_HEALTHCHECK, this::handleGetHealthCheck);
 
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_APPIDS, this::handleProxyToLeader);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_CLUSTERIDS_GIVEN_APPID, this::handleProxyToLeader);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_PROCNAMES_GIVEN_APPID_CLUSTERID, this::handleProxyToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_APPIDS, this::proxyToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_CLUSTERIDS_GIVEN_APPID, this::proxyToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_PROCNAMES_GIVEN_APPID_CLUSTERID, this::proxyToLeader);
 
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, this::handleProxyToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, this::proxyToLeader);
     HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT, ApiPathConstants.BACKEND_PUT_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
-            BodyHandler.create().setBodyLimit(1024 * 10), this::handleProxyToLeader);
+            BodyHandler.create().setBodyLimit(1024 * 10), this::proxyToLeader);
     HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.BACKEND_POST_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
-            BodyHandler.create().setBodyLimit(1024 * 10), this::handleProxyToLeader);
+            BodyHandler.create().setBodyLimit(1024 * 10), this::proxyToLeader);
 
     return router;
   }
@@ -277,7 +277,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
     }
   }
 
-  private void handleProxyToLeader(RoutingContext context) {
+  private void proxyToLeader(RoutingContext context) {
     BackendDTO.LeaderDetail leaderDetail = verifyLeaderAvailabilityOrFail(context.response());
     if (leaderDetail != null) {
       try {
