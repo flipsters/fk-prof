@@ -213,7 +213,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
         context.response().setStatusCode(400);
         context.response().end("Calling backend=" + RecorderProtoUtil.assignedBackendCompactRepr(callingBackend) + " not assigned to process_group=" + RecorderProtoUtil.processGroupCompactRepr(processGroup));
       } else {
-        PolicyDTO.VersionedPolicyDetails recordingPolicy = this.policyStore.getVersionedPolicy(processGroup);
+        PolicyDTO.VersionedPolicyDetails recordingPolicy = policyStore.getVersionedPolicy(processGroup);
         if (recordingPolicy == null) {
           mtrPolicyMiss.mark();
           context.response().setStatusCode(400);

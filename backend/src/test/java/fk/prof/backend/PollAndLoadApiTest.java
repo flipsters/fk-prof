@@ -16,6 +16,7 @@ import fk.prof.backend.model.association.ProcessGroupCountBasedBackendComparator
 import fk.prof.backend.model.association.impl.ZookeeperBasedBackendAssociationStore;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
 import fk.prof.backend.model.policy.PolicyStore;
+import fk.prof.backend.model.policy.ZookeeperBasedPolicyStore;
 import fk.prof.backend.model.slot.WorkSlotPool;
 import fk.prof.backend.proto.BackendDTO;
 import fk.prof.backend.util.BitOperationUtil;
@@ -47,6 +48,7 @@ import java.time.LocalDateTime;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static fk.prof.backend.util.ZookeeperUtil.DELIMITER;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -88,6 +90,7 @@ public class PollAndLoadApiTest {
     curatorClient.start();
     curatorClient.blockUntilConnected(10, TimeUnit.SECONDS);
     curatorClient.create().forPath(backendAssociationPath);
+    curatorClient.create().creatingParentsIfNeeded().forPath(DELIMITER + this.config.getPolicyBaseDir() + DELIMITER + this.config.getPolicyVersion());
 
     vertx = Vertx.vertx(new VertxOptions(this.config.getVertxOptions()));
     backendAssociationStore = new ZookeeperBasedBackendAssociationStore(vertx, curatorClient, backendAssociationPath, 1, 1, new ProcessGroupCountBasedBackendComparator());
@@ -107,7 +110,7 @@ public class PollAndLoadApiTest {
         context.fail(ar.result().cause());
       }
       try {
-        policyStore = mock(PolicyStore.class);
+        policyStore = new ZookeeperBasedPolicyStore(vertx, curatorClient, this.config.getPolicyBaseDir(), this.config.getPolicyVersion());
         VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, this.config, backendAssociationStore, policyStore);
 
         CountDownLatch latch = new CountDownLatch(1);
