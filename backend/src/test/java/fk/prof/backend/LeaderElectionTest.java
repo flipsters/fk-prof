@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static fk.prof.backend.util.ZookeeperUtil.DELIMITER;
 import static org.mockito.Mockito.*;
 
 @RunWith(VertxUnitRunner.class)
@@ -188,7 +189,7 @@ public class LeaderElectionTest {
   }
 
   @Test(timeout = 3000)
-  public void testBeckendAssociationAndPolicyStoreInitOnLeaderSelect(TestContext context) throws Exception {
+  public void testBackendAssociationAndPolicyStoreInitOnLeaderSelect(TestContext context) throws Exception {
     vertx = Vertx.vertx(new VertxOptions(config.getVertxOptions()));
 
     Recorder.ProcessGroup pg1 = Recorder.ProcessGroup.newBuilder().setAppId("a1").setCluster("c1").setProcName("p1").build();
@@ -274,6 +275,8 @@ public class LeaderElectionTest {
     // make sure association node is present
     try {
       curatorClient.create().forPath(config.getAssociationsConfig().getAssociationPath());
+      curatorClient.create().creatingParentsIfNeeded().forPath(DELIMITER + config.getPolicyBaseDir() + DELIMITER + config.getPolicyVersion());
+
     } catch (KeeperException.NodeExistsException ex) {
       // ignore
     }
@@ -281,7 +284,7 @@ public class LeaderElectionTest {
     BackendAssociationStore backendAssociationStore = createBackendAssociationStore(vertx, curatorClient);
     backendAssociationStore.init();
 
-    PolicyStore policyStore = new ZookeeperBasedPolicyStore(vertx, curatorClient, "/policy", "v0001");
+    PolicyStore policyStore = new ZookeeperBasedPolicyStore(vertx, curatorClient, "policy", "v0001");
     policyStore.init();
 
     backendAssociationStore.reportBackendLoad(BackendDTO.LoadReportRequest.newBuilder().setCurrTick(1).setIp("1").setLoad(0.5f).setPort(1234).build());

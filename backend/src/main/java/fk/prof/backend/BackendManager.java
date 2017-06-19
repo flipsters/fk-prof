@@ -48,6 +48,8 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
+import static fk.prof.backend.util.ZookeeperUtil.DELIMITER;
+
 public class BackendManager {
   private static Logger logger = LoggerFactory.getLogger(BackendManager.class);
 
@@ -182,6 +184,7 @@ public class BackendManager {
   private void ensureRequiredZkNodesPresent() throws  Exception {
     try {
       curatorClient.create().forPath(config.getAssociationsConfig().getAssociationPath());
+      curatorClient.create().creatingParentsIfNeeded().forPath(DELIMITER + config.getPolicyBaseDir() + DELIMITER + config.getPolicyVersion());
     } catch (KeeperException.NodeExistsException ex) {
       logger.warn(ex);
     }
