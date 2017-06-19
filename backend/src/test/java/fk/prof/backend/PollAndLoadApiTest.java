@@ -110,7 +110,7 @@ public class PollAndLoadApiTest {
         context.fail(ar.result().cause());
       }
       try {
-        policyStore = new ZookeeperBasedPolicyStore(vertx, curatorClient, this.config.getPolicyBaseDir(), this.config.getPolicyVersion());
+        policyStore = spy(new ZookeeperBasedPolicyStore(vertx, curatorClient, this.config.getPolicyBaseDir(), this.config.getPolicyVersion()));
         VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, this.config, backendAssociationStore, policyStore);
 
         CountDownLatch latch = new CountDownLatch(1);
