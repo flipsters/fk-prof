@@ -67,7 +67,7 @@ TEST(SiteResolver__should_resolve_backtrace) {
     auto it = fn_files.find("some_lambda_caller(std::function<void ()>)");
     CHECK(it != std::end(fn_files));//this symbol comes from a shared-lib (aim is to ensure it works well with relocatable symbols)
 
-    CHECK_EQUAL(readlink_path(it->second), my_test_helper_lib());
+    CHECK_EQUAL(my_test_helper_lib(), abs_path(it->second));
 }
 
 TEST(SiteResolver__should_call_out_unknown_mapping) {

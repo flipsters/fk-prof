@@ -2,6 +2,10 @@
 #include <unordered_map>
 #include <fstream>
 #include <libgen.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <sstream>
 
 __attribute__ ((noinline)) void some_lambda_caller(std::function<void()> fn) {
     fn();
@@ -56,7 +60,10 @@ __attribute__ ((noinline)) void fn_corge(int p, int q, int bt_capture_depth) {
 }
 
 std::string my_executable() {
-    return readlink_path("/proc/self/exe");
+    char link_path[PATH_MAX];
+    auto path_len = readlink("/proc/self/exe", link_path, PATH_MAX);
+    link_path[path_len] = '\0';
+    return {link_path};
 }
 
 std::string my_test_helper_lib() {
@@ -68,13 +75,46 @@ std::string my_test_helper_lib() {
     return dir_name_str;
 }
 
-std::string readlink_path(const std::string& path) {
-    char link_path[PATH_MAX];
-    auto path_len = readlink(path.c_str(), link_path, PATH_MAX);
-    if (path_len < 0) {
-        assert(errno == EINVAL);
-        return path;
+static bool is_symlink(const std::string& path) {
+    struct stat s;
+    assert(lstat(path.c_str(), &s) == 0);
+    return S_ISLNK(s.st_mode);
+}
+
+static void fragment_path(const std::string& path, std::list<std::string>& frags) {
+    auto j = path.length();
+    for (int i = j; i > 0; i--) {
+        if (path[i] == '/') {
+            auto f = path.substr(i + 1, j - i);
+            frags.push_front(f);
+            j = i - 1;
+        }
     }
-    link_path[path_len] = '\0';
-    return {link_path};
+    frags.push_front(path.substr(1, j));
+}
+
+static void dereference_symlink(std::stringstream& path) {
+    char dest[PATH_MAX];
+    auto curr_path = path.str();
+    auto ret = readlink(curr_path.c_str(), dest, PATH_MAX);
+    assert(ret > 0);
+    path.clear();
+    path << dest;
+}
+
+std::string abs_path(const std::string& path) {
+    std::list<std::string> frags;
+    fragment_path(path, frags);
+    std::stringstream curr_path;
+    while (! frags.empty()) {
+        auto f = frags.front();
+        frags.pop_front();
+        curr_path << '/' << f;
+        if (is_symlink(curr_path.str())) {
+            dereference_symlink(curr_path);
+            fragment_path(curr_path.str(), frags);
+            curr_path.clear();
+        }
+    }
+    return curr_path.str();
 }
