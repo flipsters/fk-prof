@@ -248,7 +248,7 @@ TEST(ProfileSerializer__should_write_cpu_samples_native_and_java) {
     jvmtiEnv* ti = nullptr;
 
     SerializationFlushThresholds sft;
-    TruncationThresholds tts(7);
+    TruncationThresholds tts(7, 10);
     ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts, 15);
 
     CircularQueue q(ps, 10);
@@ -438,7 +438,7 @@ TEST(ProfileSerializer__should_write_cpu_samples__with_scoped_ctx) {
     jvmtiEnv* ti = nullptr;
 
     SerializationFlushThresholds sft;
-    TruncationThresholds tts(7);
+    TruncationThresholds tts(7, 10);
     ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts, 0);
 
     CircularQueue q(ps, 10);
@@ -562,7 +562,7 @@ TEST(ProfileSerializer__should_auto_flush__at_buffering_threshold) {
 
     SerializationFlushThresholds sft;
     sft.cpu_samples = 10;
-    TruncationThresholds tts(7);
+    TruncationThresholds tts(7, 10);
     ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts, 0);
 
     CircularQueue q(ps, 10);
@@ -677,7 +677,7 @@ TEST(ProfileSerializer__should_auto_flush_correctly__after_first_flush___and_sho
 
     SerializationFlushThresholds sft;
     sft.cpu_samples = 10;
-    TruncationThresholds tts(7);
+    TruncationThresholds tts(7, 10);
     ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts, 0);
 
     CircularQueue q(ps, 10);
@@ -851,7 +851,7 @@ TEST(ProfileSerializer__should_auto_flush_correctly__after_first_flush___and_sho
 
     SerializationFlushThresholds sft;
     sft.cpu_samples = 10;
-    TruncationThresholds tts(7);
+    TruncationThresholds tts(7, 10);
     ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts, 0);
 
     CircularQueue q(ps, 10);
@@ -1002,7 +1002,7 @@ TEST(ProfileSerializer__should_write_cpu_samples__with_forte_error) {
     jvmtiEnv* ti = nullptr;
 
     SerializationFlushThresholds sft;
-    TruncationThresholds tts(7);
+    TruncationThresholds tts(7, 10);
     ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts, 0);
 
     CircularQueue q(ps, 10);
@@ -1105,7 +1105,7 @@ TEST(ProfileSerializer__should_snip_short__very_long_cpu_sample_backtraces) {
     jvmtiEnv* ti = nullptr;
 
     SerializationFlushThresholds sft;
-    TruncationThresholds tts(4);
+    TruncationThresholds tts(4, 10);
     ProfileSerializingWriter ps(ti, pw, test_mthd_info_resolver, test_line_no_resolver, reg, sft, tts, 0);
 
     CircularQueue q(ps, 10);
@@ -1233,7 +1233,7 @@ void play_last_flush_scenario(recording::Wse& wse1, int additional_traces) {
 
     SerializationFlushThresholds sft;
     sft.cpu_samples = 10;
-    TruncationThresholds tts(7);
+    TruncationThresholds tts(7, 10);
 
     STATIC_ARRAY(frames0, JVMPI_CallFrame, 7, 7);
     JVMPI_CallTrace ct0;

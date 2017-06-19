@@ -55,6 +55,9 @@ struct ConfigurationOptions {
 
     char* stats_syslog_tag;
 
+    bool allow_bci;
+    bool allow_ftrace;
+
     ConfigurationOptions(const char* options) :
         service_endpoint(nullptr),
         ip(nullptr),
@@ -76,7 +79,9 @@ struct ConfigurationOptions {
         rpc_timeout(10),
         slow_tx_tolerance(1.5),
         tx_ring_sz(1024 * 1024),
-        stats_syslog_tag(nullptr) {
+        stats_syslog_tag(nullptr),
+        allow_bci(false),
+        allow_ftrace(false) {
 
         load(options);
     }

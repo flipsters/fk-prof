@@ -152,7 +152,9 @@ set(SOURCE_FILES
     ${SRC}/prob_pct.cc
     ${SRC}/metric_formatter.hh
     ${SRC}/metric_formatter.cc
-    ${SRC}/unique_readsafe_ptr.hh)
+    ${SRC}/unique_readsafe_ptr.hh
+    ${SRC}/ctx_switch_tracer.hh
+    ${SRC}/ctx_switch_tracer.cc)
 
 set(PRELOAD_SOURCE_FILES
     ${SRC_PRELOAD}/preload.c)

@@ -54,8 +54,9 @@ typedef std::uint32_t FlushCtr;
 
 struct SerializationFlushThresholds {
     FlushCtr cpu_samples;
+    FlushCtr ctx_sw_traces;
 
-    SerializationFlushThresholds() : cpu_samples(100) {}
+    SerializationFlushThresholds() : cpu_samples(100), ctx_sw_traces(100) {}
     ~SerializationFlushThresholds() {}
 };
 
@@ -63,9 +64,14 @@ typedef std::uint32_t TruncationCap;
 
 struct TruncationThresholds {
     TruncationCap cpu_samples_max_stack_sz;
+    TruncationCap ctx_sw_trace_max_stack_sz;
 
-    TruncationThresholds(TruncationCap _cpu_samples_max_stack_sz) : cpu_samples_max_stack_sz(_cpu_samples_max_stack_sz) {}
-    TruncationThresholds() : cpu_samples_max_stack_sz(DEFAULT_MAX_FRAMES_TO_CAPTURE) {}
+    TruncationThresholds(TruncationCap _cpu_samples_max_stack_sz, TruncationCap _ctx_sw_trace_max_stack_sz) :
+        cpu_samples_max_stack_sz(_cpu_samples_max_stack_sz),
+        ctx_sw_trace_max_stack_sz(_ctx_sw_trace_max_stack_sz) {}
+
+    TruncationThresholds() : TruncationThresholds(DEFAULT_MAX_FRAMES_TO_CAPTURE, DEFAULT_MAX_FRAMES_TO_CAPTURE) {}
+
     ~TruncationThresholds() {}
 };
 

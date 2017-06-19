@@ -21,3 +21,7 @@ std::uint32_t Stacktraces::fill_backtrace(NativeFrame* buff, std::uint32_t capac
     }
     return i;
 }
+
+std::uint32_t Stacktraces::calculate_max_stack_depth(std::uint32_t _max_stack_depth) {
+    return (_max_stack_depth > 0 && _max_stack_depth < (MAX_FRAMES_TO_CAPTURE - 1)) ? _max_stack_depth : DEFAULT_MAX_FRAMES_TO_CAPTURE;
+}

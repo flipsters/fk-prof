@@ -104,6 +104,11 @@ private:
     void prep(const recording::CpuSampleWork& csw);
     void issue(const recording::CpuSampleWork& csw, Processes& processes, JNIEnv* env);
     void retire(const recording::CpuSampleWork& csw);
+
+    bool capable(const recording::CtxSwitchTraceWork& cstw);
+    void prep(const recording::CtxSwitchTraceWork& cstw);
+    void issue(const recording::CtxSwitchTraceWork& cstw, Processes& processes, JNIEnv* env);
+    void retire(const recording::CtxSwitchTraceWork& cstw);
 };
 
 #endif

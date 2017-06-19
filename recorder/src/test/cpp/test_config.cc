@@ -6,7 +6,7 @@
 #define IN_TEST
 #include "../../main/cpp/config.hh"
 
-TEST(ParsesAllOptions) {
+TEST(Config_Should_ParsesAllOptions) {
     TestEnv _;
     std::string str("service_endpoint=http://10.20.30.40:9070,"
                     "ip=50.60.70.80,"
@@ -32,7 +32,9 @@ TEST(ParsesAllOptions) {
                     "rpc_timeout=7,"
                     "slow_tx_tolerance=1.25,"
                     "tx_ring_sz=102400,"
-                    "stats_syslog_tag=foo");
+                    "stats_syslog_tag=foo,"
+                    "allow_bci=y,"
+                    "allow_ftrace=y");
     
     ConfigurationOptions options(str.c_str());
     CHECK_EQUAL("http://10.20.30.40:9070", options.service_endpoint);
@@ -60,11 +62,13 @@ TEST(ParsesAllOptions) {
     CHECK_EQUAL(1.25, options.slow_tx_tolerance);
     CHECK_EQUAL(102400, options.tx_ring_sz);
     CHECK_EQUAL("foo", options.stats_syslog_tag);
+    CHECK_EQUAL(true, options.allow_bci);
+    CHECK_EQUAL(true, options.allow_ftrace);
     CHECK_EQUAL(true, options.valid());
 
 }
 
-TEST(Understand_AllowSigprof) {
+TEST(Config_Should_Understand_AllowSigprof) {
     TestEnv _;
     std::string str("service_endpoint=http://10.20.30.40:9070,"
                     "ip=50.60.70.80,"
@@ -100,21 +104,25 @@ TEST(Understand_AllowSigprof) {
     "pctx_jar_path=/tmp/foo.jar,"                                    \
     "stats_syslog_tag=bar,"
 
-TEST(Understand_Match_allow_sigprof_field_value_case_insensitively) {
+TEST(Config_Should_Understand_Match_allow_capability_field_values_case_insensitively) {
     TestEnv _;
 
-    std::string str(UNRELATED_FIELDS "allow_sigprof=Y");
-    ConfigurationOptions options0(str.c_str());
-    CHECK_EQUAL(true, options0.allow_sigprof);
-    CHECK_EQUAL(true, options0.valid());
+    std::vector<std::string> keys {"allow_sigprof", "allow_bci", "allow_ftrace"};
 
-    str = (UNRELATED_FIELDS "allow_sigprof=y");
-    ConfigurationOptions options1(str.c_str());
-    CHECK_EQUAL(true, options1.allow_sigprof);
-    CHECK_EQUAL(true, options1.valid());
+    for (const auto& key : keys) {
+        std::string str(UNRELATED_FIELDS + key + "=Y");
+        ConfigurationOptions options0(str.c_str());
+        CHECK_EQUAL(true, options0.allow_sigprof);
+        CHECK_EQUAL(true, options0.valid());
+
+        str = (UNRELATED_FIELDS + key + "=y");
+        ConfigurationOptions options1(str.c_str());
+        CHECK_EQUAL(true, options1.allow_sigprof);
+        CHECK_EQUAL(true, options1.valid());
+    }
 }
 
-TEST(DefaultAppropriately) {
+TEST(Config_Should_DefaultAppropriately) {
     TestEnv _;
     std::string str("service_endpoint=http://10.20.30.40:9070,"
                     "ip=50.60.70.80,"
@@ -156,6 +164,8 @@ TEST(DefaultAppropriately) {
     CHECK_EQUAL(1.5, options.slow_tx_tolerance);
     CHECK_EQUAL(1024 * 1024, options.tx_ring_sz);
     CHECK_EQUAL("bar", options.stats_syslog_tag);
+    CHECK_EQUAL(false, options.allow_bci);
+    CHECK_EQUAL(false, options.allow_ftrace);
     CHECK_EQUAL(true, options.valid());
 }
 
@@ -191,7 +201,7 @@ TEST(DefaultAppropriately) {
         CHECK_EQUAL(false, opts.valid());               \
     }
 
-TEST(Validity) {
+TEST(Config_Should_Check_Validity) {
     TestEnv _;
     std::vector<std::string> opts {"service_endpoint=http://10.20.30.40:9070",
             "ip=50.60.70.80",
@@ -237,7 +247,7 @@ TEST(Validity) {
 }
 
 
-TEST(SafelyTerminatesStrings) {
+TEST(Config_Should_SafelyTerminatesStrings) {
     char* string = (char *) "/home/richard/log.hpl";
     char* result = safe_copy_string(string, NULL);
 

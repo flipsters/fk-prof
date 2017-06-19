@@ -53,8 +53,6 @@ public:
 
 class Profiler : public Process {
 public:
-    static std::uint32_t calculate_max_stack_depth(std::uint32_t hinted_max_stack_depth);
-
     explicit Profiler(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap &_thread_map, ProfileSerializingWriter& _serializer, std::uint32_t _max_stack_depth, std::uint32_t _sampling_freq, ProbPct& _prob_pct, std::uint8_t _noctx_cov_pct);
 
     bool start(JNIEnv *jniEnv);

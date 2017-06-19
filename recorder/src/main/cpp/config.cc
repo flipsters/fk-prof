@@ -81,6 +81,15 @@ std::ostream& operator<<(std::ostream& os, const ConfigurationOptions* config) {
     return os;
 }
 
+bool is_one_char(const char* value) {
+    return (strlen(value) == 1) || (value[1] == ',');
+}
+
+bool is_yes(const char* value) {
+    return is_one_char(value) &&
+        ((value[0] == 'y') || (value[0] == 'Y'));
+}
+
 void ConfigurationOptions::load(const char* options) {
     const char* next = options;
     for (const char *key = options; next != NULL; key = next + 1) {
@@ -141,8 +150,7 @@ void ConfigurationOptions::load(const char* options) {
                     noctx_cov_pct = 100;
                 }
             } else if (strstr(key, "allow_sigprof") == key) {
-                allow_sigprof = ((strlen(value) == 1) || (value[1] == ',')) &&
-                    ((value[0] == 'y') || (value[0] == 'Y'));
+                allow_sigprof = is_yes(value);
             } else if (strstr(key, "pctx_jar_path") == key) {
                 pctx_jar_path = safe_copy_string(value, next);
             } else if (strstr(key, "rpc_timeout") == key) {
@@ -153,6 +161,10 @@ void ConfigurationOptions::load(const char* options) {
                 tx_ring_sz = static_cast<std::uint32_t>(atoi(value));
             } else if (strstr(key, "stats_syslog_tag") == key) {
                 stats_syslog_tag = safe_copy_string(value, next);
+            } else if (strstr(key, "allow_bci") == key) {
+                allow_bci = is_yes(value);
+            } else if (strstr(key, "allow_ftrace") == key) {
+                allow_ftrace = is_yes(value);
             } else {
                 logger->warn("Unknown configuration option: {}", key);
             }

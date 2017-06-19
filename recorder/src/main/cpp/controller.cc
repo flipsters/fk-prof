@@ -3,6 +3,7 @@
 #include <curl/curl.h>
 #include "buff.hh"
 #include "blocking_ring_buffer.hh"
+#include "ctx_switch_tracer.hh"
 
 void controllerRunnable(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *arg) {
     auto control = static_cast<Controller*>(arg);
@@ -640,19 +641,19 @@ bool Controller::capable(const recording::CpuSampleWork& csw) {
 
 void Controller::prep(const recording::CpuSampleWork& csw) {
     sft.cpu_samples = csw.serialization_flush_threshold();
-    tts.cpu_samples_max_stack_sz = Profiler::calculate_max_stack_depth(csw.max_frames());
+    tts.cpu_samples_max_stack_sz = Stacktraces::calculate_max_stack_depth(csw.max_frames());
 }
 
-class CpuProfileProcess : public Process {
-    ReadsafePtr<Profiler> p;
+template <typename T> class ReadsafeProcess : public Process {
+    ReadsafePtr<T> p;
     bool available;
 
 public:
-    CpuProfileProcess() : p(GlobalCtx::recording.cpu_profiler) {
+    ReadsafeProcess(UniqueReadsafePtr<T>& _p) : p(_p) {
         available = p.available();
     }
 
-    virtual ~CpuProfileProcess() {}
+    virtual ~ReadsafeProcess() {}
 
     void run() {
         if (available) p->run();
@@ -666,16 +667,46 @@ public:
 void Controller::issue(const recording::CpuSampleWork& csw, Processes& processes, JNIEnv* env) {
     auto freq = csw.frequency();
     logger->info("Starting cpu-sampling at {} Hz and for upto {} frames", freq, tts.cpu_samples_max_stack_sz);
-    
+
     GlobalCtx::recording.cpu_profiler.reset(new Profiler(jvm, jvmti, thread_map, *serializer.get(), tts.cpu_samples_max_stack_sz, freq, get_prob_pct(), cfg.noctx_cov_pct));
     ReadsafePtr<Profiler> p(GlobalCtx::recording.cpu_profiler);
     p->start(env);
-    processes.push_back(new CpuProfileProcess());
+    processes.push_back(new ReadsafeProcess<Profiler>(GlobalCtx::recording.cpu_profiler));
 }
 
 void Controller::retire(const recording::CpuSampleWork& csw) {
     logger->info("Stopping cpu-sampling");
     GlobalCtx::recording.cpu_profiler.reset();
+}
+
+bool Controller::capable(const recording::CtxSwitchTraceWork& cstw) {
+    bool capable = cfg.allow_ftrace && cfg.allow_bci;
+    if (! capable) logger->warn("Not capable of context-switch-tracing (off-cpu tracing) work.");
+    return capable;
+}
+
+void Controller::prep(const recording::CtxSwitchTraceWork& cstw) {
+    sft.ctx_sw_traces = cstw.serialization_flush_threshold();
+    tts.ctx_sw_trace_max_stack_sz = Stacktraces::calculate_max_stack_depth(cstw.max_frames());
+}
+
+void Controller::issue(const recording::CtxSwitchTraceWork& cstw, Processes& processes, JNIEnv* env) {
+    auto latency_threshold_ns = cstw.min_latency_ns();
+    auto track_wakeup_lag = cstw.track_wakeup_lag();
+    auto use_global_clock = cstw.use_global_clock();
+    auto track_syscall = cstw.track_syscall();
+
+    logger->info("Starting ctx-switch tracing for latency >= {}ns (tracing wakeup-lag: {}, using global clock: {}, tracking syscalls: {}) and for upto {} frames", latency_threshold_ns, track_wakeup_lag, use_global_clock, track_syscall, tts.cpu_samples_max_stack_sz);
+
+    GlobalCtx::recording.ctxsw_tracer.reset(new CtxSwitchTracer(thread_map, *serializer.get(), tts.ctx_sw_trace_max_stack_sz, get_prob_pct(), cfg.noctx_cov_pct, latency_threshold_ns, track_wakeup_lag, use_global_clock, track_syscall));
+    ReadsafePtr<CtxSwitchTracer> p(GlobalCtx::recording.ctxsw_tracer);
+    p->start(env);
+    processes.push_back(new ReadsafeProcess<CtxSwitchTracer>(GlobalCtx::recording.ctxsw_tracer));
+}
+
+void Controller::retire(const recording::CtxSwitchTraceWork& cstw) {
+    logger->info("Stopping ctx-switch tracing");
+    GlobalCtx::recording.ctxsw_tracer.reset();
 }
 
 namespace GlobalCtx {

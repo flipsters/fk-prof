@@ -141,6 +141,8 @@ private:
 
 namespace Stacktraces {
     std::uint32_t fill_backtrace(NativeFrame* buff, std::uint32_t capacity);
+
+    std::uint32_t calculate_max_stack_depth(std::uint32_t hinted_max_stack_depth);
 }
 
 #endif // STACKTRACES_H

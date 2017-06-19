@@ -228,10 +228,11 @@ message MonitorTrace {
 
 message CtxSwitchTraceWork {
   required uint64 min_latency_ns = 1;
-  required bool use_global_clock = 2;
-  required bool track_syscall = 3;
-  required bool track_wakeup_lag = 4;
-  optional uint32 serialization_flush_threshold = 5 [default = 100];
+  required uint32 max_frames = 2;
+  required bool track_wakeup_lag = 3;
+  required bool use_global_clock = 4;
+  required bool track_syscall = 5;
+  optional uint32 serialization_flush_threshold = 6 [default = 100];
 }
 
 message CtxSwitchTraceWse {
@@ -240,10 +241,10 @@ message CtxSwitchTraceWse {
 
 message CtxSwitchTrace {
   required StackSample stack = 1;
-  required uint64 latency_ns = 2;//both are inaccurate with local clock
-  optional uint64 wakeup_lag_ns = 3;
-  required bool voluntary = 4;
-  required bool migrated = 5;
+  required uint64 latency_ns = 2;  //both latency and wakeup_lag are inaccurate with local clock
+  required bool voluntary = 3;
+  required bool migrated = 4;
+  optional uint64 wakeup_lag_ns = 5;
   optional uint32 syscall_id = 6;
 }
 
