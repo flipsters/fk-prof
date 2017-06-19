@@ -7,7 +7,6 @@ import fk.prof.backend.deployer.VerticleDeployer;
 import fk.prof.backend.deployer.impl.BackendHttpVerticleDeployer;
 import fk.prof.backend.http.ApiPathConstants;
 import fk.prof.backend.http.HttpHelper;
-import fk.prof.backend.http.ProfHttpClient;
 import fk.prof.backend.mock.MockPolicyData;
 import fk.prof.backend.model.aggregation.impl.ActiveAggregationWindowsImpl;
 import fk.prof.backend.model.assignment.AssociatedProcessGroups;
@@ -91,7 +90,7 @@ public class BackendPolicyAPITest {
         final Async async = context.async();
         Router router = Router.router(vertx);
         HttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
-                ApiPathConstants.LEADER + ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, req -> {
+                ApiPathConstants.LEADER_GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, req -> {
                     PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0);
 
                     req.response().end(versionedPolicyDetails.toString());
@@ -126,7 +125,7 @@ public class BackendPolicyAPITest {
         }
         Buffer finalPayloadAsBuffer = payloadAsBuffer;
         HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT,
-                ApiPathConstants.LEADER + ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
+                ApiPathConstants.LEADER_GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
                 BodyHandler.create().setBodyLimit(1024 * 10), req -> {
                     try {
                         PolicyDTO.VersionedPolicyDetails expected = PolicyDTO.VersionedPolicyDetails.parseFrom(finalPayloadAsBuffer.getBytes());
@@ -167,7 +166,7 @@ public class BackendPolicyAPITest {
         }
         Buffer finalPayloadAsBuffer = payloadAsBuffer;
         HttpHelper.attachHandlersToRoute(router, HttpMethod.POST,
-                ApiPathConstants.LEADER + ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
+                ApiPathConstants.LEADER_GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
                 BodyHandler.create().setBodyLimit(1024 * 10), req -> {
                     try {
                         PolicyDTO.VersionedPolicyDetails expected = PolicyDTO.VersionedPolicyDetails.parseFrom(finalPayloadAsBuffer.getBytes());

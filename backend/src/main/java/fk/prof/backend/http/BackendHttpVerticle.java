@@ -95,10 +95,10 @@ public class BackendHttpVerticle extends AbstractVerticle {
     HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.AGGREGATOR_POST_PROFILE,
         this::handlePostProfile);
 
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.POST_ASSOCIATION,
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.BACKEND_POST_ASSOCIATION,
         BodyHandler.create().setBodyLimit(1024 * 10), this::handlePostAssociation);
 
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.GET_ASSOCIATIONS,
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_ASSOCIATIONS,
         this::handleGetAssociations);
 
     HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.BACKEND_POST_POLL,
@@ -106,15 +106,15 @@ public class BackendHttpVerticle extends AbstractVerticle {
 
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_HEALTHCHECK, this::handleGetHealthCheck);
 
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.APPIDS, this::proxyToLeader);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.CLUSTERIDS_GIVEN_APPID, this::proxyToLeader);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.PROCNAMES_GIVEN_APPID_CLUSTERID, this::proxyToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_APPIDS, this::handleProxyToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_CLUSTERIDS_GIVEN_APPID, this::handleProxyToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_PROCNAMES_GIVEN_APPID_CLUSTERID, this::handleProxyToLeader);
 
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, this::proxyToLeader);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT, ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
-            BodyHandler.create().setBodyLimit(1024 * 10), this::proxyToLeader);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
-            BodyHandler.create().setBodyLimit(1024 * 10), this::proxyToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, this::handleProxyToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT, ApiPathConstants.BACKEND_PUT_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
+            BodyHandler.create().setBodyLimit(1024 * 10), this::handleProxyToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.BACKEND_POST_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
+            BodyHandler.create().setBodyLimit(1024 * 10), this::handleProxyToLeader);
 
     return router;
   }
@@ -232,7 +232,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
         Buffer recorderInfoAsBuffer = ProtoUtil.buildBufferFromProto(recorderInfo);
 
         //Proxy request to leader if self(backend) is not associated with the recorder
-        makeRequestToLeader(leaderDetail, HttpMethod.POST, ApiPathConstants.POST_ASSOCIATION, recorderInfoAsBuffer, true)
+        makeRequestToLeader(leaderDetail, HttpMethod.POST, ApiPathConstants.BACKEND_POST_ASSOCIATION, recorderInfoAsBuffer, true)
           .setHandler(ar -> handleLeaderResponse(context, ar));
       } catch (Exception ex) {
         HttpFailure httpFailure = HttpFailure.failure(ex);
@@ -247,7 +247,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
     if (leaderDetail != null) {
       try {
         //Proxy request to leader
-        makeRequestToLeader(leaderDetail, HttpMethod.GET, ApiPathConstants.GET_ASSOCIATIONS, null, true).setHandler(ar -> {
+        makeRequestToLeader(leaderDetail, HttpMethod.GET, ApiPathConstants.BACKEND_GET_ASSOCIATIONS, null, true).setHandler(ar -> {
           if(ar.failed()) {
             HttpFailure httpFailure = HttpFailure.failure(ar.cause());
             HttpHelper.handleFailure(context, httpFailure);
@@ -277,7 +277,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
     }
   }
 
-  private void proxyToLeader(RoutingContext context) {
+  private void handleProxyToLeader(RoutingContext context) {
     BackendDTO.LeaderDetail leaderDetail = verifyLeaderAvailabilityOrFail(context.response());
     if (leaderDetail != null) {
       try {

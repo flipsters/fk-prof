@@ -103,7 +103,7 @@ public class LeaderProcessGroupListingAPITest {
         Future<Void> pIncorrectPrefix = Future.future();
         Future<Void> pNoPrefix = Future.future();
 
-        client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER + ApiPathConstants.APPIDS + "?prefix=" + P_APP_ID.substring(0, 1 + new Random().nextInt(P_APP_ID.length() - 1)), httpClientResponse -> {
+        client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER_GET_APPIDS + "?prefix=" + P_APP_ID.substring(0, 1 + new Random().nextInt(P_APP_ID.length() - 1)), httpClientResponse -> {
             context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
             httpClientResponse.bodyHandler(buffer -> {
                 context.assertTrue(buffer.toString().contains(P_APP_ID));
@@ -111,7 +111,7 @@ public class LeaderProcessGroupListingAPITest {
                 pCorrectPrefix.complete();
             });
         });
-        client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER + ApiPathConstants.APPIDS + "?prefix=", httpClientResponse -> {
+        client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER_GET_APPIDS + "?prefix=", httpClientResponse -> {
             context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
             httpClientResponse.bodyHandler(buffer -> {
                 context.assertTrue(buffer.toString().contains(P_APP_ID));
@@ -119,7 +119,7 @@ public class LeaderProcessGroupListingAPITest {
                 pIncorrectPrefix.complete();
             });
         });
-        client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER + ApiPathConstants.APPIDS + "?prefix=" + NP_APP_ID.substring(0, 1 + new Random().nextInt(NP_APP_ID.length() - 1)), httpClientResponse -> {
+        client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER_GET_APPIDS + "?prefix=" + NP_APP_ID.substring(0, 1 + new Random().nextInt(NP_APP_ID.length() - 1)), httpClientResponse -> {
             context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
             httpClientResponse.bodyHandler(buffer -> {
                 context.assertFalse(buffer.toString().contains(P_APP_ID));

@@ -6,7 +6,6 @@ import fk.prof.backend.deployer.VerticleDeployer;
 import fk.prof.backend.deployer.impl.BackendHttpVerticleDeployer;
 import fk.prof.backend.http.ApiPathConstants;
 import fk.prof.backend.http.HttpHelper;
-import fk.prof.backend.http.ProfHttpClient;
 import fk.prof.backend.http.policy.BackendPolicyAPITest;
 import fk.prof.backend.model.aggregation.impl.ActiveAggregationWindowsImpl;
 import fk.prof.backend.model.assignment.AssociatedProcessGroups;
@@ -99,12 +98,12 @@ public class BackendProcessGroupListingAPITest {
 
         Router router = Router.router(vertx);
         HttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
-                ApiPathConstants.LEADER + ApiPathConstants.APPIDS, req -> req.response().end(Json.encode(Sets.newSet(APP_ID))));
+                ApiPathConstants.LEADER_GET_APPIDS, req -> req.response().end(Json.encode(Sets.newSet(APP_ID))));
         leaderServer.requestHandler(router::accept);
         leaderServer.listen(leaderPort, result -> {
             if (result.succeeded()) {
                 when(inMemoryLeaderStore.getLeader()).thenReturn(BackendDTO.LeaderDetail.newBuilder().setHost(LEADER_IP).setPort(leaderPort).build());
-                client.getNow(backendPort, "localhost", ApiPathConstants.APPIDS + "?prefix=" + APP_ID.substring(0, 1 + new Random().nextInt(APP_ID.length() - 1)), httpClientResponse -> {
+                client.getNow(backendPort, "localhost", ApiPathConstants.BACKEND_GET_APPIDS + "?prefix=" + APP_ID.substring(0, 1 + new Random().nextInt(APP_ID.length() - 1)), httpClientResponse -> {
                     context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
                     httpClientResponse.bodyHandler(buffer -> {
                         context.assertEquals(buffer.toJsonArray().size(), 1);
@@ -124,7 +123,7 @@ public class BackendProcessGroupListingAPITest {
 
         Router router = Router.router(vertx);
         HttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
-                ApiPathConstants.LEADER + ApiPathConstants.CLUSTERIDS_GIVEN_APPID, req -> req.response().end(Json.encode(Sets.newSet(CLUSTER_ID))));
+                ApiPathConstants.LEADER_GET_CLUSTERIDS_GIVEN_APPID, req -> req.response().end(Json.encode(Sets.newSet(CLUSTER_ID))));
         leaderServer.requestHandler(router::accept);
         leaderServer.listen(leaderPort, result -> {
             if (result.succeeded()) {
@@ -150,7 +149,7 @@ public class BackendProcessGroupListingAPITest {
 
         Router router = Router.router(vertx);
         HttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
-                ApiPathConstants.LEADER + ApiPathConstants.PROCNAMES_GIVEN_APPID_CLUSTERID, req -> req.response().end(Json.encode(Sets.newSet(PROC))));
+                ApiPathConstants.LEADER_GET_PROCNAMES_GIVEN_APPID_CLUSTERID, req -> req.response().end(Json.encode(Sets.newSet(PROC))));
         leaderServer.requestHandler(router::accept);
         leaderServer.listen(leaderPort, result -> {
             if (result.succeeded()) {
