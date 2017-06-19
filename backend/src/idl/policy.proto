@@ -17,7 +17,8 @@ message PolicyDetails {
 
 message Policy {
     required Schedule schedule = 1;
-    repeated Work work = 2;
+    required string description = 2;
+    repeated Work work = 3;
 }
 
 message Schedule {

@@ -22,7 +22,7 @@ public class PolicyDTOProtoUtil {
         PolicyDTO.Policy inputPolicy = versionedPolicy.getPolicyDetails().getPolicy();
         return  BackendDTO.RecordingPolicy.newBuilder().setCoveragePct(inputPolicy.getSchedule().getPgCovPct())
                 .setDuration(inputPolicy.getSchedule().getDuration())
-                .setDescription(constructDescription(versionedPolicy.getPolicyDetails()))
+                .setDescription(inputPolicy.getDescription())
                 .addAllWork(inputPolicy.getWorkList().stream().map(PolicyDTOProtoUtil::translateToBackendDTOWork).collect(Collectors.toList())).build();
     }
 
@@ -65,12 +65,5 @@ public class PolicyDTOProtoUtil {
                     .setMaxFrames(inputMonitorWait.getMaxFrames()).build());
         }
         return outputWorkBuilder.build();
-    }
-
-    private static String constructDescription(PolicyDTO.PolicyDetails policyDetails){
-        return "Created at: " + policyDetails.getCreatedAt() +
-                ", Modified at: " + policyDetails.getModifiedAt() +
-                ", Modified by: " + policyDetails.getModifiedBy();
-
     }
 }

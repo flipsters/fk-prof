@@ -189,7 +189,7 @@ public class LeaderElectionTest {
   }
 
   @Test(timeout = 3000)
-  public void testBackendAssociationAndPolicyStoreInitOnLeaderSelect(TestContext context) throws Exception {
+  public void   testBackendAssociationAndPolicyStoreInitOnLeaderSelect(TestContext context) throws Exception {
     vertx = Vertx.vertx(new VertxOptions(config.getVertxOptions()));
 
     Recorder.ProcessGroup pg1 = Recorder.ProcessGroup.newBuilder().setAppId("a1").setCluster("c1").setProcName("p1").build();
@@ -202,9 +202,7 @@ public class LeaderElectionTest {
     PolicyDTO.Schedule schedule = PolicyDTO.Schedule.newBuilder().setDuration(200).setPgCovPct(100).setAfter("w0").build();
     PolicyDTO.PolicyDetails policyDetails = PolicyDTO.PolicyDetails.newBuilder().
             setPolicy(PolicyDTO.Policy.newBuilder().
-                    addWork(work).setSchedule(schedule).build()).setCreatedAt("3").setModifiedAt("4").setModifiedBy("admin").build();
-//
-
+                    addWork(work).setSchedule(schedule).setDescription("Test policy").build()).setCreatedAt("3").setModifiedAt("4").setModifiedBy("admin").build();
 
     // populate some data first
     CompositeFuture f = populateAssociationAndPolicies(pg1, pg2, policyDetails);
@@ -220,7 +218,7 @@ public class LeaderElectionTest {
 
           // get the httpVerticleDeployedFuture for reference.
           MutableObject<Future> httpVerticleDeployedFuture = new MutableObject<>();
-          PolicyStore policyStore = mock(PolicyStore.class);
+          PolicyStore policyStore = new ZookeeperBasedPolicyStore(vertx, curatorClient, config.getPolicyBaseDir(), config.getPolicyVersion());
           VerticleDeployer leaderHttpVerticleDeployer = spy(new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore));
           when(leaderHttpVerticleDeployer.deploy()).thenAnswer(inv -> {
             httpVerticleDeployedFuture.setValue((Future) inv.callRealMethod());
