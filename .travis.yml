@@ -16,13 +16,14 @@ before_install:
 
 install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y libunittest++-dev libboost-all-dev libprotobuf-dev protobuf-compiler libelf-dev valgrind
+  - sudo apt-get install -y tree libunittest++-dev libboost-all-dev libprotobuf-dev protobuf-compiler libelf-dev valgrind
 
 before_script:
   - gcc -v
   - cmake -version
   - apt-cache policy cmake
   - apt-cache policy libelf-dev
+  - tree /usr/lib
   - git clone https://github.com/efficient/libcuckoo.git
   - pushd libcuckoo && git checkout v0.2 
   - cmake .
