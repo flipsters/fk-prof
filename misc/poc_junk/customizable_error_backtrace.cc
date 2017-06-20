@@ -18,11 +18,13 @@
 #include <cxxabi.h>
 #include <link.h>
 #include <signal.h>
+#include <assert.h>
 
 #include "error_backtrace_different_compilation_unit_helper.hh"
 
 #ifdef W_JNI
 #include "BtPrinter.h"
+#include <ucontext.h>
 #endif
 
 typedef std::uint64_t Addr;
@@ -310,6 +312,7 @@ void hookup_sighdlr() {
     }
 }
 
+
 #ifndef W_JNI
 
 int main() {
@@ -320,8 +323,52 @@ int main() {
 
 #else
 
+std::atomic<bool> initialized {false};
+
+typedef struct {
+    jint lineno;
+    jmethodID method_id;
+} JVMPI_CallFrame;
+
+typedef struct {
+    // JNIEnv of the thread from which we grabbed the trace
+    JNIEnv* env_id;
+    // < 0 if the frame isn't walkable
+    jint num_frames;
+    // The frames, callee first.
+    JVMPI_CallFrame *frames;
+} JVMPI_CallTrace;
+
+typedef void (*ASGCTType)(JVMPI_CallTrace *, jint, void *);
+
+ASGCTType agct;
+
+void init_agct() {
+    agct = reinterpret_cast<ASGCTType>(dlsym(RTLD_DEFAULT, "AsyncGetCallTrace"));
+}
+
+void agct_capture(JNIEnv *jniEnv) {
+    JVMPI_CallFrame* frames = (JVMPI_CallFrame*)alloca(256 * sizeof(JVMPI_CallFrame));
+    JVMPI_CallTrace trace;
+    trace.env_id = jniEnv;
+    trace.frames = frames;
+    ucontext_t ctx;
+    auto ret = getcontext(&ctx);
+    assert(ret == 0);
+    (*agct)(&trace, 256, &ctx);
+    std::cout << "Captured frames: " << trace.num_frames << "\n";
+    if (trace.num_frames > 0) {
+        //buffer->push(trace, err, default_ctx, thread_info);
+    }
+}
+
 JNIEXPORT void JNICALL Java_BtPrinter_printBt(JNIEnv* jni, jobject self) {
-    foo();
+    if (! initialized) {
+        init_agct();
+        initialized = true;
+    }
+    //foo();
+    agct_capture(jni);
 }
 
 #endif
