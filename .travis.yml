@@ -22,6 +22,7 @@ before_script:
   - gcc -v
   - cmake -version
   - apt-cache policy cmake
+  - apt-cache policy libelf-dev
   - git clone https://github.com/efficient/libcuckoo.git
   - pushd libcuckoo && git checkout v0.2 
   - cmake .
