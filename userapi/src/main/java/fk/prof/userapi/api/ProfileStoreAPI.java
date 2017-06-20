@@ -39,7 +39,7 @@ public interface ProfileStoreAPI {
      * @param procPrefix prefix to filter the processes
      * @return completable future which returns set containing process names
      */
-    void getProcsWithPrefix(Future<Set<String>> procIds, String baseDir, String appId, String clusterId, String procPrefix);
+    void getProcNamesWithPrefix(Future<Set<String>> procNames, String baseDir, String appId, String clusterId, String procPrefix);
 
     /**
      * Returns set of profiles of specified appId, clusterId and process from the DataStore filtered by the specified time interval and duration

@@ -164,7 +164,7 @@ public class ProfileDiscoveryAPITest {
             f.setHandler(res -> {
                 context.assertEquals(entry.getValue(), res.result());
             });
-            profileDiscoveryAPI.getProcsWithPrefix(f, BASE_DIR, entry.getKey().get(0), entry.getKey().get(1), entry.getKey().get(2));
+            profileDiscoveryAPI.getProcNamesWithPrefix(f, BASE_DIR, entry.getKey().get(0), entry.getKey().get(1), entry.getKey().get(2));
         }
 
         CompositeFuture f = CompositeFuture.all(futures);
