@@ -13,7 +13,7 @@
       "endpoint": "http://127.0.0.1:13031",
       "access.key": "",
       "secret.key": "",
-      "list.objects.timeout.ms": 1000
+      "list.objects.timeout.ms": 9000
     },
     "thread.pool": {
       "coresize": 10,
@@ -23,5 +23,5 @@
     }
   },
   "aggregatedProfiles.baseDir": "profiles",
-  "vertx.worker.pool.size": 50
+  "vertx.worker.pool.size": 5
 }
