@@ -16,7 +16,7 @@ before_install:
 
 install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y tree libunittest++-dev libboost-all-dev libprotobuf-dev protobuf-compiler elfutils valgrind
+  - sudo apt-get install -y tree libunittest++-dev libboost-all-dev libprotobuf-dev protobuf-compiler elfutils libelf-dev valgrind
   - eu-nm --version | head -1 | cut -d' ' -f3
   - elfutil_version=$(eu-nm --version | head -1 | cut -d' ' -f3)
   - sed -i 's/{{elfutil_version}}/'${elfutil_version}'/g' libelf.pc
