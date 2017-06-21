@@ -54,9 +54,7 @@ template <typename TraceType, typename InMsg> bool CircularQueue<TraceType, InMs
     }
 
     // wait until we've finished writing to the buffer
-    while (buffer[current_output].is_committed.load(std::memory_order_acquire) != COMMITTED) {
-        usleep(1);
-    }
+    if (buffer[current_output].is_committed.load(std::memory_order_acquire) != COMMITTED) return false;
 
     listener_.record(buffer[current_output]);
     

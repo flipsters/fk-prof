@@ -106,6 +106,4 @@ namespace cpu {
 
 extern template class ::CircularQueue<cpu::Sample, cpu::InMsg>;
 
-
-
 #endif /* CIRCULAR_QUEUE_H */
