@@ -75,7 +75,7 @@ struct TruncationThresholds {
     ~TruncationThresholds() {}
 };
 
-class ProfileSerializingWriter : public QueueListener, public SiteResolver::MethodListener {
+class ProfileSerializingWriter : public CpuSamplesQueue::Listener, public SiteResolver::MethodListener {
 private:
     jvmtiEnv* jvmti;
     
@@ -139,7 +139,7 @@ public:
 
     ~ProfileSerializingWriter();
 
-    virtual void record(const Backtrace &trace, ThreadBucket *info = nullptr, std::uint8_t ctx_len = 0, PerfCtx::ThreadTracker::EffectiveCtx* ctx = nullptr, bool default_ctx = false);
+    virtual void record(const TraceHolder& entry);
 
     virtual MthId recordNewMethod(const jmethodID method_id, const char *file_name, const char *class_name, const char *method_name, const char *method_signature);
 

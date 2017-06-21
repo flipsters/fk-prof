@@ -36,7 +36,7 @@ TEST_FIXTURE(GivenQueue, OnlyInOnlyOut) {
   CHECK(!pop(0));
 }
 
-void pushLocalTraceOnto(CircularQueue &queue, const long envId) {
+void pushLocalTraceOnto(CpuSamplesQueue& queue, const long envId) {
   givenStackTrace(envId);
   CHECK(queue.push(trace, BacktraceError::Fkp_no_error, false));
 }
@@ -81,7 +81,7 @@ const int THREAD_COUNT = std::thread::hardware_concurrency() ?
   std::thread::hardware_concurrency() : 1;
 const int THREAD_GAP = Size / THREAD_COUNT;
 
-void runnable(long start, CircularQueue* queue) {
+void runnable(long start, CpuSamplesQueue* queue) {
   start *= THREAD_GAP;
   givenStackTrace(start);
   int end = start + THREAD_GAP;

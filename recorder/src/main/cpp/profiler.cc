@@ -105,7 +105,7 @@ void Profiler::set_sampling_freq(std::uint32_t sampling_freq) {
 }
 
 void Profiler::configure() {
-    buffer = new CircularQueue(serializer, capture_stack_depth());
+    buffer = new CpuSamplesQueue(serializer, capture_stack_depth());
 
     handler = new SignalHandler(itvl_min, itvl_max);
     int processor_interval = Size * itvl_min / 1000 / 2;
