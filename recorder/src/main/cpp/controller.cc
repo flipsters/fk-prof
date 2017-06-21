@@ -28,9 +28,9 @@ std::string load_vm_id(jvmtiEnv* env) {
     return ss.str();
 }
 
-Controller::Controller(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap& _thread_map, ConfigurationOptions& _cfg) :
-    jvm(_jvm), jvmti(_jvmti), thread_map(_thread_map), cfg(_cfg), keep_running(false), writer(nullptr),
-    serializer(nullptr), processor(nullptr), raw_writer_ring(_cfg.tx_ring_sz),
+Controller::Controller(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap& _thread_map, ConfigurationOptions& _cfg, Instrumentation* _instr) :
+    jvm(_jvm), jvmti(_jvmti), thread_map(_thread_map), cfg(_cfg), instr(_instr), keep_running(false),
+    writer(nullptr), serializer(nullptr), processor(nullptr), raw_writer_ring(_cfg.tx_ring_sz),
 
     s_t_poll_rpc(get_metrics_registry().new_timer({METRICS_DOMAIN, METRICS_TYPE_RPC, "poll"})),
     s_c_poll_rpc_failures(get_metrics_registry().new_counter({METRICS_DOMAIN, METRICS_TYPE_RPC, "poll", "failures"})),
@@ -39,6 +39,7 @@ Controller::Controller(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap& _thread_map, C
     s_c_associate_rpc_failures(get_metrics_registry().new_counter({METRICS_DOMAIN, METRICS_TYPE_RPC, "associate", "failures"})),
 
     s_v_work_cpu_sampling(get_metrics_registry().new_value({METRICS_DOMAIN, METRICS_TYPE_STATE, "working", "cpu_sampling"})),
+    s_v_work_ctxsw_tracing(get_metrics_registry().new_value({METRICS_DOMAIN, METRICS_TYPE_STATE, "working", "ctxsw_tracing"})),
 
     s_c_work_success(get_metrics_registry().new_counter({METRICS_DOMAIN, "work", "retire", "success"})),
     s_c_work_failure(get_metrics_registry().new_counter({METRICS_DOMAIN, "work", "retire", "failure"})),
@@ -541,9 +542,11 @@ void Controller::retire_work(const std::uint64_t work_id) {
 
                 logger->info("Will now retire work {}", work_id);
 
+                JNIEnv *env = getJNIEnv(jvm);
+
                 for (auto i = 0; i < w.work_size(); i++) {
                     auto work = w.work(i);
-                    retire(work);
+                    retire(work, env);
                 }
 
                 serializer.reset();
@@ -573,6 +576,12 @@ bool has_cpu_sample_work_p(const recording::Work& work) {
     return false;
 }
 
+bool has_ctx_switch_trace_work_p(const recording::Work& work) {
+    if (work.has_ctx_switch_trace()) return true;
+    logger->error("Work of Ctx-Switch-tracing-type {} doesn't have a definition", work.w_type());
+    return false;
+}
+
 bool Controller::capable(const W& w) {
     for (auto i = 0; i < w.work_size(); i++) {
         auto work = w.work(i);
@@ -586,6 +595,8 @@ bool Controller::capable(const recording::Work& work) {
     switch(w_type) {
     case recording::WorkType::cpu_sample_work:
         return has_cpu_sample_work_p(work) && capable(work.cpu_sample());
+    case recording::WorkType::ctx_switch_trace_work:
+        return has_ctx_switch_trace_work_p(work) && capable(work.ctx_switch_trace());
     default:
         logger->error("Encountered unknown work type {}", w_type);
         return false;
@@ -598,6 +609,11 @@ void Controller::prep(const recording::Work& work) {
     case recording::WorkType::cpu_sample_work:
         if (has_cpu_sample_work_p(work)) {
             prep(work.cpu_sample());
+        }
+        return;
+    case recording::WorkType::ctx_switch_trace_work:
+        if (has_ctx_switch_trace_work_p(work)) {
+            prep(work.ctx_switch_trace());
         }
         return;
     default:
@@ -614,18 +630,30 @@ void Controller::issue(const recording::Work& work, Processes& processes, JNIEnv
             s_v_work_cpu_sampling.update(1);
         }
         return;
+    case recording::WorkType::ctx_switch_trace_work:
+        if (has_ctx_switch_trace_work_p(work)) {
+            issue(work.ctx_switch_trace(), processes, env);
+            s_v_work_ctxsw_tracing.update(1);
+        }
+        return;
     default:
         assert(false);
     }
 }
 
-void Controller::retire(const recording::Work& work) {
+void Controller::retire(const recording::Work& work, JNIEnv* env) {
     auto w_type = work.w_type();
     switch(w_type) {
     case recording::WorkType::cpu_sample_work:
         if (has_cpu_sample_work_p(work)) {
             retire(work.cpu_sample());
             s_v_work_cpu_sampling.update(0);
+        }
+        return;
+    case recording::WorkType::ctx_switch_trace_work:
+        if (has_ctx_switch_trace_work_p(work)) {
+            retire(work.ctx_switch_trace(), env);
+            s_v_work_ctxsw_tracing.update(0);
         }
         return;
     default:
@@ -702,10 +730,12 @@ void Controller::issue(const recording::CtxSwitchTraceWork& cstw, Processes& pro
     ReadsafePtr<CtxSwitchTracer> p(GlobalCtx::recording.ctxsw_tracer);
     p->start(env);
     processes.push_back(new ReadsafeProcess<CtxSwitchTracer>(GlobalCtx::recording.ctxsw_tracer));
+    instr->engage_return_tracer(GlobalCtx::recording.ctxsw_tracer, env);
 }
 
-void Controller::retire(const recording::CtxSwitchTraceWork& cstw) {
+void Controller::retire(const recording::CtxSwitchTraceWork& cstw, JNIEnv* env) {
     logger->info("Stopping ctx-switch tracing");
+    instr->disengage_return_tracer(env);
     GlobalCtx::recording.ctxsw_tracer.reset();
 }
 

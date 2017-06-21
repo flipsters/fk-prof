@@ -20,6 +20,7 @@
 LoggerP logger = spdlog::syslog_logger("syslog", "fk-prof-rec", LOG_PID);
 static ConfigurationOptions* CONFIGURATION;
 static Controller* controller;
+Instrumentation* instr;
 static ThreadMap thread_map;
 static medida::MetricsRegistry metrics_registry;
 static PerfCtx::Registry ctx_reg;
@@ -28,6 +29,8 @@ static medida::reporting::UdpReporter* metrics_reporter;
 static MetricFormatter::SyslogTsdbFormatter *formatter;
 static ThdProcP metrics_thd;
 std::atomic<bool> abort_metrics_poll;
+
+std::atomic<VmInitState> init_state{VmInitState::PRE_INIT};
 
 // This has to be here, or the VM turns off class loading events.
 // And AsyncGetCallTrace needs class loading events to be turned on!
@@ -73,6 +76,7 @@ void metrics_poller(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *arg) {
 
 void JNICALL OnVMInit(jvmtiEnv *jvmti, JNIEnv *jniEnv, jthread thread) {
     IMPLICITLY_USE(thread);
+    init_state.store(VmInitState::INITIALIZING, std::memory_order_relaxed);
     // Forces the creation of jmethodIDs of the classes that had already
     // been loaded (eg java.lang.Object, java.lang.ClassLoader) and
     // OnClassPrepare() misses.
@@ -87,6 +91,8 @@ void JNICALL OnVMInit(jvmtiEnv *jvmti, JNIEnv *jniEnv, jthread thread) {
 
     metrics_thd = start_new_thd(jniEnv, jvmti, "Fk-Prof Metrics Reporter", metrics_poller, nullptr);
     controller->start();
+
+    init_state.store(VmInitState::INITIALIZED, std::memory_order_relaxed);
 }
 
 void JNICALL OnClassPrepare(jvmtiEnv *jvmti_env, JNIEnv *jni_env,
@@ -225,6 +231,15 @@ void JNICALL OnThreadEnd(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread) {
     thread_map.remove(jni_env);
 }
 
+void JNICALL OnClassFileLoadHook(jvmtiEnv *jvmti_env, JNIEnv* env,
+                                 jclass class_being_redefined, jobject loader,
+                                 const char* name, jobject protection_domain,
+                                 jint class_data_len, const unsigned char* class_data,
+                                 jint* new_class_data_len, unsigned char** new_class_data) {
+    instr->class_file_loaded(init_state.load(std::memory_order_relaxed), env, class_being_redefined, loader, name,
+                             protection_domain, class_data_len, class_data, new_class_data_len, new_class_data);
+}
+
 static bool RegisterJvmti(jvmtiEnv *jvmti) {
     sigemptyset(&prof_signal_mask);
     sigaddset(&prof_signal_mask, SIGPROF);
@@ -243,6 +258,9 @@ static bool RegisterJvmti(jvmtiEnv *jvmti) {
     callbacks->NativeMethodBind = &OnNativeMethodBind;
     callbacks->ThreadStart = &OnThreadStart;
     callbacks->ThreadEnd = &OnThreadEnd;
+
+    callbacks->ClassFileLoadHook = &OnClassFileLoadHook;
+
 
     JVMTI_ERROR_RET((jvmti->SetEventCallbacks(callbacks.get(), sizeof(jvmtiEventCallbacks))), false);
 
@@ -332,8 +350,10 @@ AGENTEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved
     formatter = new MetricFormatter::SyslogTsdbFormatter(tsdb_tags(), CONFIGURATION->stats_syslog_tag);
     metrics_reporter = new medida::reporting::UdpReporter(metrics_registry, *formatter, CONFIGURATION->metrics_dst_port);
     abort_metrics_poll.store(false, std::memory_order_relaxed);
+
+    instr = new Instrumentation(jvm, jvmti, *CONFIGURATION);
     
-    controller = new Controller(jvm, jvmti, thread_map, *CONFIGURATION);
+    controller = new Controller(jvm, jvmti, thread_map, *CONFIGURATION, instr);
 
     return 0;
 }

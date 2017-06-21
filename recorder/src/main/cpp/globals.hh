@@ -25,6 +25,8 @@ extern const char* fkprec_version;
 extern const char* fkprec_version_verbose;
 extern const char* fkprec_build_env;
 
+enum class VmInitState { PRE_INIT = 0, INITIALIZING = 1, INITIALIZED = 2 };
+
 typedef std::shared_ptr<spdlog::logger> LoggerP;
 
 namespace Time {

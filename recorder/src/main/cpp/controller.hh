@@ -23,12 +23,13 @@
 #include "scheduler.hh"
 #include "blocking_ring_buffer.hh"
 #include "ti_thd.hh"
+#include "instrumentation.hh"
 
 #define MAX_DATA_SIZE 100
 
 class Controller {
 public:
-    explicit Controller(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap& _thread_map, ConfigurationOptions& _cfg);
+    explicit Controller(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap& _thread_map, ConfigurationOptions& _cfg, Instrumentation* instr);
 
     virtual ~Controller() {}
 
@@ -45,6 +46,7 @@ private:
     jvmtiEnv *jvmti;
     ThreadMap& thread_map;
     ConfigurationOptions& cfg;
+    Instrumentation* instr;
     std::atomic_bool keep_running;
     ThdProcP thd_proc;
     Buff buff;
@@ -78,6 +80,7 @@ private:
     metrics::Ctr& s_c_associate_rpc_failures;
 
     metrics::Value& s_v_work_cpu_sampling;
+    metrics::Value& s_v_work_ctxsw_tracing;
 
     metrics::Ctr& s_c_work_success;
     metrics::Ctr& s_c_work_failure;
@@ -98,7 +101,7 @@ private:
     bool capable(const recording::Work& w);
     void prep(const recording::Work& w);
     void issue(const recording::Work& w, Processes& processes, JNIEnv* env);
-    void retire(const recording::Work& w);
+    void retire(const recording::Work& w, JNIEnv* env);
 
     bool capable(const recording::CpuSampleWork& csw);
     void prep(const recording::CpuSampleWork& csw);
@@ -108,7 +111,7 @@ private:
     bool capable(const recording::CtxSwitchTraceWork& cstw);
     void prep(const recording::CtxSwitchTraceWork& cstw);
     void issue(const recording::CtxSwitchTraceWork& cstw, Processes& processes, JNIEnv* env);
-    void retire(const recording::CtxSwitchTraceWork& cstw);
+    void retire(const recording::CtxSwitchTraceWork& cstw, JNIEnv* env);
 };
 
 #endif

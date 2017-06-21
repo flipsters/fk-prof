@@ -18,6 +18,8 @@ public:
 
     void stop();
 
+    void evt_mthd_return(JNIEnv* env);
+
 private:
 
     DISALLOW_COPY_AND_ASSIGN(CtxSwitchTracer);
