@@ -80,7 +80,7 @@ const std::set<std::string> SYSTEM_CLASSES = {
 #define METHOD_RETURN_TRACEPT_NAME "returnTracepoint"
 #define METHOD_RETURN_TRACEPT_SIG "(II)V"
 #define TRACKER_ENGAGED_NAME  "engaged"
-#define TRACKER_ENGAGED_SIG "I"
+#define TRACKER_ENGAGED_SIG "Z"
 
 void Instrumentation::class_file_loaded(VmInitState init_state, JNIEnv* env, jclass class_being_redefined, jobject loader, const char* name,
                                         jobject protection_domain, jint class_data_len, const unsigned char* class_data,
@@ -191,7 +191,7 @@ void engage_tracepoints(JNIEnv *jni, bool on) {
         return;
     }
 
-    jni->SetStaticIntField(tracker_klass, field_id, on ? 1 : 0);
+    jni->SetStaticBooleanField(tracker_klass, field_id, on ? 1 : 0);
     handle_exception_if_any(jni, "Couldn't set tracker field " TRACKER_ENGAGED_NAME);
 }
 
