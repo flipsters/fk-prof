@@ -20,7 +20,7 @@ install:
   - eu-nm --version | head -1 | cut -d' ' -f3
   - elfutil_version=$(eu-nm --version | head -1 | cut -d' ' -f3)
   - sed -i 's/{{elfutil_version}}/'${elfutil_version}'/g' libelf.pc
-  - mv libelf.pc /usr/lib/pkgconfig/libelf.pc
+  - sudo mv libelf.pc /usr/lib/pkgconfig/libelf.pc
 before_script:
   - gcc -v
   - cmake -version
