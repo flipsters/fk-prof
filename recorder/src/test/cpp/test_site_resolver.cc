@@ -35,7 +35,7 @@ TEST(SiteResolver__should_resolve_backtrace) {
     const std::uint32_t buff_sz = 100;
     NativeFrame buff[buff_sz];
     std::uint32_t bt_len;
-    some_λ_caller([&]() {
+    some_lambda_caller([&]() {
             bt_len = caller_of_foo(buff, buff_sz);
         });
     CHECK(bt_len > 4);
@@ -64,12 +64,10 @@ TEST(SiteResolver__should_resolve_backtrace) {
         fn_files[fn_name] = file_name;
     }
 
-    auto it = fn_files.find("some_λ_caller(std::function<void ()>)");
+    auto it = fn_files.find("some_lambda_caller(std::function<void ()>)");
     CHECK(it != std::end(fn_files));//this symbol comes from a shared-lib (aim is to ensure it works well with relocatable symbols)
 
-    auto dir = path.substr(0, path.rfind("/"));
-    CHECK_EQUAL(0, it->second.find(dir));
-    CHECK_EQUAL(my_test_helper_lib(), it->second);
+    CHECK_EQUAL(my_test_helper_lib(), abs_path(it->second));
 }
 
 typedef std::vector<std::pair<SiteResolver::Addr, SiteResolver::Addr>> CurrMappings;
@@ -167,15 +165,11 @@ TEST(SiteResolver__TestUtil__mappable_range_finder) {
 
 void iterate_mapping(std::function<void(SiteResolver::Addr start, SiteResolver::Addr end, const MRegion::Event& e)> cb) {
     MRegion::Parser parser([&](const MRegion::Event& e) {
-            std::stringstream ss;
-            std::uint64_t start, end;
-
-            ss << e.range.start;
-            ss >> std::hex >> start;
-
-            ss.clear();
-            ss << e.range.end;
-            ss >> std::hex >> end;
+            std::size_t pos;
+            std::uint64_t start = std::stoull(e.range.start, &pos, 16);
+            assert(pos == e.range.start.length());
+            std::uint64_t end = std::stoull(e.range.end, &pos, 16);
+            assert(pos == e.range.end.length());
 
             cb(start, end, e);
 
@@ -233,7 +227,7 @@ TEST(SiteResolver__should_call_out_unknown_mapping) {
     const std::uint32_t buff_sz = 100;
     NativeFrame buff[buff_sz];
     std::uint32_t bt_len;
-    some_λ_caller([&]() {
+    some_lambda_caller([&]() {
             bt_len = caller_of_foo(buff, buff_sz);
         });
     CHECK(bt_len > 4);
@@ -365,7 +359,7 @@ TEST(SiteResolver__should_handle_mapping_changes_between___mmap_parse___and___dl
             map_target_1 << '0';
         }
     }
-    auto mt1_path = std::string(dir.get()) + "/" + mt1;
+    auto mt1_path = abs_path(std::string(dir.get()) + "/" + mt1);
 
     auto mt1_fd = open(mt1_path.c_str(), O_RDONLY);
     CHECK(fchmod(mt1_fd, S_IRUSR | S_IXUSR) == 0);

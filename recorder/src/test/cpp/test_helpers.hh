@@ -4,7 +4,7 @@
 #include <string>
 #include <stacktraces.hh>
 
-__attribute__ ((noinline)) void some_λ_caller(std::function<void()> fn);
+__attribute__ ((noinline)) void some_lambda_caller(std::function<void()> fn);
 
 void bt_pusher(); //defined in serializer test
 
@@ -25,5 +25,7 @@ std::string my_executable();
 #define LIB_TEST_UTIL "/libtestutil.so"
 
 std::string my_test_helper_lib();
+
+std::string abs_path(const std::string& path);
 
 #endif /* TEST_HELPERS_H */
