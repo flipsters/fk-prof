@@ -54,7 +54,8 @@ void Profiler::handle(int signum, siginfo_t *info, void *context) {
         ASGCTType asgct = Asgct::GetAsgct();
         (*asgct)(&trace, capture_stack_depth(), context);
         if (trace.num_frames > 0) {
-            buffer->push(trace, err, default_ctx, thread_info);
+            cpu::InMsg m(trace, thread_info, err, default_ctx);
+            buffer->push(m);
             return; // we got java trace, so bail-out
         }
         if (trace.num_frames <= 0) {
@@ -69,7 +70,8 @@ void Profiler::handle(int signum, siginfo_t *info, void *context) {
     STATIC_ARRAY(native_trace, NativeFrame, capture_stack_depth(), MAX_FRAMES_TO_CAPTURE);
 
     auto bt_len = Stacktraces::fill_backtrace(native_trace, capture_stack_depth());
-    buffer->push(native_trace, bt_len, err, default_ctx, thread_info);
+    cpu::InMsg m(native_trace, bt_len, thread_info, err, default_ctx);
+    buffer->push(m);
 }
 
 bool Profiler::start(JNIEnv *jniEnv) {
@@ -105,7 +107,7 @@ void Profiler::set_sampling_freq(std::uint32_t sampling_freq) {
 }
 
 void Profiler::configure() {
-    buffer = new CpuSamplesQueue(serializer, capture_stack_depth());
+    buffer = new cpu::Queue(serializer, capture_stack_depth());
 
     handler = new SignalHandler(itvl_min, itvl_max);
     int processor_interval = Size * itvl_min / 1000 / 2;

@@ -112,7 +112,7 @@ ProfileSerializingWriter::CtxId ProfileSerializingWriter::report_ctx(PerfCtx::Tr
     }
 }
 
-void ProfileSerializingWriter::record(const TraceHolder& entry) {
+void ProfileSerializingWriter::record(const cpu::Sample& entry) {
     auto& trace = entry.trace;
     auto info = entry.info;
     auto ctx_len = entry.ctx_len;

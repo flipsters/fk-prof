@@ -72,11 +72,11 @@ template <typename TraceType, typename InMsg> size_t CircularQueue<TraceType, In
     return (index + 1) % Capacity;
 }
 
-CpuSamplesQueue::CpuSamplesQueue(QueueListener<TraceHolder> &listener, std::uint32_t maxFrameSize) : CircularQueue<TraceHolder, CpuSample>(listener, maxFrameSize) {}
+cpu::Queue::Queue(QueueListener<cpu::Sample> &listener, std::uint32_t maxFrameSize) : CircularQueue<cpu::Sample, cpu::InMsg>(listener, maxFrameSize) {}
 
-CpuSamplesQueue::~CpuSamplesQueue() {}
+cpu::Queue::~Queue() {}
 
-void CpuSamplesQueue::write(TraceHolder& entry, StackFrame* fb, const CpuSample& in_msg) {
+void cpu::Queue::write(cpu::Sample& entry, StackFrame* fb, const cpu::InMsg& in_msg) {
     // Unable to use memcpy inside the push method because its not async-safe
     
     switch(in_msg.type) {
@@ -108,25 +108,15 @@ void CpuSamplesQueue::write(TraceHolder& entry, StackFrame* fb, const CpuSample&
     entry.default_ctx = in_msg.default_ctx;
 }
 
-bool CpuSamplesQueue::push(const JVMPI_CallTrace &item, const BacktraceError error, bool default_ctx, ThreadBucket *info) {
-    CpuSample s(item, info, error, default_ctx);
-    return CircularQueue<TraceHolder, CpuSample>::push(s);
-}
-
-bool CpuSamplesQueue::push(const NativeFrame* item, const std::uint32_t num_frames, const BacktraceError error, bool default_ctx, ThreadBucket *info) {
-    CpuSample s(item, num_frames, info, error, default_ctx);
-    return CircularQueue<TraceHolder, CpuSample>::push(s);
-}
-
-CpuSample::CpuSample(const JVMPI_CallTrace& item, ThreadBucket* info, const BacktraceError error, const bool default_ctx) : CpuSample(BacktraceType::Java, info, error, default_ctx) {
+cpu::InMsg::InMsg(const JVMPI_CallTrace& item, ThreadBucket* info, const BacktraceError error, const bool default_ctx) : cpu::InMsg(BacktraceType::Java, info, error, default_ctx) {
     ct.java.ct = &item;
 }
 
-CpuSample::CpuSample(const NativeFrame* trace, const std::uint32_t num_frames, ThreadBucket* info, const BacktraceError error, bool default_ctx) : CpuSample(BacktraceType::Native, info, error, default_ctx) {
+cpu::InMsg::InMsg(const NativeFrame* trace, const std::uint32_t num_frames, ThreadBucket* info, const BacktraceError error, bool default_ctx) : cpu::InMsg(BacktraceType::Native, info, error, default_ctx) {
     ct.native.ct = trace;
     ct.native.num_frames = num_frames;
 }
 
-CpuSample::CpuSample(BacktraceType _type, ThreadBucket* _info, const BacktraceError _error, bool _default_ctx) : type(_type), info(_info), error(_error), default_ctx(_default_ctx) { }
+cpu::InMsg::InMsg(BacktraceType _type, ThreadBucket* _info, const BacktraceError _error, bool _default_ctx) : type(_type), info(_info), error(_error), default_ctx(_default_ctx) { }
 
-template class CircularQueue<TraceHolder, CpuSample>;
+template class CircularQueue<cpu::Sample, cpu::InMsg>;

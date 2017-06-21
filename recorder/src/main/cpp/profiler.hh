@@ -78,7 +78,7 @@ private:
 
     std::shared_ptr<ProfileWriter> writer;
 
-    CpuSamplesQueue *buffer;
+    cpu::Queue *buffer;
 
     SignalHandler* handler;
 

@@ -4,11 +4,11 @@
 #ifndef FIXTURES_H
 #define FIXTURES_H
 
-class ItemHolder : public CpuSamplesQueue::Listener {
+class ItemHolder : public cpu::Queue::Listener {
 public:
   explicit ItemHolder() {}
 
-    virtual void record(const TraceHolder& entry) {
+    virtual void record(const cpu::Sample& entry) {
         auto& trace = entry.trace;
             
         CHECK_EQUAL(2, trace.num_frames);
@@ -28,7 +28,7 @@ public:
 struct GivenQueue {
   GivenQueue() {
     holder = new ItemHolder();
-    queue = new CpuSamplesQueue(*holder, DEFAULT_MAX_FRAMES_TO_CAPTURE);
+    queue = new cpu::Queue(*holder, DEFAULT_MAX_FRAMES_TO_CAPTURE);
   }
 
   ~GivenQueue() {
@@ -38,7 +38,7 @@ struct GivenQueue {
 
   ItemHolder *holder;
 
-  CpuSamplesQueue *queue;
+    cpu::Queue *queue;
 
   // wrap an easy to test api around the queue
   bool pop(const long envId) {
