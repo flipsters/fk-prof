@@ -106,4 +106,50 @@ namespace cpu {
 
 extern template class ::CircularQueue<cpu::Sample, cpu::InMsg>;
 
+namespace ctxsw {
+    struct Sample {
+        std::atomic<int> is_committed;
+        Backtrace trace;
+        ThreadBucket *info;
+        PerfCtx::ThreadTracker::EffectiveCtx ctx;
+        std::uint8_t ctx_len;
+        bool default_ctx;
+    };
+
+    struct InMsg {
+        BacktraceType type;
+        ThreadBucket* info;
+        BacktraceError error;
+        bool default_ctx;
+        union {
+            struct {
+                const JVMPI_CallTrace* ct;
+            } java;
+            struct {
+                const NativeFrame* ct;
+                std::uint32_t num_frames;
+            } native;
+        } ct;
+
+        InMsg(const JVMPI_CallTrace& item, ThreadBucket* info, const BacktraceError error, const bool default_ctx);
+
+        InMsg(const NativeFrame* trace, const std::uint32_t num_frames, ThreadBucket* info, const BacktraceError error, bool default_ctx);
+
+    private:
+        InMsg(BacktraceType type, ThreadBucket* info, const BacktraceError error, bool default_ctx);
+    };
+
+    class Queue : public CircularQueue<Sample, InMsg> {
+    public:
+        explicit Queue(QueueListener<Sample>& listener, std::uint32_t maxFrameSize);
+
+        ~Queue();
+
+    protected:
+        void write(Sample& entry, StackFrame* fb, const InMsg& in_msg);
+    };
+}
+
+extern template class ::CircularQueue<ctxsw::Sample, ctxsw::InMsg>;
+
 #endif /* CIRCULAR_QUEUE_H */

@@ -8,13 +8,12 @@
 #include "metrics.hh"
 #include "unique_readsafe_ptr.hh"
 
-#define SPDLOG_ENABLE_SYSLOG
-#include <spdlog/spdlog.h>
-
 #include "perf_ctx.hh"
 
 #ifndef GLOBALS_H
 #define GLOBALS_H
+
+#include "logging.hh"
 
 #define RECORDER_VERION 1
 #define DATA_ENCODING_VERSION 1
@@ -26,8 +25,6 @@ extern const char* fkprec_version_verbose;
 extern const char* fkprec_build_env;
 
 enum class VmInitState { PRE_INIT = 0, INITIALIZING = 1, INITIALIZED = 2 };
-
-typedef std::shared_ptr<spdlog::logger> LoggerP;
 
 namespace Time {
     typedef std::chrono::steady_clock Clk;
@@ -41,7 +38,6 @@ namespace Time {
     std::uint32_t elapsed_seconds(const Pt& later, const Pt& earlier);
 };
 
-extern LoggerP logger;//TODO: stick me in GlobalCtx???
 
 class Profiler;
 class CtxSwitchTracer;

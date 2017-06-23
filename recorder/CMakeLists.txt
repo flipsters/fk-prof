@@ -58,6 +58,9 @@ set(BASE_OUTPUT "bagent")
 set(AGENT_LIB "fkpagent")
 set(PRELOAD_LIB "prefkp")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${BIN})
+set(FTRACE "ftrace")
+set(BASE_FTRACER "ftracer")
+set(FTRACE_SERVER "fkp-ftracer")
 #protobuf idl setup
 add_subdirectory(src/idl)
 include_directories(src/idl src/main/cpp)
@@ -161,6 +164,24 @@ set(SOURCE_FILES
     ${SRC}/instrumentation_stub.hh
     ${SRC}/instrumentation.cc)
 
+set(FTRACE_SERVER_FILES
+    ${SRC}/${FTRACE}/server.hh
+    ${SRC}/${FTRACE}/server.cc
+    ${SRC}/${FTRACE}/lock.hh
+    ${SRC}/${FTRACE}/lock.cc
+    ${SRC}/${FTRACE}/io.hh
+    ${SRC}/${FTRACE}/io.cc
+    ${SRC}/${FTRACE}/events.hh
+    ${SRC}/${FTRACE}/events.cc
+    ${SRC}/${FTRACE}/format_parser.hh
+    ${SRC}/${FTRACE}/format_parser.cc
+    ${SRC}/${FTRACE}/tracer.hh
+    ${SRC}/${FTRACE}/tracer.cc)
+
+set(FTRACE_PROTO_FILES
+    ${SRC}/${FTRACE}/proto.cc
+    ${SRC}/${FTRACE}/proto.hh)
+
 set(PRELOAD_SOURCE_FILES
     ${SRC_PRELOAD}/preload.c)
 
@@ -245,6 +266,7 @@ set(CMAKE_CXX_FLAGS "-I${INCLUDE_VENDOR_SPDLOG} -I${INCLUDE_VENDOR_CONCQUEUE} -I
 # Build
 
 add_library(${BASE_OUTPUT} STATIC ${SOURCE_FILES})
+add_library(${BASE_FTRACER} STATIC ${FTRACE_SERVER_FILES} ${FTRACE_PROTO_FILES})
 add_library(${AGENT_LIB} SHARED ${TI_SRC_FILES})
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD") 
@@ -254,6 +276,8 @@ else()
 endif()
 target_link_libraries(${AGENT_LIB} ${BASE_OUTPUT})
 add_library(${PRELOAD_LIB} SHARED ${PRELOAD_SOURCE_FILES})
+add_executable(${FTRACE_SERVER} ${SRC}/${FTRACE}/main.cc)
+target_link_libraries(${FTRACE_SERVER} ${BASE_FTRACER})
 
 add_library(testutil SHARED ${TEST_UTIL_FILES})
 add_library(testbase STATIC ${TEST_BASE_FILES})
@@ -276,6 +300,8 @@ add_test(tests ${BIN}/tests)
 
 # install
 install(TARGETS  ${AGENT_LIB}
-LIBRARY DESTINATION lib)
+  LIBRARY DESTINATION lib)
 install(TARGETS  ${PRELOAD_LIB}
-LIBRARY DESTINATION lib)
+  LIBRARY DESTINATION lib)
+install(TARGETS  ${FTRACE_SERVER}
+  RUNTIME DESTINATION sbin)

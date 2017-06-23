@@ -109,7 +109,6 @@ message IndexedData {
   repeated MethodInfo method_info = 2;
   repeated ThreadInfo thread_info = 3;
   repeated MonitorInfo monitor_info = 4;
-  repeated SyscallInfo syscall_info = 5;
 }
 
 message TraceContext {
@@ -237,6 +236,7 @@ message CtxSwitchTraceWork {
 
 message CtxSwitchTraceWse {
   repeated CtxSwitchTrace sample = 1;
+  optional uint64 events_dropped = 2;
 }
 
 message CtxSwitchTrace {
@@ -245,7 +245,7 @@ message CtxSwitchTrace {
   required bool voluntary = 3;
   required bool migrated = 4;
   optional uint64 wakeup_lag_ns = 5;
-  optional uint32 syscall_id = 6;
+  optional int64 syscall_nr = 6;
 }
 
 message ProcessGroup {
