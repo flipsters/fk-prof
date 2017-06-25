@@ -1,4 +1,3 @@
-libbagent.a
-libtestbase.a
-libftracer.a
+*.a
+*.so
 *.tmp

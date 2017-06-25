@@ -54,6 +54,7 @@ set(INCLUDE_VENDOR_CONCQUEUE "vendor/concurrentqueue")
 set(INCLUDE_VENDOR_SPDLOG "vendor/spdlog/include")
 set(SRC_TEST "src/test/cpp")
 set(BIN "build")
+set(COMMON_OUTPUT "common")
 set(BASE_OUTPUT "bagent")
 set(AGENT_LIB "fkpagent")
 set(PRELOAD_LIB "prefkp")
@@ -110,6 +111,14 @@ check_include_file("valgrind/valgrind.h" HAS_VALGRIND_H)
 # equivalent in ubuntu 13.10
 include_directories("/usr/include/i386-linux-gnu/c++/4.8/")
 
+set(COMMON_SOURCE_FILES
+  ${SRC}/metric_formatter.hh
+  ${SRC}/metric_formatter.cc
+  ${SRC}/logging.hh
+  ${SRC}/logging.cc
+  ${SRC}/config_util.hh
+  ${SRC}/config_util.cc)
+
 set(SOURCE_FILES
     ${SRC}/checksum.cc
     ${SRC}/checksum.hh
@@ -155,8 +164,6 @@ set(SOURCE_FILES
     ${SRC}/perf_ctx.cc
     ${SRC}/prob_pct.hh
     ${SRC}/prob_pct.cc
-    ${SRC}/metric_formatter.hh
-    ${SRC}/metric_formatter.cc
     ${SRC}/unique_readsafe_ptr.hh
     ${SRC}/ctx_switch_tracer.hh
     ${SRC}/ctx_switch_tracer.cc
@@ -167,6 +174,8 @@ set(SOURCE_FILES
 set(FTRACE_SERVER_FILES
     ${SRC}/${FTRACE}/server.hh
     ${SRC}/${FTRACE}/server.cc
+    ${SRC}/${FTRACE}/config.hh
+    ${SRC}/${FTRACE}/config.cc
     ${SRC}/${FTRACE}/lock.hh
     ${SRC}/${FTRACE}/lock.cc
     ${SRC}/${FTRACE}/io.hh
@@ -265,15 +274,14 @@ set(CMAKE_CXX_FLAGS "-I${INCLUDE_VENDOR_SPDLOG} -I${INCLUDE_VENDOR_CONCQUEUE} -I
 ##########################################################
 # Build
 
+add_library(${COMMON_OUTPUT} STATIC ${COMMON_SOURCE_FILES})
 add_library(${BASE_OUTPUT} STATIC ${SOURCE_FILES})
 add_library(${BASE_FTRACER} STATIC ${FTRACE_SERVER_FILES} ${FTRACE_PROTO_FILES})
 add_library(${AGENT_LIB} SHARED ${TI_SRC_FILES})
 
-if ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD") 
-    target_link_libraries(${BASE_OUTPUT} proto ${PROTOBUF_LIBRARY} ${ZLIB_LDFLAGS} ${CURL_LDFLAGS} ${MEDIDA_LDFLAGS} ${ELF_LDFLAGS} ${UNWIND_LDFLAGS} ${LIBCUCKOO_CITY_HASH_LIB})
-else()
-    target_link_libraries(${BASE_OUTPUT} proto ${PROTOBUF_LIBRARY} ${ZLIB_LDFLAGS} ${CURL_LDFLAGS} ${MEDIDA_LDFLAGS} ${ELF_LDFLAGS} ${UNWIND_LDFLAGS} ${LIBCUCKOO_CITY_HASH_LIB} dl)
-endif()
+target_link_libraries(${BASE_OUTPUT} ${COMMON_OUTPUT} proto ${PROTOBUF_LIBRARY} ${ZLIB_LDFLAGS} ${CURL_LDFLAGS} ${MEDIDA_LDFLAGS} ${ELF_LDFLAGS} ${UNWIND_LDFLAGS} ${LIBCUCKOO_CITY_HASH_LIB} dl)
+target_link_libraries(${BASE_FTRACER} ${COMMON_OUTPUT} ${MEDIDA_LDFLAGS} dl)
+
 target_link_libraries(${AGENT_LIB} ${BASE_OUTPUT})
 add_library(${PRELOAD_LIB} SHARED ${PRELOAD_SOURCE_FILES})
 add_executable(${FTRACE_SERVER} ${SRC}/${FTRACE}/main.cc)

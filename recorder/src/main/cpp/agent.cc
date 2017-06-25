@@ -12,6 +12,7 @@
 #include "perf_ctx.hh"
 #include "prob_pct.hh"
 #include "metric_formatter.hh"
+#include "config_shared.hh"
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #define GETENV_NEW_THREAD_ASYNC_UNSAFE
@@ -280,21 +281,8 @@ static bool RegisterJvmti(jvmtiEnv *jvmti) {
     return true;
 }
 
-#define LST "LOGGING-SELF-TEST: "
-
-void log_level_self_test() {
-    logger->trace(LST "*trace*");
-    SPDLOG_TRACE(logger, LST "*compile-time checked trace*");
-    logger->debug(LST "*debug*");
-    SPDLOG_DEBUG(logger, LST "*compile-time checked debug*");
-    logger->info(LST "*info*");
-    logger->warn(LST "*warn*");
-    logger->error(LST "*err*");
-    logger->critical(LST "*critical*");
-}
-
 std::string tsdb_tags() {
-    std::string tags = "prefix_override=fkpr";
+    std::string tags = metrics_tsdb_tag;
     if (CONFIGURATION->proc != nullptr) {
         tags += (" proc=" + std::string(CONFIGURATION->proc));
     }
@@ -305,12 +293,9 @@ AGENTEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved
     IMPLICITLY_USE(reserved);
     int err;
     jvmtiEnv *jvmti;
-    CONFIGURATION = new ConfigurationOptions(options);
 
-    logger->set_level(CONFIGURATION->log_level);
-    logger->set_pattern("{%t} %+");//TODO: make this configurable
-    log_level_self_test();
-    logger->info("======================= Starting fk-prof JVMTI agent =======================");
+    CONFIGURATION = new ConfigurationOptions(options);
+    init_logging(CONFIGURATION->log_level, std::string("JVMTI-agent(") + CONFIGURATION->proc + ")");
     
     if (! CONFIGURATION->valid()) return 1;
 

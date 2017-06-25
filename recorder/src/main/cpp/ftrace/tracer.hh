@@ -4,28 +4,33 @@
 #include <cstdint>
 #include <string>
 #include <atomic>
-#include <vector>
+#include <list>
 #include <unordered_map>
+#include <functional>
+#include "ftrace/proto.hh"
 
 namespace ftrace {
     class Tracer {
     public:
         class Listener {
-            void unicast(pid_t dest_pid, ftrace::v_curr::PktType pkt_type, std::uint8_t* payload, std::size_t payload_len) = 0;
-            void multicast(ftrace::v_curr::PktType pkt_type, const std::uint8_t* payload, std::size_t payload_len) = 0;
+            virtual ~Listener() {}
+            
+            virtual void unicast(pid_t dest_pid, ftrace::v_curr::PktType pkt_type, std::uint8_t* payload, std::size_t payload_len) = 0;
+            
+            virtual void multicast(ftrace::v_curr::PktType pkt_type, const std::uint8_t* payload, std::size_t payload_len) = 0;
         };
         
         struct DataLink {
             int pipe_fd;
             int stats_fd;
-            std::uint32_t cpu;
+            std::uint16_t cpu;
         };
         
-        explicit Tracer(const std::string& tracing_dir, function<void(DataLink&)> data_link_listener);
+        explicit Tracer(const std::string& tracing_dir, std::function<void(const DataLink&)> data_link_listener);
 
         ~Tracer();
 
-        void trace_on(pid_t pid, Listener& l);
+        void trace_on(pid_t pid, Listener* l);
         
         void trace_off(pid_t pid);
 
@@ -50,7 +55,7 @@ namespace ftrace {
 
         std::list<DataLink> dls;
 
-        std::unordered_map<pid_t, Listener&> tracees;
+        std::unordered_map<pid_t, Listener*> tracees;
     };
 }
 

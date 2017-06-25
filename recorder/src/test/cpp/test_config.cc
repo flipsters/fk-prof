@@ -4,7 +4,8 @@
 #include "fixtures.hh"
 #include "test.hh"
 #define IN_TEST
-#include "../../main/cpp/config.hh"
+#include <config.hh>
+#include <config_util.hh>
 
 TEST(Config_Should_ParsesAllOptions) {
     TestEnv _;
