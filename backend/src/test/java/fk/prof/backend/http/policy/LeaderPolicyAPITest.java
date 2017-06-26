@@ -10,7 +10,6 @@ import fk.prof.backend.http.ApiPathConstants;
 import fk.prof.backend.mock.MockPolicyData;
 import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.policy.PolicyStore;
-import fk.prof.backend.proto.PolicyDTO;
 import fk.prof.backend.util.ProtoUtil;
 import fk.prof.backend.util.proto.RecorderProtoUtil;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -26,6 +25,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import proto.PolicyDTO;
 
 import java.util.concurrent.CompletableFuture;
 

@@ -19,7 +19,6 @@ import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
 import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.model.policy.ZookeeperBasedPolicyStore;
 import fk.prof.backend.proto.BackendDTO;
-import fk.prof.backend.proto.PolicyDTO;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -37,6 +36,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import proto.PolicyDTO;
 import recording.Recorder;
 
 import java.io.IOException;

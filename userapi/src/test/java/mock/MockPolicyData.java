@@ -1,4 +1,4 @@
-package fk.prof.backend.mock;
+package mock;
 
 import proto.PolicyDTO;
 import recording.Recorder;

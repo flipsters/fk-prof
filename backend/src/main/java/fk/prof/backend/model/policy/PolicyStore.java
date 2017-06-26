@@ -1,7 +1,7 @@
 package fk.prof.backend.model.policy;
 
-import fk.prof.backend.proto.PolicyDTO;
 import io.vertx.core.Future;
+import proto.PolicyDTO;
 import recording.Recorder;
 
 import java.util.Set;

@@ -1,7 +1,6 @@
 package fk.prof.backend.model.policy;
 
 import fk.prof.backend.mock.MockPolicyData;
-import fk.prof.backend.proto.PolicyDTO;
 import fk.prof.backend.util.ZookeeperUtil;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -18,6 +17,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import proto.PolicyDTO;
 import recording.Recorder;
 
 import java.util.*;

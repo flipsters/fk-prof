@@ -13,7 +13,6 @@ import fk.prof.backend.model.assignment.AssociatedProcessGroups;
 import fk.prof.backend.model.assignment.impl.AssociatedProcessGroupsImpl;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
 import fk.prof.backend.proto.BackendDTO;
-import fk.prof.backend.proto.PolicyDTO;
 import fk.prof.backend.util.ProtoUtil;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Vertx;
@@ -31,6 +30,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import proto.PolicyDTO;
 
 import java.io.IOException;
 
@@ -125,7 +125,7 @@ public class BackendPolicyAPITest {
         }
         Buffer finalPayloadAsBuffer = payloadAsBuffer;
         HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT,
-                ApiPathConstants.LEADER_GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
+                ApiPathConstants.LEADER_PUT_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
                 BodyHandler.create().setBodyLimit(1024 * 10), req -> {
                     try {
                         PolicyDTO.VersionedPolicyDetails expected = PolicyDTO.VersionedPolicyDetails.parseFrom(finalPayloadAsBuffer.getBytes());
@@ -166,7 +166,7 @@ public class BackendPolicyAPITest {
         }
         Buffer finalPayloadAsBuffer = payloadAsBuffer;
         HttpHelper.attachHandlersToRoute(router, HttpMethod.POST,
-                ApiPathConstants.LEADER_GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
+                ApiPathConstants.LEADER_POST_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
                 BodyHandler.create().setBodyLimit(1024 * 10), req -> {
                     try {
                         PolicyDTO.VersionedPolicyDetails expected = PolicyDTO.VersionedPolicyDetails.parseFrom(finalPayloadAsBuffer.getBytes());
