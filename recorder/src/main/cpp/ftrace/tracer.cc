@@ -83,7 +83,7 @@ void append(int fd, const std::string buff) {
     assert(wr_sz == buff.length());
 }
 
-ftrace::Tracer::Tracer(const std::string& tracing_dir, std::function<void(const ftrace::Tracer::DataLink&)> data_link_listener) {
+ftrace::Tracer::Tracer(const std::string& tracing_dir, Listener& _listener, std::function<void(const ftrace::Tracer::DataLink&)> data_link_listener) : listener(_listener) {
     auto instances_dir = tracing_dir + INSTANCES_DIR;
     if (! dir_exists(instances_dir.c_str())) {
         throw_file_not_found(instances_dir, "dir");
@@ -110,12 +110,16 @@ ftrace::Tracer::~Tracer() {
     //TODO: impl me!
 }
 
-void ftrace::Tracer::trace_on(pid_t pid, Listener* l) {
+void ftrace::Tracer::trace_on(pid_t pid, void* ctx) {
     bool is_first_pid = tracees.empty();
-    tracees[pid] = l;
-    if (is_first_pid) {
-        start();
-    }
+    tracees[pid] = ctx;
+    if (is_first_pid) start();
+}
+
+void ftrace::Tracer::trace_off(pid_t pid) {
+    tracees.erase(pid);
+    bool was_last_pid = tracees.empty();
+    if (was_last_pid) stop();
 }
 
 #define ON "1"
@@ -137,6 +141,6 @@ void ftrace::Tracer::stop() {
     append(ctrl_fds.tracing_on,           OFF);
 }
 
-void ftrace::Tracer::process(DataLink& dl) {
+void ftrace::Tracer::process(const DataLink& dl) {
     
 }

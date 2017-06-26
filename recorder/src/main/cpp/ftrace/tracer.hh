@@ -13,11 +13,14 @@ namespace ftrace {
     class Tracer {
     public:
         class Listener {
+
+        public:
             virtual ~Listener() {}
             
-            virtual void unicast(pid_t dest_pid, ftrace::v_curr::PktType pkt_type, std::uint8_t* payload, std::size_t payload_len) = 0;
+            virtual void unicast(pid_t dest_pid, void* ctx, ftrace::v_curr::PktType pkt_type, const std::uint8_t* payload, ftrace::v_curr::PayloadLen payload_len) = 0;
+
+            virtual void multicast(ftrace::v_curr::PktType pkt_type, const std::uint8_t* payload, ftrace::v_curr::PayloadLen payload_len) = 0;
             
-            virtual void multicast(ftrace::v_curr::PktType pkt_type, const std::uint8_t* payload, std::size_t payload_len) = 0;
         };
         
         struct DataLink {
@@ -26,20 +29,22 @@ namespace ftrace {
             std::uint16_t cpu;
         };
         
-        explicit Tracer(const std::string& tracing_dir, std::function<void(const DataLink&)> data_link_listener);
+        explicit Tracer(const std::string& tracing_dir, Listener& _listener, std::function<void(const DataLink&)> data_link_listener);
 
         ~Tracer();
 
-        void trace_on(pid_t pid, Listener* l);
+        void trace_on(pid_t pid, void* ctx);
         
         void trace_off(pid_t pid);
 
-        void process(DataLink& link);
+        void process(const DataLink& link);
 
     private:
         void start();
 
         void stop();
+
+        Listener& listener;
 
         std::string instance_path;
 
@@ -55,7 +60,7 @@ namespace ftrace {
 
         std::list<DataLink> dls;
 
-        std::unordered_map<pid_t, Listener*> tracees;
+        std::unordered_map<pid_t, void*> tracees;
     };
 }
 

@@ -3,40 +3,44 @@
 
 #include <cstdint>
 #include <sys/types.h>
+#include <string>
 
 /*
+  This is designed to facilitate talk between 2 processes on the same host.
+  So it is oblivious to endian-ness issues.
+
   Pkt:
   0    4    8   12   16   20   24   28   32
   |----|----|----|----|----|----|----|----|
   v    v    v    v    v    v    v    v    v
   
-  +----+----------------------------------+
-  |v:4 |            ....                  |
-  +----+            ....                  |
-  |                 ....                  |
+  +---+-----------------------------------+
+  |v:3| |            ....                 |
+  +---+-+            ....                 |
+  |                  ....                 |
   +---------------------------------------+
 
   (v0, supported, current)
-  +----+--------------+-------------------+
-  | 0x0|type:12       |len:16             |
-  +----+--------------+-------------------|
-  |                 ....                  |
-  |             data (0..64kB)            |
-  |                 ....                  |
+  +---+-----+---------+-------------------+
+  |0x0|typ:5|len:8    |                   |
+  +---+-----+---------+                   |
+  .                ....                   .
+  .            data (0..254B)             .
+  |                ....                   |
   +---------------------------------------+
+
+  'len' is the length of _entire packet_ (not just the payload)
 */
 
 namespace ftrace {
     namespace v0 {
         extern const std::uint8_t VERSION;
 
-        struct __attribute__((packed)) Header {
-            std::uint8_t     v : 4;
-            std::uint16_t type : 12;
-            std::uint16_t len  : 16;
-        };
+        const std::uint32_t max_pkt_sz = 256;
 
-        enum class PktType : std::uint16_t {
+        typedef std::uint8_t PayloadLen;
+
+        enum class PktType : std::uint8_t {
             add_tid           = 0,
             del_tid           = 1,
             lost_events       = 2,
@@ -44,7 +48,13 @@ namespace ftrace {
             sched_wakeup      = 4
         };
 
-        namespace data {
+        struct __attribute__((packed)) Header {
+            std::uint8_t    v : 3;
+            PktType      type : 5;
+            std::uint8_t  len : 8;
+        };
+
+        namespace payload {
             typedef pid_t AddTid;
             
             typedef pid_t DelTid;
@@ -70,6 +80,10 @@ namespace ftrace {
     }
 
     namespace v_curr = v0;
+}
+
+namespace std {
+    string to_string(const ftrace::v0::PktType type);
 }
 
 #endif
