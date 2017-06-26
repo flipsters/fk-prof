@@ -45,15 +45,17 @@ std::ostream& operator<<(std::ostream& os, const ftrace::v0::payload::SchedSwitc
 
 bool operator==(const ftrace::v0::payload::SchedWakeup& w1, const ftrace::v0::payload::SchedWakeup& w2) {
     return (w1.timestamp == w2.timestamp) &&
-        (w1.cpu == w2.cpu) &&
-        (w1.tid == w2.tid);
+        (w1.target_cpu == w2.target_cpu) &&
+        (w1.tid == w2.tid) &&
+        (w1.cpu == w2.cpu);
 }
 
 std::ostream& operator<<(std::ostream& os, const ftrace::v0::payload::SchedWakeup& w) {
     os << '{';
     os << "ts: " << w.timestamp << ", ";
-    os << "cpu: " << w.cpu << ", ";
+    os << "target_cpu: " << w.target_cpu << ", ";
     os << "in_tid: " << w.tid << ", ";
+    os << "cpu: " << w.cpu;
     os << '}';
     return os;
 }

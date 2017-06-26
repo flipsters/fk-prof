@@ -66,14 +66,15 @@ namespace ftrace {
                 std::int32_t out_tid;
                 std::int32_t in_tid;
                 std::int64_t syscall_nr; //-1 => no syscall
-                std::uint32_t cpu;
+                std::int32_t cpu;
                 bool voluntary; // true => out_tid was not running
             };
 
             struct __attribute__((packed)) SchedWakeup {
                 std::uint64_t timestamp;
-                std::int32_t cpu;
+                std::int32_t target_cpu;
                 std::int32_t tid;
+                std::int32_t cpu;
             };
         }
     }

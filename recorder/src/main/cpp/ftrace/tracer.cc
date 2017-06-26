@@ -157,7 +157,7 @@ void ftrace::Tracer::process(const DataLink& dl) {
     while (true) {
         auto rd_sz = read(dl.pipe_fd, buff, pg_sz);
         if (rd_sz > 0) {
-            auto read = pg_reader->read(buff);
+            auto read = pg_reader->read(dl.cpu, buff);
             s_m_read_bytes.mark(read);
             if (read < rd_sz) {
                 break;
@@ -181,17 +181,17 @@ ftrace::Tracer::SwitchTrackingEventHandler::SwitchTrackingEventHandler(ftrace::T
 
 ftrace::Tracer::SwitchTrackingEventHandler::~SwitchTrackingEventHandler() {}
 
-void ftrace::Tracer::SwitchTrackingEventHandler::handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallEntry* sys_entry) {
+void ftrace::Tracer::SwitchTrackingEventHandler::handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallEntry* sys_entry) {
     auto tid = cf->common_pid;
     current_syscall[tid] = sys_entry->nr;
 }
 
-void ftrace::Tracer::SwitchTrackingEventHandler::handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallExit* sys_exit) {
+void ftrace::Tracer::SwitchTrackingEventHandler::handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallExit* sys_exit) {
     auto tid = cf->common_pid;
     current_syscall[tid] = -1;
 }
 
-void ftrace::Tracer::SwitchTrackingEventHandler::handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedSwitch* sched_switch) {
+void ftrace::Tracer::SwitchTrackingEventHandler::handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedSwitch* sched_switch) {
     auto prev_pid = sched_switch->prev_pid;
     auto prev_it = tracees.find(prev_pid);
     auto prev_traced = (prev_it != std::end(tracees));
@@ -218,12 +218,12 @@ void ftrace::Tracer::SwitchTrackingEventHandler::handle(std::uint32_t cpu, std::
         listener.unicast(next_pid, next_it->second, ftrace::v_curr::PktType::sched_switch, reinterpret_cast<std::uint8_t*>(&sched_switch_msg), sizeof(sched_switch_msg));
 }
 
-void ftrace::Tracer::SwitchTrackingEventHandler::handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedWakeup* sched_wakeup) {
+void ftrace::Tracer::SwitchTrackingEventHandler::handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedWakeup* sched_wakeup) {
     auto prev_pid = sched_wakeup->pid;
     auto prev_it = tracees.find(prev_pid);
     auto prev_traced = prev_it != std::end(tracees);
     if (! prev_traced) return;
-    ftrace::v_curr::payload::SchedWakeup sched_wakeup_msg {timestamp_ns, sched_wakeup->target_cpu, prev_pid};
+    ftrace::v_curr::payload::SchedWakeup sched_wakeup_msg {timestamp_ns, sched_wakeup->target_cpu, prev_pid, cpu};
     listener.unicast(prev_pid, prev_it->second, ftrace::v_curr::PktType::sched_wakeup, reinterpret_cast<std::uint8_t*>(&sched_wakeup_msg), sizeof(sched_wakeup_msg));
 }
 

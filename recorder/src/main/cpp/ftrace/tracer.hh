@@ -32,13 +32,13 @@ namespace ftrace {
 
             virtual ~SwitchTrackingEventHandler();
 
-            void handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallEntry* sys_entry);
+            void handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallEntry* sys_entry);
 
-            void handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallExit* sys_exit);
+            void handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallExit* sys_exit);
 
-            void handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedSwitch* sched_switch);
+            void handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedSwitch* sched_switch);
 
-            void handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedWakeup* sched_wakeup);
+            void handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedWakeup* sched_wakeup);
 
             void untrack_tid(pid_t tid);
 
@@ -53,7 +53,7 @@ namespace ftrace {
         struct DataLink {
             int pipe_fd;
             int stats_fd;
-            std::uint16_t cpu;
+            std::int32_t cpu;
         };
         
         explicit Tracer(const std::string& tracing_dir, Listener& _listener, std::function<void(const DataLink&)> data_link_listener);

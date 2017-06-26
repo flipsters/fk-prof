@@ -261,7 +261,7 @@ TEST(SchedWakeup_Event) {
     CHECK_EQUAL(1, reported.size());
     CHECK(ftrace::v_curr::PktType::sched_wakeup == reported[0].type);
     auto& wake = reported[0].evt.sched_wakeup;
-    ftrace::v_curr::payload::SchedWakeup expected {12, 3, 500};
+    ftrace::v_curr::payload::SchedWakeup expected {12, 3, 500, 2};
     CHECK_EQUAL(expected, wake);
     CHECK_EQUAL(reinterpret_cast<void*>(&x), reported[0].ctx);
 }
