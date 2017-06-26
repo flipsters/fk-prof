@@ -36,8 +36,7 @@ namespace ftrace {
         typedef std::uint8_t CSessId;
 
     private:
-
-        static constexpr size_t max_pkt_sz = v_curr::max_pkt_sz;
+        void shutdown();
 
         void setup_listener(const std::string& socket_path);
 
@@ -46,6 +45,8 @@ namespace ftrace {
         void accept_client_sessions();
 
         void handle_client_requests(ClientFd fd);
+
+        void drop_client_session(std::unordered_map<ClientFd, std::unique_ptr<ClientSession>>::iterator it);
 
         void drop_client_session(ClientFd fd);
 

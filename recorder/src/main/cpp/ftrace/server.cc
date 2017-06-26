@@ -84,10 +84,7 @@ ftrace::Server::Server(const std::string& tracing_dir, const std::string& socket
 }
 
 ftrace::Server::~Server() {
-    epoll_ctl(poll_fd, EPOLL_CTL_DEL, listener_fd, nullptr);
-    close(listener_fd);
-    close(poll_fd);
-    tracer.reset(nullptr);
+    shutdown();
 }
 
 // We may need to tune this value upwards as servers/VMs with higher number of cores arrive (because ftrace-buffer is a per-cpu asset)
@@ -112,6 +109,27 @@ void ftrace::Server::run() {
             }
         }
     }
+
+    shutdown();
+}
+
+void ftrace::Server::shutdown() {
+    if (poll_fd < 0) return;
+
+    logger->info("Shutting down server");
+
+    epoll_ctl(poll_fd, EPOLL_CTL_DEL, listener_fd, nullptr);
+    close(listener_fd);
+    for (auto it = std::begin(client_sessions); it != std::end(client_sessions); ) {
+        drop_client_session(it); //it erases the entry
+    }
+    for (auto it = std::begin(trace_links); it != std::end(trace_links); ) {
+        epoll_ctl(poll_fd, EPOLL_CTL_DEL, it->first, nullptr);
+        trace_links.erase(it);
+    }
+    close(poll_fd);
+    tracer.reset(nullptr);
+    poll_fd = -1;
 }
 
 struct ftrace::ClientSession {
@@ -168,8 +186,8 @@ void ftrace::Server::accept_client_sessions() {
     logger->info("Accepted connection from: {}", addr.sun_path);
 }
 
-void ftrace::Server::drop_client_session(ClientFd fd) {
-    const auto& it = client_sessions.find(fd);
+void ftrace::Server::drop_client_session(std::unordered_map<ClientFd, std::unique_ptr<ClientSession>>::iterator it) {
+    auto fd = it->first;
     assert(it != std::end(client_sessions));
     for (const auto tid : it->second->tids) {
         auto kill_count = pids_client.erase(tid);
@@ -182,6 +200,11 @@ void ftrace::Server::drop_client_session(ClientFd fd) {
     if (ret != 0) throw log_and_get_error("Couldn't close client-fd", errno);
     logger->info("Dropped client-session for: {}", it->second->sock_path);
     client_sessions.erase(it);
+}
+
+void ftrace::Server::drop_client_session(ClientFd fd) {
+    const auto& it = client_sessions.find(fd);
+    drop_client_session(it);
 }
 
 void ftrace::Server::fail_client(ClientFd fd) {
