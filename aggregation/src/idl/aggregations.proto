@@ -2,6 +2,27 @@ syntax = "proto2";
 option java_package = "fk.prof.aggregation.proto";
 option java_outer_classname = "AggregatedProfileModel";
 
+message RecorderInfo {
+	required string ip = 1;
+	required string hostname = 2;
+	required string appId = 3;
+	required string instanceGroup = 4;
+	required string cluster = 5;
+	required string instanceId = 6;
+	required string processName = 7;
+	required string vmId = 8;
+	required string zone = 9;
+	required string instanceType = 10;
+}
+
+enum WorkType {
+	cpu_sample_work = 0;
+	thread_sample_work = 1;
+	monitor_contention_work = 2;
+	monitor_wait_work = 3;
+	ctx_switch_trace_work = 4;
+}
+
 message TraceCtxNames {
 	repeated string name = 1;
 }
@@ -15,19 +36,6 @@ message TraceCtxDetail {
 // List of all trace contexts. 
 message TraceCtxDetailList {
 	repeated TraceCtxDetail traceCtx = 1;
-}
-
-message RecorderInfo {
-	optional string ip = 1;
-	optional string hostname = 2;
-	optional string appId = 3;
-	optional string instanceGroup = 4;
-	optional string cluster = 5;
-	optional string instanceId = 6;
-	optional string processName = 7;
-	optional string vmId = 8;
-	optional string zone = 9;
-	optional string instanceType = 10;
 }
 
 // Status at the end of the aggregation window.
@@ -70,7 +78,8 @@ message FrameNode {
 	required uint32 methodId = 1;
 	required uint32 childCount = 2;
 	optional uint32 lineNo = 3;
-	optional CPUSamplingNodeProps cpuSamplingProps = 4;	
+	optional CPUSamplingNodeProps cpuSamplingProps = 4;
+	optional CtxSwitchNodeProps ctxSwitchProps = 5;
 }
 
 // StacktraceTree is traversed in dfs manner and serialized to a set of FrameNodeList
@@ -84,11 +93,27 @@ message CPUSamplingNodeProps {
 	optional uint32 onStackSamples = 2;
 }
 
-enum WorkType {
-	cpu_sample_work = 0;
-	thread_sample_work = 1;
-	monitor_contention_work = 2;
-	monitor_wait_work = 3;
+message CtxSwitchNodeProps {
+	optional uint32 volCount = 1;
+	optional uint32 volMigrations = 2;
+	optional uint64 volTotalLatency = 3;
+
+	optional uint32 involCount = 4;
+	optional uint32 involMigrations = 5;
+	optional uint64 involTotalLatency = 6;
+
+	optional bytes volLatencyDigest = 7;
+	optional bytes volWakeupLagDigest = 8;
+	optional bytes involLatencyDigest = 9;
+
+	repeated SyscallProps syscalls = 10;
+}
+
+message SyscallProps {
+	optional int64 syscallId = 1;
+	optional uint32 count = 2;
+	optional uint64 totalLatency = 3;
+	optional bytes latencyDigest = 4;
 }
 
 message Header {
