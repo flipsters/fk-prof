@@ -216,6 +216,7 @@ set(TEST_FILES
     ${SRC_TEST}/test_syslog_tsdb_metric_formatter.cc
     ${SRC_TEST}/test_unique_readsafe_ptr.cc
     ${SRC_TEST}/test_site_resolver.cc
+    ${SRC_TEST}/test_sched_switch_event_reporting.cc
     ${SRC_TEST}/test.cc)
 
 set(TEST_UTIL_FILES
@@ -295,11 +296,11 @@ add_library(syminfo_test_ext SHARED ${SYMINFO_TEST_EXT_FILES})
 
 if (DEFINED ENV{UNITTEST_LIBRARIES})
   message("User has configured " $ENV{UNITTEST_LIBRARIES} " as the unit test libraries")
-  target_link_libraries(tests testutil testbase ${BASE_OUTPUT} $ENV{UNITTEST_LIBRARIES})
-  target_link_libraries(testjni testutil testbase ${BASE_OUTPUT} $ENV{UNITTEST_LIBRARIES})
+  target_link_libraries(tests testutil testbase ${BASE_OUTPUT} ${BASE_FTRACER} $ENV{UNITTEST_LIBRARIES})
+  target_link_libraries(testjni testutil testbase ${BASE_OUTPUT} ${BASE_FTRACER} $ENV{UNITTEST_LIBRARIES})
 else()
-  target_link_libraries(tests testutil testbase ${BASE_OUTPUT} ${unittest++_LIBRARIES})
-  target_link_libraries(testjni testutil testbase ${BASE_OUTPUT} ${unittest++_LIBRARIES})
+  target_link_libraries(tests testutil testbase ${BASE_OUTPUT} ${BASE_FTRACER} ${unittest++_LIBRARIES})
+  target_link_libraries(testjni testutil testbase ${BASE_OUTPUT} ${BASE_FTRACER} ${unittest++_LIBRARIES})
 endif()
 
 

@@ -16,10 +16,6 @@ enum class FdType : std::uint8_t {
 };
 
 namespace PollCtx {
-    std::uint16_t cpu(std::uint64_t val) {
-        return (val >> 40) & 0xFFFF;
-    }
-    
     int fd(std::uint64_t val) {
         return (val >> 8) & 0xFFFFFFFF;
     }
@@ -29,18 +25,8 @@ namespace PollCtx {
     }
 
     std::uint64_t pack(FdType type, int fd) {
-        assert(type != FdType::tracer);
         assert(fd > 0);
         std::uint64_t val = fd;
-        return (val << 8) | (static_cast<std::uint8_t>(type) & 0xFF);
-    }
-
-    std::uint64_t pack(FdType type, int fd, std::uint16_t cpu) {
-        assert(type == FdType::tracer);
-        assert(fd > 0);
-        std::uint64_t val = cpu;
-        val <<= 32;
-        val |= fd;
         return (val << 8) | (static_cast<std::uint8_t>(type) & 0xFF);
     }
 }
@@ -76,7 +62,7 @@ ftrace::Server::Server(const std::string& tracing_dir, const std::string& socket
     tracer.reset(new Tracer(tracing_dir, *this, [&](const ftrace::Tracer::DataLink& link) {
                 auto fd = link.pipe_fd;
                 make_non_blocking(fd);
-                epoll_event evt { .events = EPOLLIN, .data = {.u64 = PollCtx::pack(FdType::tracer, fd, link.cpu)}};
+                epoll_event evt { .events = EPOLLIN, .data = {.u64 = PollCtx::pack(FdType::tracer, fd)}};
                 trace_links[fd] = &link;
                 auto ret = epoll_ctl(poll_fd, EPOLL_CTL_ADD, fd, &evt);
                 if (ret != 0) throw log_and_get_error("Couldn't add tracer-fd to epoll-ctx", errno);

@@ -15,8 +15,8 @@
   v    v    v    v    v    v    v    v    v
   
   +---+-----------------------------------+
-  |v:3| |            ....                 |
-  +---+-+            ....                 |
+  |v:3|              ....                 |
+  +---+              ....                 |
   |                  ....                 |
   +---------------------------------------+
 
@@ -63,18 +63,17 @@ namespace ftrace {
             
             struct __attribute__((packed)) SchedSwitch {
                 std::uint64_t timestamp;
-                std::uint32_t in_tid;
-                std::uint32_t out_tid;
-                std::int64_t syscall_nr;
+                std::int32_t out_tid;
+                std::int32_t in_tid;
+                std::int64_t syscall_nr; //-1 => no syscall
                 std::uint32_t cpu;
-                bool syscall; //false => no syscall
                 bool voluntary; // true => out_tid was not running
             };
 
             struct __attribute__((packed)) SchedWakeup {
                 std::uint64_t timestamp;
-                std::uint32_t cpu;
-                std::uint32_t tid;
+                std::int32_t cpu;
+                std::int32_t tid;
             };
         }
     }
@@ -85,5 +84,14 @@ namespace ftrace {
 namespace std {
     string to_string(const ftrace::v0::PktType type);
 }
+
+//for testing
+bool operator==(const ftrace::v0::payload::SchedSwitch& sw1, const ftrace::v0::payload::SchedSwitch& sw2);
+
+std::ostream& operator<<(std::ostream& os, const ftrace::v0::payload::SchedSwitch& sw);
+
+bool operator==(const ftrace::v0::payload::SchedWakeup& w1, const ftrace::v0::payload::SchedWakeup& w2);
+
+std::ostream& operator<<(std::ostream& os, const ftrace::v0::payload::SchedWakeup& w);
 
 #endif

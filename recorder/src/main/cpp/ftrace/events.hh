@@ -43,39 +43,45 @@ namespace ftrace {
     }
 
     class EventHandler {
+    public:
         virtual ~EventHandler() {};
 
-        virtual void handle(std::uint64_t timestamp, const event::CommonFields* cf, const event::SyscallEntry* sys_entry) = 0;
-        virtual void handle(std::uint64_t timestamp, const event::CommonFields* cf, const event::SyscallExit* sys_exit) = 0;
-        virtual void handle(std::uint64_t timestamp, const event::CommonFields* cf, const event::SchedSwitch* sched_switch) = 0;
-        virtual void handle(std::uint64_t timestamp, const event::CommonFields* cf, const event::SchedWakeup* sched_wakeup) = 0;
+        virtual void handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallEntry* sys_entry) = 0;
+        virtual void handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallExit* sys_exit) = 0;
+        virtual void handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedSwitch* sched_switch) = 0;
+        virtual void handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedWakeup* sched_wakeup) = 0;
     };
 
     class CommonHeaderReader {
+    public:
         virtual ~CommonHeaderReader() {};
 
         virtual std::size_t read(const std::uint8_t* buff, event::CommonFields& common_fields) = 0;
     };
 
     class SyscallEntryReader {
+    public:
         virtual ~SyscallEntryReader() {};
 
         virtual std::size_t read(const std::uint8_t* buff, event::SyscallEntry& sys_entry) = 0;
     };
 
     class SyscallExitReader {
+    public:
         virtual ~SyscallExitReader() {};
 
         virtual std::size_t read(const std::uint8_t* buff, event::SyscallExit& sys_exit) = 0;
     };
 
     class SchedSwitchReader {
+    public:
         virtual ~SchedSwitchReader() {};
 
         virtual std::size_t read(const std::uint8_t* buff, event::SchedSwitch& sched_switch) = 0;
     };
 
     class SchedWakeupReader {
+    public:
         virtual ~SchedWakeupReader() {};
 
         virtual std::size_t read(const std::uint8_t* buff, event::SchedWakeup& sched_wakeup) = 0;
@@ -87,7 +93,7 @@ namespace ftrace {
 
         virtual ~EventReader();
 
-        std::size_t handle(const std::uint8_t* buff, std::size_t sz) const;
+        std::size_t read(const std::uint8_t* buff, std::size_t sz) const;
 
     private:
         EventHandler& handler;
@@ -107,10 +113,12 @@ namespace ftrace {
 
         virtual ~PageReader();
 
-        void handle(const std::uint8_t* page);
+        std::size_t read(const std::uint8_t* page);
 
     private:
         const EventReader& e_rdr;
+
+        std::size_t pg_sz;
 
     };
 };

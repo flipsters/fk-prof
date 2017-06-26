@@ -8,12 +8,13 @@
 #include <unordered_map>
 #include <functional>
 #include "ftrace/proto.hh"
+#include "ftrace/events.hh"
+#include "metrics.hh"
 
 namespace ftrace {
     class Tracer {
     public:
         class Listener {
-
         public:
             virtual ~Listener() {}
             
@@ -22,7 +23,33 @@ namespace ftrace {
             virtual void multicast(ftrace::v_curr::PktType pkt_type, const std::uint8_t* payload, ftrace::v_curr::PayloadLen payload_len) = 0;
             
         };
-        
+
+        typedef std::unordered_map<pid_t, void*> Tracees;
+
+        class SwitchTrackingEventHandler : public EventHandler {
+        public:
+            SwitchTrackingEventHandler(Listener& _listener, const Tracees& tracees);
+
+            virtual ~SwitchTrackingEventHandler();
+
+            void handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallEntry* sys_entry);
+
+            void handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallExit* sys_exit);
+
+            void handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedSwitch* sched_switch);
+
+            void handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedWakeup* sched_wakeup);
+
+            void untrack_tid(pid_t tid);
+
+        private:
+            Listener& listener;
+
+            const Tracees& tracees;
+
+            std::unordered_map<pid_t, std::int64_t> current_syscall;
+        };
+
         struct DataLink {
             int pipe_fd;
             int stats_fd;
@@ -44,7 +71,17 @@ namespace ftrace {
 
         void stop();
 
-        Listener& listener;
+        Tracees tracees;
+
+        SwitchTrackingEventHandler evt_hdlr;
+
+        std::size_t pg_sz;
+
+        std::unique_ptr<std::uint8_t> pg_buff;
+
+        metrics::Ctr& s_c_read_failed;
+
+        metrics::Mtr& s_m_read_bytes;
 
         std::string instance_path;
 
@@ -60,7 +97,10 @@ namespace ftrace {
 
         std::list<DataLink> dls;
 
-        std::unordered_map<pid_t, void*> tracees;
+        std::unique_ptr<EventReader> evt_reader;
+
+        std::unique_ptr<PageReader> pg_reader;
+
     };
 }
 

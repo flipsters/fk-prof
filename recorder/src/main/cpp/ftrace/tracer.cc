@@ -26,10 +26,10 @@ bool file_exists(const char *path) {
 #define INSTANCES_DIR "/instances"
 #define INSTANCE "/fk-prof-rec"
 #define EVENTS_DIR "/events"
-#define SCHED_SWITCH_DIR "/events/sched/sched_switch"
-#define SCHED_WAKEUP_DIR "/events/sched/sched_wakeup"
-#define SYSCALL_ENTER_DIR "/events/raw_syscalls/sys_enter"
-#define SYSCALL_EXIT_DIR "/events/raw_syscalls/sys_exit"
+#define SCHED_SWITCH_DIR EVENTS_DIR "/sched/sched_switch"
+#define SCHED_WAKEUP_DIR EVENTS_DIR "/sched/sched_wakeup"
+#define SYSCALL_ENTER_DIR EVENTS_DIR "/raw_syscalls/sys_enter"
+#define SYSCALL_EXIT_DIR EVENTS_DIR "/raw_syscalls/sys_exit"
 #define ENABLE_FILE "/enable"
 #define CPU_DIR_PREFIX "/per_cpu/cpu"
 #define PER_CPU_RAW_TRACE_PIPE "/trace_pipe_raw"
@@ -83,7 +83,14 @@ void append(int fd, const std::string buff) {
     assert(wr_sz == buff.length());
 }
 
-ftrace::Tracer::Tracer(const std::string& tracing_dir, Listener& _listener, std::function<void(const ftrace::Tracer::DataLink&)> data_link_listener) : listener(_listener) {
+#define METRIC_TYPE "tracer"
+
+ftrace::Tracer::Tracer(const std::string& tracing_dir, Listener& listener, std::function<void(const ftrace::Tracer::DataLink&)> data_link_listener) :
+    evt_hdlr(listener, tracees), pg_sz(getpagesize()), pg_buff(new std::uint8_t[pg_sz]),
+
+    s_c_read_failed(get_metrics_registry().new_counter({METRICS_DOMAIN_TRACE, METRIC_TYPE, "pipe_read", "failed"})),
+    s_m_read_bytes(get_metrics_registry().new_meter({METRICS_DOMAIN_TRACE, METRIC_TYPE, "pipe_read", "bytes"}, "rate")) {
+
     auto instances_dir = tracing_dir + INSTANCES_DIR;
     if (! dir_exists(instances_dir.c_str())) {
         throw_file_not_found(instances_dir, "dir");
@@ -104,6 +111,9 @@ ftrace::Tracer::Tracer(const std::string& tracing_dir, Listener& _listener, std:
 
     append(ctrl_fds.trace_options, "bin");
     append(ctrl_fds.trace_options, "nooverwrite");
+
+    evt_reader.reset(new EventReader(instances_dir + EVENTS_DIR, evt_hdlr));
+    pg_reader.reset(new PageReader(*evt_reader.get(), pg_sz));
 }
 
 ftrace::Tracer::~Tracer() {
@@ -118,6 +128,7 @@ void ftrace::Tracer::trace_on(pid_t pid, void* ctx) {
 
 void ftrace::Tracer::trace_off(pid_t pid) {
     tracees.erase(pid);
+    evt_hdlr.untrack_tid(pid);
     bool was_last_pid = tracees.empty();
     if (was_last_pid) stop();
 }
@@ -142,5 +153,80 @@ void ftrace::Tracer::stop() {
 }
 
 void ftrace::Tracer::process(const DataLink& dl) {
+    auto buff = pg_buff.get();
+    while (true) {
+        auto rd_sz = read(dl.pipe_fd, buff, pg_sz);
+        if (rd_sz > 0) {
+            auto read = pg_reader->read(buff);
+            s_m_read_bytes.mark(read);
+            if (read < rd_sz) {
+                break;
+            }
+        } else if (rd_sz < 0) {
+            if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
+                s_c_read_failed.inc();
+                auto msg =  error_message("read of raw-trace-pipe failed", errno);
+                logger->warn("For cpu {}, {}", dl.cpu, msg);
+            }
+            break;
+        } else {
+            s_c_read_failed.inc();
+            logger->error("For cpu {}, raw-trace-pipe read returned 0", dl.cpu);
+            break;
+        }
+    }
+}
+
+ftrace::Tracer::SwitchTrackingEventHandler::SwitchTrackingEventHandler(ftrace::Tracer::Listener& _listener, const ftrace::Tracer::Tracees& _tracees) : listener(_listener), tracees(_tracees) {}
+
+ftrace::Tracer::SwitchTrackingEventHandler::~SwitchTrackingEventHandler() {}
+
+void ftrace::Tracer::SwitchTrackingEventHandler::handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallEntry* sys_entry) {
+    auto tid = cf->common_pid;
+    current_syscall[tid] = sys_entry->nr;
+}
+
+void ftrace::Tracer::SwitchTrackingEventHandler::handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallExit* sys_exit) {
+    auto tid = cf->common_pid;
+    current_syscall[tid] = -1;
+}
+
+void ftrace::Tracer::SwitchTrackingEventHandler::handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedSwitch* sched_switch) {
+    auto prev_pid = sched_switch->prev_pid;
+    auto prev_it = tracees.find(prev_pid);
+    auto prev_traced = (prev_it != std::end(tracees));
     
+    auto next_pid = sched_switch->next_pid;
+    auto next_it = tracees.find(next_pid);
+    auto next_traced = (next_it != std::end(tracees));
+    
+    if (! (prev_traced || next_traced)) return;
+    auto prev_syscall_it = current_syscall.find(prev_pid);
+    std::int64_t syscall_nr = -1;
+    if (prev_syscall_it != std::end(current_syscall)) {
+        syscall_nr = prev_syscall_it->second;
+    }
+    auto runnable = (sched_switch->prev_state == 0); // check <linux>/include/linux/sched.h task state bitmask (TASK_RUNNING)
+    ftrace::v_curr::payload::SchedSwitch sched_switch_msg {timestamp_ns, prev_pid, next_pid, syscall_nr, cpu, ! runnable};
+
+    if (next_traced) next_traced = ! (prev_traced && (prev_it->second == next_it->second));
+    
+    if (prev_traced)
+        listener.unicast(prev_pid, prev_it->second, ftrace::v_curr::PktType::sched_switch, reinterpret_cast<std::uint8_t*>(&sched_switch_msg), sizeof(sched_switch_msg));
+
+    if (next_traced)
+        listener.unicast(next_pid, next_it->second, ftrace::v_curr::PktType::sched_switch, reinterpret_cast<std::uint8_t*>(&sched_switch_msg), sizeof(sched_switch_msg));
+}
+
+void ftrace::Tracer::SwitchTrackingEventHandler::handle(std::uint32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedWakeup* sched_wakeup) {
+    auto prev_pid = sched_wakeup->pid;
+    auto prev_it = tracees.find(prev_pid);
+    auto prev_traced = prev_it != std::end(tracees);
+    if (! prev_traced) return;
+    ftrace::v_curr::payload::SchedWakeup sched_wakeup_msg {timestamp_ns, sched_wakeup->target_cpu, prev_pid};
+    listener.unicast(prev_pid, prev_it->second, ftrace::v_curr::PktType::sched_wakeup, reinterpret_cast<std::uint8_t*>(&sched_wakeup_msg), sizeof(sched_wakeup_msg));
+}
+
+void ftrace::Tracer::SwitchTrackingEventHandler::untrack_tid(pid_t tid) {
+    current_syscall.erase(tid);
 }
