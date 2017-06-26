@@ -100,7 +100,7 @@ message Wse {
   optional StackSampleWse thread_sample_entry = 4;
   optional MonitorReportWse monitor_contention_entry = 5;
   optional MonitorReportWse monitor_wait_entry = 6;
-  optional CtxSwitchTraceWse off_cpu_sample_entry = 7;
+  optional CtxSwitchTraceWse off_cpu_trace_entry = 7;
 }
 
 /* indexed data, incrementally sent  */
@@ -235,7 +235,7 @@ message CtxSwitchTraceWork {
 }
 
 message CtxSwitchTraceWse {
-  repeated CtxSwitchTrace sample = 1;
+  repeated CtxSwitchTrace traces = 1;
   optional uint64 events_dropped = 2;
 }
 
