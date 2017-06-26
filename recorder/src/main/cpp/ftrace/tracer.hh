@@ -55,7 +55,7 @@ namespace ftrace {
             int sched_wakeup_enable;
             int syscall_enter_enable;
             int syscall_exit_enable;
-            int set_event_pid; // newer kernels support this, enhance this to write pids to be traced here -jj
+            int set_event_pid; // newer kernels support this (but 3.16 on jessie doesn't), after 1500 or more years, when it finally gets a new enough kernel, enhance this to write pids to be traced here -jj
         } ctrl_fds;
 
         std::list<DataLink> dls;
