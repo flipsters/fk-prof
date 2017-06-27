@@ -106,7 +106,7 @@ message CtxSwitchNodeProps {
 	optional bytes volWakeupLagDigest = 8;
 	optional bytes involLatencyDigest = 9;
 
-	repeated SyscallProps syscalls = 10;
+	repeated SyscallProps syscall = 10;
 }
 
 message SyscallProps {

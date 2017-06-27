@@ -1,5 +1,6 @@
 package fk.prof.aggregation.model;
 
+import fk.prof.aggregation.proto.AggregatedProfileModel;
 import fk.prof.aggregation.stacktrace.StacktraceFrameNode;
 
 import java.util.ArrayList;
@@ -79,15 +80,14 @@ public class CtxSwitchNode extends StacktraceFrameNode<CtxSwitchNode> {
     return result;
   }
 
-//  protected AggregatedProfileModel.FrameNode buildFrameNodeProto() {
-//    return AggregatedProfileModel.FrameNode.newBuilder()
-//      .setMethodId(methodId)
-//      .setChildCount(children.size())
-//      .setLineNo(lineNumber)
-//      .setCpuSamplingProps(AggregatedProfileModel.CPUSamplingNodeProps.newBuilder()
-//          .setOnCpuSamples(onCpuSamples.get()).setOnStackSamples(onStackSamples.get()))
-//      .build();
-//  }
+  protected AggregatedProfileModel.FrameNode buildFrameNodeProto() {
+    return AggregatedProfileModel.FrameNode.newBuilder()
+      .setMethodId(methodId)
+      .setChildCount(children.size())
+      .setLineNo(lineNumber)
+      .setCtxSwitchProps(data == null ? AggregatedProfileModel.CtxSwitchNodeProps.getDefaultInstance() : data.buildCtxSwitchNodePropsProto())
+      .build();
+  }
 
   @Override
   protected Iterable<CtxSwitchNode> children() {
