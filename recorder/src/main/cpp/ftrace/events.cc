@@ -1,5 +1,7 @@
 #include "events.hh"
 #include "logging.hh"
+#include "util.hh"
+#include <regex>
 
 /**
    There is no documentation or help for the magic that happens here, but who needs documentation when we have source-tree?
@@ -15,10 +17,235 @@
    Happy hacking!
 
    -jj
- */
+*/
 
-ftrace::EventReader::EventReader(const std::string& _events_dir, EventHandler& _handler) : handler(_handler) {
+#define MARK_CONSUMED(len)                      \
+    {                                           \
+        buff += len;                            \
+        remaining -= len;                       \
+    }
+
+#define CONSUMED (buff - buff_start)
+
+template <typename Event> std::size_t read_copy(const std::uint8_t* buff, std::size_t remaining, Event& event) {
+    auto buff_start = buff;
+    auto sz = sizeof(Event);
+    assert(remaining >= sz);
+    event = *reinterpret_cast<const Event*>(buff);
+    MARK_CONSUMED(sz);
+    return CONSUMED;
+}
+
+//TODO: use macros to DRY this stuff up -jj
+
+class CommonHeaderReaderJessie : public ftrace::CommonHeaderReader {
+public:
+    ~CommonHeaderReaderJessie() {}
+
+    std::size_t read(const std::uint8_t* buff, std::size_t remaining, ftrace::event::CommonFields& common_fields) {
+        return read_copy<ftrace::event::CommonFields>(buff, remaining, common_fields);
+    }
+
+    std::size_t repr_length() {
+        return sizeof(ftrace::event::CommonFields);
+    }
+};
+
+class SchedSwitchReaderJessie : public ftrace::SchedSwitchReader {
+public:
+    ~SchedSwitchReaderJessie() {}
+
+    std::size_t read(const std::uint8_t* buff, std::size_t remaining, ftrace::event::SchedSwitch& fields) {
+        return read_copy<ftrace::event::SchedSwitch>(buff, remaining, fields);
+    }
+
+    std::size_t repr_length() {
+        return sizeof(ftrace::event::SchedSwitch);
+    }
+};
+
+class SchedWakeupReaderJessie : public ftrace::SchedWakeupReader {
+public:
+    ~SchedWakeupReaderJessie() {}
+
+    std::size_t read(const std::uint8_t* buff, std::size_t remaining, ftrace::event::SchedWakeup& fields) {
+        return read_copy<ftrace::event::SchedWakeup>(buff, remaining, fields);
+    }
+
+    std::size_t repr_length() {
+        return sizeof(ftrace::event::SchedWakeup);
+    }
+};
+
+class SyscallEntryReaderJessie : public ftrace::SyscallEntryReader {
+public:
+    ~SyscallEntryReaderJessie() {}
+
+    std::size_t read(const std::uint8_t* buff, std::size_t remaining, ftrace::event::SyscallEntry& fields) {
+        return read_copy<ftrace::event::SyscallEntry>(buff, remaining, fields);
+    }
+
+    std::size_t repr_length() {
+        return sizeof(ftrace::event::SyscallEntry);
+    }
+};
+
+class SyscallExitReaderJessie : public ftrace::SyscallExitReader {
+    ~SyscallExitReaderJessie() {}
+
+    std::size_t read(const std::uint8_t* buff, std::size_t remaining, ftrace::event::SyscallExit& fields) {
+        return read_copy<ftrace::event::SyscallExit>(buff, remaining, fields);
+    }
+
+    std::size_t repr_length() {
+        return sizeof(ftrace::event::SyscallExit);
+    }
+};
+
+#define EXPECTED_PAGE_HEADER                                            \
+    "        field: u64 timestamp;   offset:0;       size:8; signed:0;\n" \
+    "        field: local_t commit;  offset:8;       size:8; signed:1;\n" \
+    "        field: int overwrite;   offset:8;       size:1; signed:1;\n" \
+    "        field: char data;       offset:16;      size:4080;      signed:1;"
+
+#define EXPECTED_HEADER_EVENT                   \
+    "# compressed entry header\n"               \
+    "        type_len    :    5 bits\n"         \
+    "        time_delta  :   27 bits\n"         \
+    "        array       :   32 bits\n"         \
+    "\n"                                        \
+    "        padding     : type == 29\n"        \
+    "        time_extend : type == 30\n"        \
+    "        data max type_len  == 28\n"
+
+#define COMMON_FIELDS_FORMAT_JESSIE                                     \
+    "        field:unsigned short common_type;       offset:0;       size:2; signed:0;\n" \
+    "        field:unsigned char common_flags;       offset:2;       size:1; signed:0;\n" \
+    "        field:unsigned char common_preempt_count;       offset:3;       size:1; signed:0;\n" \
+    "        field:int common_pid;   offset:4;       size:4; signed:1;"
+
+#define SYSCALL_ENTRY_FORMAT_JESSIE             \
+    "        field:long id;  offset:8;       size:8; signed:1;\n"       \
+    "        field:unsigned long args[6];    offset:16;      size:48;        signed:0;"
+
+#define SYSCALL_EXIT_FORMAT_JESSIE              \
+    "        field:long id;  offset:8;       size:8; signed:1;\n"   \
+    "        field:long ret; offset:16;      size:8; signed:1;"
+
+#define SCHED_SWITCH_FORMAT_JESSIE                                      \
+    "        field:char prev_comm[16];       offset:8;       size:16;        signed:1;\n" \
+    "        field:pid_t prev_pid;   offset:24;      size:4; signed:1;\n" \
+    "        field:int prev_prio;    offset:28;      size:4; signed:1;\n" \
+    "        field:long prev_state;  offset:32;      size:8; signed:1;\n" \
+    "        field:char next_comm[16];       offset:40;      size:16;        signed:1;\n" \
+    "        field:pid_t next_pid;   offset:56;      size:4; signed:1;\n" \
+    "        field:int next_prio;    offset:60;      size:4; signed:1;\n"
+
+#define SCHED_WAKEUP_FORMAT_JESSIE                                      \
+    "        field:char comm[16];    offset:8;       size:16;        signed:1;\n" \
+    "        field:pid_t pid;        offset:24;      size:4; signed:1;\n" \
+    "        field:int prio; offset:28;      size:4; signed:1;\n"       \
+    "        field:int success;      offset:32;      size:4; signed:1;\n" \
+    "        field:int target_cpu;   offset:36;      size:4; signed:1;"
+
+ftrace::EventReader::EventReader(const std::string& events_dir, EventHandler& _handler) : handler(_handler) {
     //TODO: assert event header prefix content matchs
+    auto header_event_path = events_dir + "/header_event";
+    auto header_event = Util::content(header_event_path, nullptr, nullptr);
+    assert(header_event == EXPECTED_HEADER_EVENT);
+
+    std::regex bin_fmt_start_marker("^format:$");
+    std::regex text_fmt_start_marker("^print fmt: $");
+
+    auto specific_fields_offset = create_sched_switch_and_common_fields_reader(events_dir, bin_fmt_start_marker, text_fmt_start_marker);
+    create_sched_wakeup_reader(events_dir, bin_fmt_start_marker, text_fmt_start_marker, specific_fields_offset);
+    create_syscall_entry_reader(events_dir, bin_fmt_start_marker, text_fmt_start_marker, specific_fields_offset);
+    create_syscall_exit_reader(events_dir, bin_fmt_start_marker, text_fmt_start_marker, specific_fields_offset);
+}
+
+std::runtime_error get_version_unsupported_error(const std::string& identity, const std::string& format) {
+    auto msg = "This kernel version doesn't seem supported. Discovered " + identity + " had an unknown format '" + format + "'";
+    logger->error(msg);
+    return std::runtime_error(msg);
+}
+
+std::string::size_type ftrace::EventReader::create_sched_switch_and_common_fields_reader(const std::string& events_dir, std::regex& bin_fmt_start_marker, std::regex& text_fmt_start_marker) {
+    auto sched_switch_event_dir = events_dir + SCHED_SWITCH_DIR;
+    auto sched_switch_format_path = sched_switch_event_dir + "/format";
+    auto sched_switch_all_format = Util::content(sched_switch_format_path, &bin_fmt_start_marker, &text_fmt_start_marker);
+    auto common_fields_end = sched_switch_all_format.find("\n\n");
+    assert(common_fields_end != std::string::npos);
+
+    auto common_fields_format = sched_switch_all_format.substr(0, common_fields_end);
+    if (common_fields_format == COMMON_FIELDS_FORMAT_JESSIE) {
+        common_header_rdr.reset(new CommonHeaderReaderJessie());
+    } else {
+        throw get_version_unsupported_error("common_fields", common_fields_format);
+    }
+
+    auto specific_fields_offset = common_fields_end + 2;
+
+    auto sched_switch_format = sched_switch_all_format.substr(specific_fields_offset);
+    if (sched_switch_format == SCHED_SWITCH_FORMAT_JESSIE) {
+        sched_switch_rdr.reset(new SchedSwitchReaderJessie());
+    } else {
+        throw get_version_unsupported_error("sched_switch", sched_switch_format);
+    }
+    auto sched_switch_id_path = sched_switch_event_dir + "/id";
+    auto sched_switch_id_str = Util::content(sched_switch_id_path, nullptr, nullptr);
+    sched_switch_id = Util::stoun<std::uint16_t>(sched_switch_id_str);
+
+    return specific_fields_offset;
+}
+
+//TODO: use macros to dry this stuff up -jj
+
+void ftrace::EventReader::create_sched_wakeup_reader(const std::string& events_dir, std::regex& bin_fmt_start_marker, std::regex& text_fmt_start_marker, std::string::size_type specific_fields_offset) {
+    auto sched_wakeup_event_dir = events_dir + SCHED_WAKEUP_DIR;
+    auto sched_wakeup_format_path = sched_wakeup_event_dir + "/format";
+    auto sched_wakeup_all_format = Util::content(sched_wakeup_format_path, &bin_fmt_start_marker, &text_fmt_start_marker);
+
+    auto sched_wakeup_format = sched_wakeup_all_format.substr(specific_fields_offset);
+    if (sched_wakeup_format == SCHED_WAKEUP_FORMAT_JESSIE) {
+        sched_wakeup_rdr.reset(new SchedWakeupReaderJessie());
+    } else {
+        throw get_version_unsupported_error("sched_wakeup", sched_wakeup_format);
+    }
+    auto sched_wakeup_id_path = sched_wakeup_event_dir + "/id";
+    auto sched_wakeup_id_str = Util::content(sched_wakeup_id_path, nullptr, nullptr);
+    sched_wakeup_id = Util::stoun<std::uint16_t>(sched_wakeup_id_str);
+}
+
+void ftrace::EventReader::create_syscall_entry_reader(const std::string& events_dir, std::regex& bin_fmt_start_marker, std::regex& text_fmt_start_marker, std::string::size_type specific_fields_offset) {
+    auto sys_entry_event_dir = events_dir + SYSCALL_ENTER_DIR;
+    auto sys_entry_format_path = sys_entry_event_dir + "/format";
+    auto sys_entry_all_format = Util::content(sys_entry_format_path, &bin_fmt_start_marker, &text_fmt_start_marker);
+
+    auto sys_entry_format = sys_entry_all_format.substr(specific_fields_offset);
+    if (sys_entry_format == SYSCALL_ENTRY_FORMAT_JESSIE) {
+        sys_entry_rdr.reset(new SyscallEntryReaderJessie());
+    } else {
+        throw get_version_unsupported_error("syscall_entry", sys_entry_format);
+    }
+    auto sys_entry_id_path = sys_entry_event_dir + "/id";
+    auto sys_entry_id_str = Util::content(sys_entry_id_path, nullptr, nullptr);
+    sys_entry_id = Util::stoun<std::uint16_t>(sys_entry_id_str);
+}
+
+void ftrace::EventReader::create_syscall_exit_reader(const std::string& events_dir, std::regex& bin_fmt_start_marker, std::regex& text_fmt_start_marker, std::string::size_type specific_fields_offset) {
+    auto sys_exit_event_dir = events_dir + SYSCALL_ENTER_DIR;
+    auto sys_exit_format_path = sys_exit_event_dir + "/format";
+    auto sys_exit_all_format = Util::content(sys_exit_format_path, &bin_fmt_start_marker, &text_fmt_start_marker);
+
+    auto sys_exit_format = sys_exit_all_format.substr(specific_fields_offset);
+    if (sys_exit_format == SYSCALL_ENTRY_FORMAT_JESSIE) {
+        sys_exit_rdr.reset(new SyscallExitReaderJessie());
+    } else {
+        throw get_version_unsupported_error("syscall_exit", sys_exit_format);
+    }
+    auto sys_exit_id_path = sys_exit_event_dir + "/id";
+    auto sys_exit_id_str = Util::content(sys_exit_id_path, nullptr, nullptr);
+    sys_exit_id = Util::stoun<std::uint16_t>(sys_exit_id_str);
 }
 
 ftrace::EventReader::~EventReader() {}
@@ -44,11 +271,6 @@ struct __attribute__((packed)) EvtHdrPrefix {
 #define RINGBUF_TYPE_DATA_TYPE_LEN_MAX 28
 #define RINGBUF_TYPE_PADDING 29
 #define RINGBUF_TYPE_TIME_EXTEND 30
-
-void mark_consumed(std::size_t& consumed, std::size_t& remaining, std::size_t len) {
-    consumed += len;
-    remaining -= len;
-}
 
 #define MARK_CONSUMED(len)                      \
     {                                           \
@@ -102,6 +324,14 @@ std::size_t ftrace::EventReader::read(std::int32_t cpu, std::uint64_t timestamp_
     return CONSUMED;
 }
 
+#define READ_AND_DELIVER(event_type, rdr)                       \
+    {                                                           \
+        event_type e;                                           \
+        assert(remaining >= rdr->repr_length());                \
+        MARK_CONSUMED(rdr->read(buff, remaining, e));           \
+        handler.handle(cpu, timestamp_ns, common_fields, e);    \
+    }
+
 std::size_t ftrace::EventReader::read_payload(const std::uint8_t* buff, std::size_t remaining, std::uint64_t timestamp_ns, std::int32_t cpu) const {
     auto buff_start = buff;
 
@@ -112,16 +342,13 @@ std::size_t ftrace::EventReader::read_payload(const std::uint8_t* buff, std::siz
     const auto type_id = common_fields.common_type;
     
     if (type_id == sys_entry_id) {
-        event::SyscallEntry e;
-        assert(remaining >= sys_entry_rdr->repr_length());
-        MARK_CONSUMED(sys_entry_rdr->read(buff, remaining, e));
-        handler.handle(cpu, timestamp_ns, common_fields, e);
+        READ_AND_DELIVER(event::SyscallEntry, sys_entry_rdr);
     } else if (type_id == sys_exit_id) {
-
+        READ_AND_DELIVER(event::SyscallExit, sys_exit_rdr);
     } else if (type_id == sched_switch_id) {
-
+        READ_AND_DELIVER(event::SchedSwitch, sched_switch_rdr);
     } else if (type_id == sched_wakeup_id) {
-
+        READ_AND_DELIVER(event::SchedWakeup, sched_wakeup_rdr);
     } else {
         logger->error("Encountered event with unknown type-id: {}", type_id);
         throw std::runtime_error("Encountered event with unknown type-id");
@@ -129,8 +356,10 @@ std::size_t ftrace::EventReader::read_payload(const std::uint8_t* buff, std::siz
     return CONSUMED;
 }
 
-ftrace::PageReader::PageReader(const EventReader& _e_rdr, std::size_t _pg_sz) : e_rdr(_e_rdr), pg_sz(_pg_sz) {
-    //assert page_header content matches
+ftrace::PageReader::PageReader(const std::string& events_dir, const EventReader& _e_rdr, std::size_t _pg_sz) : e_rdr(_e_rdr), pg_sz(_pg_sz) {
+    auto page_header_path = events_dir + "/header_page";
+    auto page_header = Util::content(page_header_path, nullptr, nullptr);
+    assert(page_header == EXPECTED_PAGE_HEADER);
 }
 
 ftrace::PageReader::~PageReader() {}

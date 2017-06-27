@@ -4,7 +4,7 @@
 
 using namespace UnitTest;
 
-int main(int argc, char** argv ) {
+int main(int argc, char** argv) {
     TestReporterStdout reporter;
     TestRunner runner(reporter);
     auto ret = runner.RunTestsIf(Test::GetTestList(), NULL, [argc, argv](Test* t) {

@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include "logging.hh"
+#include "util.hh"
 
 bool dir_exists(const char *path) {
     struct stat info;
@@ -25,11 +26,6 @@ bool file_exists(const char *path) {
 #define TRACE_OPTIONS "/trace_options"
 #define INSTANCES_DIR "/instances"
 #define INSTANCE "/fk-prof-rec"
-#define EVENTS_DIR "/events"
-#define SCHED_SWITCH_DIR EVENTS_DIR "/sched/sched_switch"
-#define SCHED_WAKEUP_DIR EVENTS_DIR "/sched/sched_wakeup"
-#define SYSCALL_ENTER_DIR EVENTS_DIR "/raw_syscalls/sys_enter"
-#define SYSCALL_EXIT_DIR EVENTS_DIR "/raw_syscalls/sys_exit"
 #define ENABLE_FILE "/enable"
 #define CPU_DIR_PREFIX "/per_cpu/cpu"
 #define PER_CPU_RAW_TRACE_PIPE "/trace_pipe_raw"
@@ -49,22 +45,12 @@ static int open_file(const std::string& instance_path, const std::string& subpat
     return open(path.c_str(), flags);
 }
 
-template <typename T> T stoun(const std::string& str) {
-    std::size_t end;
-    std::uint64_t result = std::stoul(str, &end, 10);
-    assert(end == str.length());
-    if (result > std::numeric_limits<T>::max()) {
-        throw std::out_of_range("stoun");
-    }
-    return result;
-}
-
 std::uint16_t cpus_present() {
     std::fstream in{"/sys/devices/system/cpu/present", std::ios_base::in};
     std::string content;
     in >> content;
     auto idx = content.find('-');
-    return stoun<std::uint16_t>(content.substr(idx + 1));
+    return Util::stoun<std::uint16_t>(content.substr(idx + 1));
 }
 
 static void populate_data_links(const std::string& instance_path, std::list<ftrace::Tracer::DataLink>& dls, std::function<void(const ftrace::Tracer::DataLink&)>& data_link_listener) {
@@ -112,8 +98,9 @@ ftrace::Tracer::Tracer(const std::string& tracing_dir, Listener& listener, std::
     append(ctrl_fds.trace_options, "bin");
     append(ctrl_fds.trace_options, "nooverwrite");
 
-    evt_reader.reset(new EventReader(instances_dir + EVENTS_DIR, evt_hdlr));
-    pg_reader.reset(new PageReader(*evt_reader.get(), pg_sz));
+    const auto events_dir = instances_dir + EVENTS_DIR;
+    evt_reader.reset(new EventReader(events_dir, evt_hdlr));
+    pg_reader.reset(new PageReader(events_dir, *evt_reader.get(), pg_sz));
 }
 
 ftrace::Tracer::~Tracer() {

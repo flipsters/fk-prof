@@ -4,6 +4,13 @@
 #include <cstdint>
 #include <string>
 #include <memory>
+#include <regex>
+
+#define EVENTS_DIR "/events"
+#define SCHED_SWITCH_DIR EVENTS_DIR "/sched/sched_switch"
+#define SCHED_WAKEUP_DIR EVENTS_DIR "/sched/sched_wakeup"
+#define SYSCALL_ENTER_DIR EVENTS_DIR "/raw_syscalls/sys_enter"
+#define SYSCALL_EXIT_DIR EVENTS_DIR "/raw_syscalls/sys_exit"
 
 namespace ftrace {
     namespace event {
@@ -107,6 +114,14 @@ namespace ftrace {
         std::size_t read(std::int32_t cpu, std::uint64_t timestamp_ns, const std::uint8_t* buff, std::size_t remaining) const;
 
     private:
+        std::string::size_type create_sched_switch_and_common_fields_reader(const std::string& events_dir, std::regex& start_marker, std::regex& end_marker);
+
+        void create_sched_wakeup_reader(const std::string& events_dir, std::regex& start_marker, std::regex& end_marker, std::string::size_type specific_fields_offset);
+
+        void create_syscall_entry_reader(const std::string& events_dir, std::regex& start_marker, std::regex& end_marker, std::string::size_type specific_fields_offset);
+
+        void create_syscall_exit_reader(const std::string& events_dir, std::regex& start_marker, std::regex& end_marker, std::string::size_type specific_fields_offset);
+
         std::size_t read_payload(const std::uint8_t* buff, std::size_t remaining, std::uint64_t timestamp_ns, std::int32_t cpu) const;
 
         EventHandler& handler;
@@ -129,7 +144,7 @@ namespace ftrace {
 
     class PageReader {
     public:
-        PageReader(const EventReader& _e_rdr, std::size_t pg_sz);
+        PageReader(const std::string& events_dir, const EventReader& _e_rdr, std::size_t pg_sz);
 
         PageReader();
 

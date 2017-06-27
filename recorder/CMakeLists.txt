@@ -117,7 +117,9 @@ set(COMMON_SOURCE_FILES
   ${SRC}/logging.hh
   ${SRC}/logging.cc
   ${SRC}/config_util.hh
-  ${SRC}/config_util.cc)
+  ${SRC}/config_util.cc
+  ${SRC}/util.hh
+  ${SRC}/util.cc)
 
 set(SOURCE_FILES
     ${SRC}/checksum.cc
@@ -158,7 +160,6 @@ set(SOURCE_FILES
     ${SRC}/config.cc
     ${SRC}/scheduler.hh
     ${SRC}/scheduler.cc
-    ${SRC}/util.hh
     ${SRC}/perf_ctx_jni.hh
     ${SRC}/perf_ctx.hh
     ${SRC}/perf_ctx.cc
@@ -217,6 +218,7 @@ set(TEST_FILES
     ${SRC_TEST}/test_unique_readsafe_ptr.cc
     ${SRC_TEST}/test_site_resolver.cc
     ${SRC_TEST}/test_sched_switch_event_reporting.cc
+    ${SRC_TEST}/test_util.cc
     ${SRC_TEST}/test.cc)
 
 set(TEST_UTIL_FILES

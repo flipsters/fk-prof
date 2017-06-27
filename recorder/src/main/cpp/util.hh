@@ -1,7 +1,8 @@
-#include <sstream>
-
 #ifndef UTIL_H
 #define UTIL_H
+
+#include <sstream>
+#include <regex>
 
 namespace Util {
     namespace {
@@ -28,6 +29,12 @@ namespace Util {
     template <typename T> const T& max(const T& first, const T& second) {
         return first < second ? second : first;
     }
+
+    std::string content(const std::string& path, const std::regex* after, const std::regex* before);
+
+    template <typename T> T stoun(const std::string& str);
+
+    extern template std::uint16_t stoun<std::uint16_t>(const std::string& str);
 }
 
 
