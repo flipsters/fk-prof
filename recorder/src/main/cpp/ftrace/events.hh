@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <memory>
 
 namespace ftrace {
     namespace event {
@@ -46,45 +47,55 @@ namespace ftrace {
     public:
         virtual ~EventHandler() {};
 
-        virtual void handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallEntry* sys_entry) = 0;
-        virtual void handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SyscallExit* sys_exit) = 0;
-        virtual void handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedSwitch* sched_switch) = 0;
-        virtual void handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields* cf, const event::SchedWakeup* sched_wakeup) = 0;
+        virtual void handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields& cf, const event::SyscallEntry& sys_entry) = 0;
+        virtual void handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields& cf, const event::SyscallExit& sys_exit) = 0;
+        virtual void handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields& cf, const event::SchedSwitch& sched_switch) = 0;
+        virtual void handle(std::int32_t cpu, std::uint64_t timestamp_ns, const event::CommonFields& cf, const event::SchedWakeup& sched_wakeup) = 0;
     };
 
     class CommonHeaderReader {
     public:
         virtual ~CommonHeaderReader() {};
 
-        virtual std::size_t read(std::int32_t cpu, std::uint64_t timestamp_ns, const std::uint8_t* buff, event::CommonFields& common_fields) = 0;
+        virtual std::size_t read(const std::uint8_t* buff, std::size_t remaining, event::CommonFields& common_fields) = 0;
+
+        virtual std::size_t repr_length() = 0;
     };
 
     class SyscallEntryReader {
     public:
         virtual ~SyscallEntryReader() {};
 
-        virtual std::size_t read(std::int32_t cpu, std::uint64_t timestamp_ns, const std::uint8_t* buff, event::SyscallEntry& sys_entry) = 0;
+        virtual std::size_t read(const std::uint8_t* buff, std::size_t remaining, event::SyscallEntry& sys_entry) = 0;
+
+        virtual std::size_t repr_length() = 0;
     };
 
     class SyscallExitReader {
     public:
         virtual ~SyscallExitReader() {};
 
-        virtual std::size_t read(std::int32_t cpu, std::uint64_t timestamp_ns, const std::uint8_t* buff, event::SyscallExit& sys_exit) = 0;
+        virtual std::size_t read(const std::uint8_t* buff, std::size_t remaining, event::SyscallExit& sys_exit) = 0;
+
+        virtual std::size_t repr_length() = 0;
     };
 
     class SchedSwitchReader {
     public:
         virtual ~SchedSwitchReader() {};
 
-        virtual std::size_t read(std::int32_t cpu, std::uint64_t timestamp_ns, const std::uint8_t* buff, event::SchedSwitch& sched_switch) = 0;
+        virtual std::size_t read(const std::uint8_t* buff, std::size_t remaining, event::SchedSwitch& sched_switch) = 0;
+
+        virtual std::size_t repr_length() = 0;
     };
 
     class SchedWakeupReader {
     public:
         virtual ~SchedWakeupReader() {};
 
-        virtual std::size_t read(std::int32_t cpu, std::uint64_t timestamp_ns, const std::uint8_t* buff, event::SchedWakeup& sched_wakeup) = 0;
+        virtual std::size_t read(const std::uint8_t* buff, std::size_t remaining, event::SchedWakeup& sched_wakeup) = 0;
+
+        virtual std::size_t repr_length() = 0;
     };
 
     class EventReader {
@@ -93,18 +104,27 @@ namespace ftrace {
 
         virtual ~EventReader();
 
-        std::size_t read(std::int32_t cpu, std::uint64_t timestamp_ns, const std::uint8_t* buff, std::size_t len) const;
+        std::size_t read(std::int32_t cpu, std::uint64_t timestamp_ns, const std::uint8_t* buff, std::size_t remaining) const;
 
     private:
-        std::size_t read_payload(const std::uint8_t* buff, std::size_t len, std::uint64_t timestamp_ns, std::int32_t cpu) const;
+        std::size_t read_payload(const std::uint8_t* buff, std::size_t remaining, std::uint64_t timestamp_ns, std::int32_t cpu) const;
 
         EventHandler& handler;
 
-        CommonHeaderReader* common_header_rdr;
-        SyscallEntryReader* sys_entry_rdr;
-        SyscallExitReader* sys_exit_rdr;
-        SchedSwitchReader* sched_switch_rdr;
-        SchedWakeupReader* sched_wakeup_rdr;
+        std::unique_ptr<CommonHeaderReader> common_header_rdr;
+
+        std::uint16_t sys_entry_id;
+        std::unique_ptr<SyscallEntryReader> sys_entry_rdr;
+
+        std::uint16_t sys_exit_id;
+        std::unique_ptr<SyscallExitReader> sys_exit_rdr;
+
+        std::uint16_t sched_switch_id;
+        std::unique_ptr<SchedSwitchReader> sched_switch_rdr;
+
+        std::uint16_t sched_wakeup_id;
+        std::unique_ptr<SchedWakeupReader> sched_wakeup_rdr;
+
     };
 
     class PageReader {
