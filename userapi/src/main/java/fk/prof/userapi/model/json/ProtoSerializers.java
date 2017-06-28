@@ -179,7 +179,7 @@ public class ProtoSerializers {
         @Override
         public void serialize(PolicyDTO.VersionedPolicyDetails versionedPolicyDetails, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
             jsonGenerator.writeStartObject();
-            jsonGenerator.writeNumberField("versioned_policy_details", versionedPolicyDetails.getVersion());
+            jsonGenerator.writeNumberField("version", versionedPolicyDetails.getVersion());
 
             jsonGenerator.writeFieldName("policy_details");
             JsonSerializer<Object> policyDetailsSerializer = serializerProvider.findValueSerializer(PolicyDTO.PolicyDetails.class);
@@ -222,7 +222,6 @@ public class ProtoSerializers {
 
             jsonGenerator.writeStringField("description", policy.getDescription());
             jsonGenerator.writeArrayFieldStart("work");
-            jsonGenerator.writeStartArray();
             for (PolicyDTO.Work work: policy.getWorkList()){
                 JsonSerializer<Object> workSerializer = serializerProvider.findValueSerializer(PolicyDTO.Work.class);
                 workSerializer.serialize(work, jsonGenerator, serializerProvider);
@@ -272,6 +271,7 @@ public class ProtoSerializers {
                 JsonSerializer<Object> monitorWaitSerializer = serializerProvider.findValueSerializer(PolicyDTO.MonitorWaitWork.class);
                 monitorWaitSerializer.serialize(work.getMonitorWait(), jsonGenerator, serializerProvider);
             }
+            jsonGenerator.writeEndObject();
         }
     }
 

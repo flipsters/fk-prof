@@ -28,6 +28,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.TimeoutHandler;
+import proto.PolicyDTO;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -79,27 +80,11 @@ public class HttpVerticle extends AbstractVerticle {
 
         UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET, UserapiApiPathConstants.GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, this::getPolicyFromBackend);
         UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.PUT, UserapiApiPathConstants.PUT_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
-                BodyHandler.create().setBodyLimit(1024 * 10), this::putPolicyToBackend);
+                BodyHandler.create().setBodyLimit(1024 * 10), this::putPostPolicyToBackend);
         UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.POST, UserapiApiPathConstants.POST_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
-                BodyHandler.create().setBodyLimit(1024 * 10), this::postPolicyToBackend);
+                BodyHandler.create().setBodyLimit(1024 * 10), this::putPostPolicyToBackend);
 
         return router;
-    }
-
-    private void postPolicyToBackend(RoutingContext routingContext) {
-
-    }
-
-    private void putPolicyToBackend(RoutingContext routingContext) {
-
-    }
-
-    private void getPolicyFromBackend(RoutingContext routingContext) {
-        proxyToBackend(routingContext, routingContext.normalisedPath().substring(UserapiApiPathConstants.LIST_POLICY.length()));
-    }
-
-    private void proxyListAPIToBackend(RoutingContext routingContext){
-        proxyToBackend(routingContext, routingContext.normalisedPath().substring(UserapiApiPathConstants.LIST_POLICY.length()));
     }
 
     @Override
@@ -262,11 +247,35 @@ public class HttpVerticle extends AbstractVerticle {
         profileStoreAPI.load(future, filename);
     }
 
+    private void handleGetHealth(RoutingContext routingContext) {
+        routingContext.response().setStatusCode(200).end();
+    }
+
+    private void putPostPolicyToBackend(RoutingContext routingContext) {
+        JsonObject versionedPolicyDetailsJO = routingContext.getBodyAsJson();
+        try {
+            PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = versionedPolicyDetailsJO.mapTo(PolicyDTO.VersionedPolicyDetails.class);
+            makeRequestToBackend(routingContext.request().method(), routingContext.normalisedPath(), Buffer.buffer(versionedPolicyDetails.toString()), false)
+                    .setHandler(ar -> setResponse(ar, routingContext));
+        } catch (Exception ex) {
+            UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(ex);
+            UserapiHttpHelper.handleFailure(routingContext, httpFailure);
+        }
+    }
+
+    private void getPolicyFromBackend(RoutingContext routingContext) {
+        proxyToBackend(routingContext, routingContext.normalisedPath());
+    }
+
+    private void proxyListAPIToBackend(RoutingContext routingContext){
+        proxyToBackend(routingContext, routingContext.normalisedPath().substring(UserapiApiPathConstants.LIST_POLICY.length()));
+    }
+
 
     private void proxyToBackend(RoutingContext context, String path) {
         try {
             makeRequestToBackend(context.request().method(), path, context.getBody(), false)
-                    .setHandler(ar -> handleBackendResponse(context, ar));
+                    .setHandler(ar -> setResponse(ar, context));
         } catch (Exception ex) {
             UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(ex);
             UserapiHttpHelper.handleFailure(context, httpFailure);
@@ -279,20 +288,6 @@ public class HttpVerticle extends AbstractVerticle {
         }else{
             return httpClient.requestAsync(method, backendConfig.getIp(), backendConfig.getPort(), path, payloadAsBuffer);
         }
-    }
-
-    private void handleBackendResponse(RoutingContext context, AsyncResult<ProfHttpClient.ResponseWithStatusTuple> ar) {
-        if(ar.succeeded()) {
-            context.response().setStatusCode(ar.result().getStatusCode());
-            context.response().end(ar.result().getResponse());
-        } else {
-            UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(ar.cause());
-            UserapiHttpHelper.handleFailure(context, httpFailure);
-        }
-    }
-
-    private void handleGetHealth(RoutingContext routingContext) {
-        routingContext.response().setStatusCode(200).end();
     }
 
     private <T> void setResponse(AsyncResult<T> result, RoutingContext routingContext) {
