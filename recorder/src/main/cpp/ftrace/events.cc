@@ -102,51 +102,51 @@ class SyscallExitReaderJessie : public ftrace::SyscallExitReader {
     }
 };
 
-#define EXPECTED_PAGE_HEADER                                            \
-    "        field: u64 timestamp;   offset:0;       size:8; signed:0;\n" \
-    "        field: local_t commit;  offset:8;       size:8; signed:1;\n" \
-    "        field: int overwrite;   offset:8;       size:1; signed:1;\n" \
-    "        field: char data;       offset:16;      size:4080;      signed:1;"
+#define EXPECTED_PAGE_HEADER                                   \
+    "\tfield: u64 timestamp;\toffset:0;\tsize:8;\tsigned:0;\n"  \
+    "\tfield: local_t commit;\toffset:8;\tsize:8;\tsigned:1;\n" \
+    "\tfield: int overwrite;\toffset:8;\tsize:1;\tsigned:1;\n"  \
+    "\tfield: char data;\toffset:16;\tsize:4080;\tsigned:1;\n"
 
 #define EXPECTED_HEADER_EVENT                   \
     "# compressed entry header\n"               \
-    "        type_len    :    5 bits\n"         \
-    "        time_delta  :   27 bits\n"         \
-    "        array       :   32 bits\n"         \
+    "\ttype_len    :    5 bits\n"               \
+    "\ttime_delta  :   27 bits\n"               \
+    "\tarray       :   32 bits\n"               \
     "\n"                                        \
-    "        padding     : type == 29\n"        \
-    "        time_extend : type == 30\n"        \
-    "        data max type_len  == 28\n"
+    "\tpadding     : type == 29\n"              \
+    "\ttime_extend : type == 30\n"              \
+    "\tdata max type_len  == 28\n"
 
 #define COMMON_FIELDS_FORMAT_JESSIE                                     \
-    "        field:unsigned short common_type;       offset:0;       size:2; signed:0;\n" \
-    "        field:unsigned char common_flags;       offset:2;       size:1; signed:0;\n" \
-    "        field:unsigned char common_preempt_count;       offset:3;       size:1; signed:0;\n" \
-    "        field:int common_pid;   offset:4;       size:4; signed:1;"
+    "\tfield:unsigned short common_type;\toffset:0;\tsize:2;\tsigned:0;\n" \
+    "\tfield:unsigned char common_flags;\toffset:2;\tsize:1;\tsigned:0;\n" \
+    "\tfield:unsigned char common_preempt_count;\toffset:3;\tsize:1;\tsigned:0;\n" \
+    "\tfield:int common_pid;\toffset:4;\tsize:4;\tsigned:1;\n\n"
 
-#define SYSCALL_ENTRY_FORMAT_JESSIE             \
-    "        field:long id;  offset:8;       size:8; signed:1;\n"       \
-    "        field:unsigned long args[6];    offset:16;      size:48;        signed:0;"
+#define SYSCALL_ENTRY_FORMAT_JESSIE                           \
+    "\tfield:long id;\toffset:8;\tsize:8;\tsigned:1;\n"       \
+    "\tfield:unsigned long args[6];\toffset:16;\tsize:48;\tsigned:0;\n\n"
 
-#define SYSCALL_EXIT_FORMAT_JESSIE              \
-    "        field:long id;  offset:8;       size:8; signed:1;\n"   \
-    "        field:long ret; offset:16;      size:8; signed:1;"
+#define SYSCALL_EXIT_FORMAT_JESSIE                          \
+    "\tfield:long id;\toffset:8;\tsize:8;\tsigned:1;\n"     \
+    "\tfield:long ret;\toffset:16;\tsize:8;\tsigned:1;\n\n"
 
-#define SCHED_SWITCH_FORMAT_JESSIE                                      \
-    "        field:char prev_comm[16];       offset:8;       size:16;        signed:1;\n" \
-    "        field:pid_t prev_pid;   offset:24;      size:4; signed:1;\n" \
-    "        field:int prev_prio;    offset:28;      size:4; signed:1;\n" \
-    "        field:long prev_state;  offset:32;      size:8; signed:1;\n" \
-    "        field:char next_comm[16];       offset:40;      size:16;        signed:1;\n" \
-    "        field:pid_t next_pid;   offset:56;      size:4; signed:1;\n" \
-    "        field:int next_prio;    offset:60;      size:4; signed:1;\n"
+#define SCHED_SWITCH_FORMAT_JESSIE                                  \
+    "\tfield:char prev_comm[16];\toffset:8;\tsize:16;\tsigned:1;\n" \
+    "\tfield:pid_t prev_pid;\toffset:24;\tsize:4;\tsigned:1;\n"     \
+    "\tfield:int prev_prio;\toffset:28;\tsize:4;\tsigned:1;\n"      \
+    "\tfield:long prev_state;\toffset:32;\tsize:8;\tsigned:1;\n"     \
+    "\tfield:char next_comm[16];\toffset:40;\tsize:16;\tsigned:1;\n" \
+    "\tfield:pid_t next_pid;\toffset:56;\tsize:4;\tsigned:1;\n"      \
+    "\tfield:int next_prio;\toffset:60;\tsize:4;\tsigned:1;\n\n"
 
-#define SCHED_WAKEUP_FORMAT_JESSIE                                      \
-    "        field:char comm[16];    offset:8;       size:16;        signed:1;\n" \
-    "        field:pid_t pid;        offset:24;      size:4; signed:1;\n" \
-    "        field:int prio; offset:28;      size:4; signed:1;\n"       \
-    "        field:int success;      offset:32;      size:4; signed:1;\n" \
-    "        field:int target_cpu;   offset:36;      size:4; signed:1;"
+#define SCHED_WAKEUP_FORMAT_JESSIE                                  \
+    "\tfield:char comm[16];\toffset:8;\tsize:16;\tsigned:1;\n"      \
+    "\tfield:pid_t pid;\toffset:24;\tsize:4;\tsigned:1;\n"          \
+    "\tfield:int prio;\toffset:28;\tsize:4;\tsigned:1;\n"           \
+    "\tfield:int success;\toffset:32;\tsize:4;\tsigned:1;\n"        \
+    "\tfield:int target_cpu;\toffset:36;\tsize:4;\tsigned:1;\n\n"
 
 ftrace::EventReader::EventReader(const std::string& events_dir, EventHandler& _handler) : handler(_handler) {
     //TODO: assert event header prefix content matchs
