@@ -92,8 +92,11 @@ public class BackendPolicyAPITest {
         HttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
                 ApiPathConstants.LEADER_GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, req -> {
                     PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0);
-
-                    req.response().end(versionedPolicyDetails.toString());
+                    try {
+                        req.response().end(ProtoUtil.buildBufferFromProto(versionedPolicyDetails));
+                    } catch (IOException e) {
+                        context.fail(e);
+                    }
                 });
         leaderServer.requestHandler(router::accept);
         leaderServer.listen(leaderPort, result -> {
@@ -103,12 +106,16 @@ public class BackendPolicyAPITest {
 
                 client.getNow(backendPort, "localhost", backendPolicyPath, res -> {
                     res.bodyHandler(buffer -> {
-                        context.assertEquals(buffer.toString(), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0).toString());
+                        try {
+                            context.assertEquals(buffer, ProtoUtil.buildBufferFromProto(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0)));
+                        } catch (IOException e) {
+                            context.fail(e);
+                        }
                         async.complete();
                     });
                 });
             } else {
-                context.fail();
+                context.fail(result.cause());
             }
         });
     }
@@ -131,8 +138,8 @@ public class BackendPolicyAPITest {
                         PolicyDTO.VersionedPolicyDetails expected = PolicyDTO.VersionedPolicyDetails.parseFrom(finalPayloadAsBuffer.getBytes());
                         PolicyDTO.VersionedPolicyDetails got = PolicyDTO.VersionedPolicyDetails.parseFrom(req.getBody().getBytes());
                         context.assertEquals(expected, got);
-                        req.response().end(got.toBuilder().setVersion(got.getVersion() + 1).toString());
-                    } catch (InvalidProtocolBufferException e) {
+                        req.response().end(ProtoUtil.buildBufferFromProto(got.toBuilder().setVersion(got.getVersion() + 1).build()));
+                    } catch (IOException e) {
                         context.fail(e);
                     }
                 });
@@ -144,7 +151,11 @@ public class BackendPolicyAPITest {
 
                 client.put(backendPort, "localhost", backendPolicyPath, res -> {
                     res.bodyHandler(buffer -> {
-                        context.assertEquals(buffer.toString(), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 1).toString());
+                        try {
+                            context.assertEquals(buffer, ProtoUtil.buildBufferFromProto(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 1)));
+                        } catch (IOException e) {
+                            context.fail(e);
+                        }
                         async.complete();
                     });
                 }).end(finalPayloadAsBuffer);
@@ -172,8 +183,8 @@ public class BackendPolicyAPITest {
                         PolicyDTO.VersionedPolicyDetails expected = PolicyDTO.VersionedPolicyDetails.parseFrom(finalPayloadAsBuffer.getBytes());
                         PolicyDTO.VersionedPolicyDetails got = PolicyDTO.VersionedPolicyDetails.parseFrom(req.getBody().getBytes());
                         context.assertEquals(expected, got);
-                        req.response().end(got.toBuilder().setVersion(got.getVersion() + 1).toString());
-                    } catch (InvalidProtocolBufferException e) {
+                        req.response().end(ProtoUtil.buildBufferFromProto(got.toBuilder().setVersion(got.getVersion() + 1).build()));
+                    } catch (IOException e) {
                         context.fail(e);
                     }
                 });
@@ -185,12 +196,16 @@ public class BackendPolicyAPITest {
 
                 client.post(backendPort, "localhost", backendPolicyPath, res -> {
                     res.bodyHandler(buffer -> {
-                        context.assertEquals(buffer.toString(), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0).toString());
+                        try {
+                            context.assertEquals(buffer, ProtoUtil.buildBufferFromProto(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0)));
+                        } catch (IOException e) {
+                            context.fail(e);
+                        }
                         async.complete();
                     });
                 }).end(finalPayloadAsBuffer);
             } else {
-                context.fail();
+                context.fail(result.cause());
             }
         });
     }
