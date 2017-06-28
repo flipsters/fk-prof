@@ -20,8 +20,12 @@ public:
 
     void evt_mthd_return(JNIEnv* env);
 
+    void handle_trace_events();
+
 private:
     void connect_tracer(const char* listener_socket_path, const char* proc);
+
+    std::atomic<bool> do_stop;
 
     int trace_conn;
 

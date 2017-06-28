@@ -21,8 +21,11 @@
 
 #define MARK_CONSUMED(len)                      \
     {                                           \
-        buff += len;                            \
-        remaining -= len;                       \
+        {                                       \
+            auto l = len;                       \
+            buff += l;                          \
+            remaining -= l;                     \
+        }                                       \
     }
 
 #define CONSUMED (buff - buff_start)
@@ -232,12 +235,12 @@ void ftrace::EventReader::create_syscall_entry_reader(const std::string& events_
 }
 
 void ftrace::EventReader::create_syscall_exit_reader(const std::string& events_dir, std::regex& bin_fmt_start_marker, std::regex& text_fmt_start_marker, std::string::size_type specific_fields_offset) {
-    auto sys_exit_event_dir = events_dir + SYSCALL_ENTER_DIR;
+    auto sys_exit_event_dir = events_dir + SYSCALL_EXIT_DIR;
     auto sys_exit_format_path = sys_exit_event_dir + "/format";
     auto sys_exit_all_format = Util::content(sys_exit_format_path, &bin_fmt_start_marker, &text_fmt_start_marker);
 
     auto sys_exit_format = sys_exit_all_format.substr(specific_fields_offset);
-    if (sys_exit_format == SYSCALL_ENTRY_FORMAT_JESSIE) {
+    if (sys_exit_format == SYSCALL_EXIT_FORMAT_JESSIE) {
         sys_exit_rdr.reset(new SyscallExitReaderJessie());
     } else {
         throw get_version_unsupported_error("syscall_exit", sys_exit_format);
@@ -270,14 +273,6 @@ struct __attribute__((packed)) EvtHdrPrefix {
 #define RINGBUF_TYPE_DATA_TYPE_LEN_MAX 28
 #define RINGBUF_TYPE_PADDING 29
 #define RINGBUF_TYPE_TIME_EXTEND 30
-
-#define MARK_CONSUMED(len)                      \
-    {                                           \
-        buff += len;                            \
-        remaining -= len;                       \
-    }
-
-#define CONSUMED (buff - buff_start)
 
 std::size_t ftrace::EventReader::read(std::int32_t cpu, std::uint64_t timestamp_ns, const std::uint8_t* buff, std::size_t remaining) const {
     auto buff_start = buff;
@@ -312,7 +307,9 @@ std::size_t ftrace::EventReader::read(std::int32_t cpu, std::uint64_t timestamp_
         } else if (fhp->type_len == RINGBUF_TYPE_TIME_EXTEND) {
             std::uint32_t arr_0;
             MARK_CONSUMED(r_u32(buff, remaining, arr_0));
-            std::uint64_t time_delta = (arr_0 << 27) + fhp->time_delta;
+            std::uint64_t time_delta = arr_0;
+            time_delta = (time_delta << 27);
+            time_delta += fhp->time_delta;
             SPDLOG_TRACE(logger, "Time δ: +{}", time_delta);
             timestamp_ns += time_delta;
         } else {
