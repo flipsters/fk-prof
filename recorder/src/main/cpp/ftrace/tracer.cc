@@ -8,20 +8,6 @@
 #include "logging.hh"
 #include "util.hh"
 
-bool dir_exists(const char *path) {
-    struct stat info;
-    if(stat(path, &info) != 0)
-        return false;
-    return S_ISDIR(info.st_mode);
-}
-
-bool file_exists(const char *path) {
-    struct stat info;
-    if(stat(path, &info) != 0)
-        return false;
-    return S_ISREG(info.st_mode);
-}
-
 #define TRACING_ON "/tracing_on"
 #define TRACE_OPTIONS "/trace_options"
 #define INSTANCES_DIR "/instances"
@@ -39,7 +25,7 @@ void throw_file_not_found(const std::string& path, const std::string& type = "fi
 
 static int open_file(const std::string& instance_path, const std::string& subpath, int flags) {
     auto path = instance_path + subpath;
-    if (! file_exists(path.c_str())) {
+    if (! Util::file_exists(path.c_str())) {
         throw_file_not_found(path);
     }
     return open(path.c_str(), flags);
@@ -78,11 +64,11 @@ ftrace::Tracer::Tracer(const std::string& tracing_dir, Listener& listener, std::
     s_m_read_bytes(get_metrics_registry().new_meter({METRICS_DOMAIN_TRACE, METRIC_TYPE, "pipe_read", "bytes"}, "rate")) {
 
     auto instances_dir = tracing_dir + INSTANCES_DIR;
-    if (! dir_exists(instances_dir.c_str())) {
+    if (! Util::dir_exists(instances_dir.c_str())) {
         throw_file_not_found(instances_dir, "dir");
     }
     instance_path = tracing_dir + INSTANCES_DIR + INSTANCE;
-    if (! dir_exists(instance_path.c_str())) {
+    if (! Util::dir_exists(instance_path.c_str())) {
         auto ret = mkdir(instance_path.c_str(), S_IRWXU | S_IXGRP | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
         assert(ret == 0);
     }
