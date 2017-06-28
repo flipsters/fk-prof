@@ -126,6 +126,8 @@ namespace ftrace {
 
         EventHandler& handler;
 
+        std::regex numeric;
+
         std::unique_ptr<CommonHeaderReader> common_header_rdr;
 
         std::uint16_t sys_entry_id;

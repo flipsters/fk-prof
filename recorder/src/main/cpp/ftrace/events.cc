@@ -148,7 +148,7 @@ class SyscallExitReaderJessie : public ftrace::SyscallExitReader {
     "\tfield:int success;\toffset:32;\tsize:4;\tsigned:1;\n"        \
     "\tfield:int target_cpu;\toffset:36;\tsize:4;\tsigned:1;\n\n"
 
-ftrace::EventReader::EventReader(const std::string& events_dir, EventHandler& _handler) : handler(_handler) {
+ftrace::EventReader::EventReader(const std::string& events_dir, EventHandler& _handler) : handler(_handler), numeric("^[0-9]\\+.*") {
     //TODO: assert event header prefix content matchs
     auto header_event_path = events_dir + "/header_event";
     auto header_event = Util::content(header_event_path, nullptr, nullptr);
@@ -192,7 +192,6 @@ std::string::size_type ftrace::EventReader::create_sched_switch_and_common_field
         throw get_version_unsupported_error("sched_switch", sched_switch_format);
     }
     auto sched_switch_id_path = sched_switch_event_dir + "/id";
-    std::regex numeric("^[0-9]\\+.*");
     auto sched_switch_id_str = Util::first_content_line_matching(sched_switch_id_path, numeric);
     sched_switch_id = Util::stoun<std::uint16_t>(sched_switch_id_str);
     return specific_fields_offset;
@@ -212,7 +211,7 @@ void ftrace::EventReader::create_sched_wakeup_reader(const std::string& events_d
         throw get_version_unsupported_error("sched_wakeup", sched_wakeup_format);
     }
     auto sched_wakeup_id_path = sched_wakeup_event_dir + "/id";
-    auto sched_wakeup_id_str = Util::content(sched_wakeup_id_path, nullptr, nullptr);
+    auto sched_wakeup_id_str = Util::first_content_line_matching(sched_wakeup_id_path, numeric);
     sched_wakeup_id = Util::stoun<std::uint16_t>(sched_wakeup_id_str);
 }
 
@@ -228,7 +227,7 @@ void ftrace::EventReader::create_syscall_entry_reader(const std::string& events_
         throw get_version_unsupported_error("syscall_entry", sys_entry_format);
     }
     auto sys_entry_id_path = sys_entry_event_dir + "/id";
-    auto sys_entry_id_str = Util::content(sys_entry_id_path, nullptr, nullptr);
+    auto sys_entry_id_str = Util::first_content_line_matching(sys_entry_id_path, numeric);
     sys_entry_id = Util::stoun<std::uint16_t>(sys_entry_id_str);
 }
 
@@ -244,7 +243,7 @@ void ftrace::EventReader::create_syscall_exit_reader(const std::string& events_d
         throw get_version_unsupported_error("syscall_exit", sys_exit_format);
     }
     auto sys_exit_id_path = sys_exit_event_dir + "/id";
-    auto sys_exit_id_str = Util::content(sys_exit_id_path, nullptr, nullptr);
+    auto sys_exit_id_str = Util::first_content_line_matching(sys_exit_id_path, numeric);
     sys_exit_id = Util::stoun<std::uint16_t>(sys_exit_id_str);
 }
 
