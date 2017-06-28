@@ -84,7 +84,7 @@ ftrace::Tracer::Tracer(const std::string& tracing_dir, Listener& listener, std::
     append(ctrl_fds.trace_options, "bin");
     append(ctrl_fds.trace_options, "nooverwrite");
 
-    const auto events_dir = instances_dir + EVENTS_DIR;
+    const auto events_dir = instance_path + EVENTS_DIR;
     evt_reader.reset(new EventReader(events_dir, evt_hdlr));
     pg_reader.reset(new PageReader(events_dir, *evt_reader.get(), pg_sz));
 }
