@@ -83,8 +83,8 @@ public class LeaderPolicyAPITest {
             context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
             httpClientResponse.bodyHandler(buffer -> {
                 try {
-                    context.assertTrue(PolicyDTO.VersionedPolicyDetails.parseFrom(buffer.getBytes()).equals(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0)));
-                } catch (InvalidProtocolBufferException e) {
+                    context.assertEquals(buffer, ProtoUtil.buildBufferFromProto(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0)));
+                } catch (IOException e) {
                     f1.completeExceptionally(e);
                 }
                 f1.complete(null);
