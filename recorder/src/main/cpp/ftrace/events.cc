@@ -155,7 +155,7 @@ ftrace::EventReader::EventReader(const std::string& events_dir, EventHandler& _h
     assert(header_event == EXPECTED_HEADER_EVENT);
 
     std::regex bin_fmt_start_marker("^format:$");
-    std::regex text_fmt_start_marker("^print fmt: ");
+    std::regex text_fmt_start_marker("^print fmt: .+");
 
     auto specific_fields_offset = create_sched_switch_and_common_fields_reader(events_dir, bin_fmt_start_marker, text_fmt_start_marker);
     create_sched_wakeup_reader(events_dir, bin_fmt_start_marker, text_fmt_start_marker, specific_fields_offset);
