@@ -177,14 +177,8 @@ set(FTRACE_SERVER_FILES
     ${SRC}/${FTRACE}/server.cc
     ${SRC}/${FTRACE}/config.hh
     ${SRC}/${FTRACE}/config.cc
-    ${SRC}/${FTRACE}/lock.hh
-    ${SRC}/${FTRACE}/lock.cc
-    ${SRC}/${FTRACE}/io.hh
-    ${SRC}/${FTRACE}/io.cc
     ${SRC}/${FTRACE}/events.hh
     ${SRC}/${FTRACE}/events.cc
-    ${SRC}/${FTRACE}/format_parser.hh
-    ${SRC}/${FTRACE}/format_parser.cc
     ${SRC}/${FTRACE}/tracer.hh
     ${SRC}/${FTRACE}/tracer.cc)
 
