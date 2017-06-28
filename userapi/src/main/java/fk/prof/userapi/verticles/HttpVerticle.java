@@ -278,7 +278,7 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     private void proxyListAPIToBackend(RoutingContext routingContext){
-        proxyToBackend(routingContext, routingContext.normalisedPath().substring(UserapiApiPathConstants.LIST_POLICY.length()));
+        proxyToBackend(routingContext, routingContext.normalisedPath().substring(UserapiApiPathConstants.LIST_POLICY.length()) + "?" + routingContext.request().query());
     }
 
 

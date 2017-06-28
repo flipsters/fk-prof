@@ -12,7 +12,7 @@ public final class UserapiApiPathConstants {
 
   public static final String GET_LIST_POLICY_APPIDS = "/list/policy/appIds";
   public static final String GET_LIST_POLICY_CLUSTERIDS_GIVEN_APPID = "/list/policy/clusterIds/:appId";
-  public static final String GET_LIST_POLICY_PROCNAMES_GIVEN_APPID_CLUSTERID = "/list/policy/appIds";
+  public static final String GET_LIST_POLICY_PROCNAMES_GIVEN_APPID_CLUSTERID = "/list/policy/procNames/:appId/:clusterId";
 
 
   public static final String GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME = "/policy/:appId/:clusterId/:procName";
