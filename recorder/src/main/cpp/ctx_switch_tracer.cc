@@ -4,16 +4,20 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-CtxSwitchTracer::CtxSwitchTracer(ThreadMap& _thread_map, ProfileSerializingWriter& _serializer, std::uint32_t _max_stack_depth,
-                                 ProbPct& _prob_pct, std::uint8_t _noctx_cov_pct, std::uint64_t _latency_threshold_ns,
-                                 bool _track_wakeup_lag, bool _use_global_clock, bool _track_syscall, const char* listener_socket_path,
-                                 const char* proc) {
+void ctx_switch_feed_reader(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *arg) { }
+
+CtxSwitchTracer::CtxSwitchTracer(JavaVM *jvm, jvmtiEnv *jvmti, ThreadMap& _thread_map, ProfileSerializingWriter& _serializer,
+                                 std::uint32_t _max_stack_depth, ProbPct& _prob_pct, std::uint8_t _noctx_cov_pct,
+                                 std::uint64_t _latency_threshold_ns, bool _track_wakeup_lag, bool _use_global_clock, bool _track_syscall,
+                                 const char* listener_socket_path, const char* proc) {
     try {
         connect_tracer(listener_socket_path, proc);
     } catch(...) {
         close(trace_conn);
         throw;
     }
+
+    thd_proc = start_new_thd(jvm, jvmti, "Fk-Prof Ctx-Switch Tracker Thread", ctx_switch_feed_reader, this);
 }
 
 CtxSwitchTracer::~CtxSwitchTracer() {}

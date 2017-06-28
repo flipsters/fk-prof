@@ -8,7 +8,7 @@
 
 class CtxSwitchTracer : public Process {
 public:
-    explicit CtxSwitchTracer(ThreadMap& _thread_map, ProfileSerializingWriter& _serializer, std::uint32_t _max_stack_depth, ProbPct& _prob_pct, std::uint8_t _noctx_cov_pct, std::uint64_t _latency_threshold_ns, bool _track_wakeup_lag, bool _use_global_clock, bool _track_syscall, const char* listener_socket_path, const char* proc);
+    explicit CtxSwitchTracer(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap& _thread_map, ProfileSerializingWriter& _serializer, std::uint32_t _max_stack_depth, ProbPct& _prob_pct, std::uint8_t _noctx_cov_pct, std::uint64_t _latency_threshold_ns, bool _track_wakeup_lag, bool _use_global_clock, bool _track_syscall, const char* listener_socket_path, const char* proc);
 
     ~CtxSwitchTracer();
 
@@ -24,6 +24,8 @@ private:
     void connect_tracer(const char* listener_socket_path, const char* proc);
 
     int trace_conn;
+
+    ThdProcP thd_proc;
 
     DISALLOW_COPY_AND_ASSIGN(CtxSwitchTracer);
 };
