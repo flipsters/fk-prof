@@ -122,7 +122,7 @@ class SyscallExitReaderJessie : public ftrace::SyscallExitReader {
     "\tfield:unsigned short common_type;\toffset:0;\tsize:2;\tsigned:0;\n" \
     "\tfield:unsigned char common_flags;\toffset:2;\tsize:1;\tsigned:0;\n" \
     "\tfield:unsigned char common_preempt_count;\toffset:3;\tsize:1;\tsigned:0;\n" \
-    "\tfield:int common_pid;\toffset:4;\tsize:4;\tsigned:1;\n\n"
+    "\tfield:int common_pid;\toffset:4;\tsize:4;\tsigned:1;"
 
 #define SYSCALL_ENTRY_FORMAT_JESSIE                           \
     "\tfield:long id;\toffset:8;\tsize:8;\tsigned:1;\n"       \
@@ -192,9 +192,9 @@ std::string::size_type ftrace::EventReader::create_sched_switch_and_common_field
         throw get_version_unsupported_error("sched_switch", sched_switch_format);
     }
     auto sched_switch_id_path = sched_switch_event_dir + "/id";
-    auto sched_switch_id_str = Util::content(sched_switch_id_path, nullptr, nullptr);
+    std::regex numeric("^[0-9]\\+.*");
+    auto sched_switch_id_str = Util::first_content_line_matching(sched_switch_id_path, numeric);
     sched_switch_id = Util::stoun<std::uint16_t>(sched_switch_id_str);
-
     return specific_fields_offset;
 }
 
