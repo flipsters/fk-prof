@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include "logging.hh"
 
 void ctx_switch_feed_reader(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *arg) {
     logger->trace("Ctx-Switch tracker thread target entered");
@@ -10,10 +11,21 @@ void ctx_switch_feed_reader(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *arg) {
     cst->handle_trace_events();
 }
 
+#define METRIC_TYPE "ctxsw_tracer"
+
 CtxSwitchTracer::CtxSwitchTracer(JavaVM *jvm, jvmtiEnv *jvmti, ThreadMap& _thread_map, ProfileSerializingWriter& _serializer,
                                  std::uint32_t _max_stack_depth, ProbPct& _prob_pct, std::uint8_t _noctx_cov_pct,
                                  std::uint64_t _latency_threshold_ns, bool _track_wakeup_lag, bool _use_global_clock, bool _track_syscall,
-                                 const char* listener_socket_path, const char* proc) : do_stop(false) {
+                                 const char* listener_socket_path, const char* proc) :
+    do_stop(false),
+
+    s_c_peer_disconnected(get_metrics_registry().new_counter({METRICS_DOMAIN, METRIC_TYPE, "peer", "disconnects"})),
+    s_c_recv_errors(get_metrics_registry().new_counter({METRICS_DOMAIN, METRIC_TYPE, "recv", "errors"})),
+    s_t_recv_wait(get_metrics_registry().new_timer({METRICS_DOMAIN, METRIC_TYPE, "read_wait_time"})),
+    s_t_recv_total(get_metrics_registry().new_timer({METRICS_DOMAIN, METRIC_TYPE, "recv_total_time"})),
+    s_m_data_received(get_metrics_registry().new_meter({METRICS_DOMAIN, METRIC_TYPE, "bytes", "received"}, "rate")),
+    s_m_events_received(get_metrics_registry().new_meter({METRICS_DOMAIN, METRIC_TYPE, "events", "received"}, "rate")) {
+
     try {
         connect_tracer(listener_socket_path, proc);
     } catch(...) {
@@ -36,11 +48,22 @@ void CtxSwitchTracer::handle_trace_events() {
     std::uint8_t buff[4096];
     std::size_t capacity = sizeof(buff);
     while (! do_stop) {
-        auto len = recv(trace_conn, buff, capacity, 0);
-        if (len < 0) {
-            if (errno != EAGAIN && errno != EWOULDBLOCK) {
-                //error
-            }
+        auto total_ctx = s_t_recv_total.time_scope();
+        ssize_t len;
+        {
+            auto wait_ctx = s_t_recv_wait.time_scope();
+            len = recv(trace_conn, buff, capacity, 0);
+        }
+        if (len > 0) {
+            s_m_data_received.mark(len);
+            //handle and mark s_m_events_received
+        } else if (len == 0) {
+            s_c_peer_disconnected.inc();
+            logger->warn("Ftrace-server closed the connection (us reading too slow could be the cause)");
+        } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) continue;
+            logger->warn(error_message("Read (from ftrace-server bound connection) failed", errno));
+            s_c_recv_errors.inc();
         }
     }
 }

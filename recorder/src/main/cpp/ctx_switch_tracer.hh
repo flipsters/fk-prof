@@ -27,6 +27,18 @@ private:
 
     std::atomic<bool> do_stop;
 
+    metrics::Ctr& s_c_peer_disconnected;
+
+    metrics::Ctr& s_c_recv_errors;
+
+    metrics::Timer& s_t_recv_wait;
+
+    metrics::Timer& s_t_recv_total;
+
+    metrics::Mtr& s_m_data_received;
+
+    metrics::Mtr& s_m_events_received;
+
     int trace_conn;
 
     ThdProcP thd_proc;
