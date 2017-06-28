@@ -42,7 +42,7 @@ std::uint16_t cpus_present() {
 static void populate_data_links(const std::string& instance_path, std::list<ftrace::Tracer::DataLink>& dls, std::function<void(const ftrace::Tracer::DataLink&)>& data_link_listener) {
     std::uint16_t nr_cpu = cpus_present();
     for (std::uint16_t c = 0; c < nr_cpu; c++) {
-        auto cpu_dir = instance_path + CPU_DIR_PREFIX + std::to_string(c);
+        auto cpu_dir = CPU_DIR_PREFIX + std::to_string(c);
         auto ring_fd = open_file(instance_path, cpu_dir + PER_CPU_RAW_TRACE_PIPE, O_RDONLY);
         auto stats_fd = open_file(instance_path, cpu_dir + PER_CPU_STATS, O_RDONLY);
         dls.push_back({ring_fd, stats_fd, c});
