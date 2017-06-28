@@ -104,7 +104,20 @@ ftrace::Tracer::Tracer(const std::string& tracing_dir, Listener& listener, std::
 }
 
 ftrace::Tracer::~Tracer() {
-    //TODO: impl me!
+    stop();
+    pg_reader.reset();
+    evt_reader.reset();
+    for (const auto& dl : dls) {
+        close(dl.pipe_fd);
+        close(dl.stats_fd);
+    }
+    //close(set_event_pid); //not enabled yet
+    close(syscall_exit_enable);
+    close(syscall_enter_enable);
+    close(sched_wakeup_enable);
+    close(sched_switch_enable);
+    close(trace_options);
+    close(tracing_on);
 }
 
 void ftrace::Tracer::trace_on(pid_t pid, void* ctx) {
