@@ -240,6 +240,10 @@ void ftrace::Server::do_del_tid(ClientFd fd, v_curr::payload::DelTid* payload) {
 
 void ftrace::Server::handle_pkt(ClientFd fd, v_curr::PktType type, std::uint8_t* buff, size_t len) {
     switch (type) {
+    case v_curr::PktType::toggle_features:
+        assert(len == sizeof(v_curr::payload::Features));
+        logger->warn("Feature toggling is not implemented yet, request is being ignored.");
+        break;
     case v_curr::PktType::add_tid:
         assert(len == sizeof(v_curr::payload::AddTid));
         do_add_tid(fd, reinterpret_cast<v_curr::payload::AddTid*>(buff));
@@ -247,10 +251,6 @@ void ftrace::Server::handle_pkt(ClientFd fd, v_curr::PktType type, std::uint8_t*
     case v_curr::PktType::del_tid:
         assert(len == sizeof(v_curr::payload::DelTid));
         do_del_tid(fd, reinterpret_cast<v_curr::payload::DelTid*>(buff));
-        break;
-    case v_curr::PktType::toggle_features:
-        assert(len == sizeof(v_curr::payload::Features));
-        logger->warn("Feature toggling is not implemented yet, request is being ignored.");
         break;
     default:
         logger->error("Received pkt with unexpected type ({}) of RPC", std::to_string(type));

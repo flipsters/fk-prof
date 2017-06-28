@@ -7,6 +7,8 @@ const std::uint8_t ftrace::v0::VERSION = 0;
 
 std::string std::to_string(const ftrace::v0::PktType type) {
     switch(type) {
+    case ftrace::v0::PktType::toggle_features:
+        return "v0::Features";
     case ftrace::v0::PktType::add_tid:
         return "v0::AddTid";
     case ftrace::v0::PktType::del_tid:
