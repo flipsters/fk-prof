@@ -148,7 +148,7 @@ class SyscallExitReaderJessie : public ftrace::SyscallExitReader {
     "\tfield:int success;\toffset:32;\tsize:4;\tsigned:1;\n"        \
     "\tfield:int target_cpu;\toffset:36;\tsize:4;\tsigned:1;\n\n"
 
-ftrace::EventReader::EventReader(const std::string& events_dir, EventHandler& _handler) : handler(_handler), numeric("^[0-9]\\+.*") {
+ftrace::EventReader::EventReader(const std::string& events_dir, EventHandler& _handler) : handler(_handler), numeric("^[0-9]+.*") {
     //TODO: assert event header prefix content matchs
     auto header_event_path = events_dir + "/header_event";
     auto header_event = Util::content(header_event_path, nullptr, nullptr);
