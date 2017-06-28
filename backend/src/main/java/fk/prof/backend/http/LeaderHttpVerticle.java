@@ -3,6 +3,7 @@ package fk.prof.backend.http;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
+import com.google.protobuf.AbstractMessage;
 import fk.prof.backend.ConfigManager;
 import fk.prof.backend.Configuration;
 import fk.prof.backend.exception.HttpFailure;
@@ -233,7 +234,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
       if (versionedPolicyDetails == null) {
         context.response().setStatusCode(400).end("Policy not found for ProcessGroup " + RecorderProtoUtil.processGroupCompactRepr(pG));
       } else {
-        context.response().end(versionedPolicyDetails.toString());
+        context.response().end(ProtoUtil.buildBufferFromProto(versionedPolicyDetails));
       }
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
@@ -245,14 +246,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     try {
       Recorder.ProcessGroup pG = parseProcessGroup(context);
       PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionedPolicyFromPayload(context);
-      policyStore.createVersionedPolicy(pG, versionedPolicyDetails).setHandler(result -> {
-        if (result.succeeded()) {
-          context.response().setStatusCode(201).end(result.result().toString());
-        } else {
-          HttpFailure httpFailure = HttpFailure.failure(result.cause());
-          HttpHelper.handleFailure(context, httpFailure);
-        }
-      });
+      policyStore.createVersionedPolicy(pG, versionedPolicyDetails).setHandler(ar -> setResponse(ar, context));
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
       HttpHelper.handleFailure(context, httpFailure);
@@ -263,16 +257,23 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     try {
       Recorder.ProcessGroup pG = parseProcessGroup(context);
       PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionedPolicyFromPayload(context);
-      policyStore.updateVersionedPolicy(pG, versionedPolicyDetails).setHandler(result -> {
-        if (result.succeeded()) {
-          context.response().setStatusCode(201).end(result.result().toString());
-        } else {
-          HttpFailure httpFailure = HttpFailure.failure(result.cause());
-          HttpHelper.handleFailure(context, httpFailure);
-        }
-      });
+      policyStore.updateVersionedPolicy(pG, versionedPolicyDetails).setHandler(ar -> setResponse(ar, context));
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
+      HttpHelper.handleFailure(context, httpFailure);
+    }
+  }
+
+  private void setResponse(AsyncResult<? extends AbstractMessage> ar, RoutingContext context){
+    if (ar.succeeded()) {
+      try {
+        context.response().setStatusCode(201).end(ProtoUtil.buildBufferFromProto(ar.result()));
+      } catch (IOException ex) {
+        HttpFailure httpFailure = HttpFailure.failure(ex);
+        HttpHelper.handleFailure(context, httpFailure);
+      }
+    } else {
+      HttpFailure httpFailure = HttpFailure.failure(ar.cause());
       HttpHelper.handleFailure(context, httpFailure);
     }
   }

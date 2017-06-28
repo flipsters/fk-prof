@@ -27,6 +27,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import proto.PolicyDTO;
 
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 import static fk.prof.backend.util.ZookeeperUtil.DELIMITER;
@@ -124,8 +125,8 @@ public class LeaderPolicyAPITest {
             context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.CREATED.code());
             httpClientResponse.bodyHandler(buffer -> {
                 try {
-                    context.assertEquals(PolicyDTO.VersionedPolicyDetails.parseFrom(buffer.getBytes()), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),0));
-                } catch (InvalidProtocolBufferException e) {
+                    context.assertEquals(buffer, ProtoUtil.buildBufferFromProto(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),0)));
+                } catch (IOException e) {
                     f1.completeExceptionally(e);
                 }
                 f1.complete(null);
@@ -173,8 +174,8 @@ public class LeaderPolicyAPITest {
             context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.CREATED.code());
             httpClientResponse.bodyHandler(buffer -> {
                 try {
-                    context.assertEquals(PolicyDTO.VersionedPolicyDetails.parseFrom(buffer.getBytes()), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),1));
-                } catch (InvalidProtocolBufferException e) {
+                    context.assertEquals(buffer, ProtoUtil.buildBufferFromProto(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),1)));
+                } catch (IOException e) {
                     f1.completeExceptionally(e);
                 }
                 f1.complete(null);
