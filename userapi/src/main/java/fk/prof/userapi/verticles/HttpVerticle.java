@@ -1,5 +1,7 @@
 package fk.prof.userapi.verticles;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
 import fk.prof.aggregation.proto.AggregatedProfileModel;
 import fk.prof.storage.StreamTransformer;
@@ -11,6 +13,7 @@ import fk.prof.userapi.http.UserapiApiPathConstants;
 import fk.prof.userapi.http.UserapiHttpHelper;
 import fk.prof.userapi.model.AggregatedProfileInfo;
 import fk.prof.userapi.model.AggregationWindowSummary;
+import fk.prof.userapi.util.ProtoUtil;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -252,11 +255,12 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     private void putPostPolicyToBackend(RoutingContext routingContext) {
-        JsonObject versionedPolicyDetailsJO = routingContext.getBodyAsJson();
+        String payloadVersionedPolicyDetailsJsonString = routingContext.getBodyAsString("utf-8");
         try {
-            PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = versionedPolicyDetailsJO.mapTo(PolicyDTO.VersionedPolicyDetails.class);
-            makeRequestToBackend(routingContext.request().method(), routingContext.normalisedPath(), Buffer.buffer(versionedPolicyDetails.toString()), false)
-                    .setHandler(ar -> setResponse(ar, routingContext));
+            PolicyDTO.VersionedPolicyDetails.Builder payloadVersionedPolicyDetails = PolicyDTO.VersionedPolicyDetails.newBuilder();
+            JsonFormat.parser().merge(payloadVersionedPolicyDetailsJsonString, payloadVersionedPolicyDetails);
+            makeRequestToBackend(routingContext.request().method(), routingContext.normalisedPath(), ProtoUtil.buildBufferFromProto(payloadVersionedPolicyDetails.build()), false)
+                    .setHandler(ar -> handleBackendBufferedPolicyResponse(routingContext, ar));
         } catch (Exception ex) {
             UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(ex);
             UserapiHttpHelper.handleFailure(routingContext, httpFailure);
@@ -264,7 +268,13 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     private void getPolicyFromBackend(RoutingContext routingContext) {
-        proxyToBackend(routingContext, routingContext.normalisedPath());
+        try {
+            makeRequestToBackend(routingContext.request().method(), routingContext.normalisedPath(), null, false)
+                    .setHandler(ar -> handleBackendBufferedPolicyResponse(routingContext, ar));
+        } catch (Exception ex) {
+            UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(ex);
+            UserapiHttpHelper.handleFailure(routingContext, httpFailure);
+        }
     }
 
     private void proxyListAPIToBackend(RoutingContext routingContext){
@@ -275,7 +285,7 @@ public class HttpVerticle extends AbstractVerticle {
     private void proxyToBackend(RoutingContext context, String path) {
         try {
             makeRequestToBackend(context.request().method(), path, context.getBody(), false)
-                    .setHandler(ar -> setResponse(ar, context));
+                    .setHandler(ar -> handleBackendResponse(context, ar));
         } catch (Exception ex) {
             UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(ex);
             UserapiHttpHelper.handleFailure(context, httpFailure);
@@ -287,6 +297,32 @@ public class HttpVerticle extends AbstractVerticle {
             return httpClient.requestAsyncWithRetry(method, backendConfig.getIp(), backendConfig.getPort(), path, payloadAsBuffer);
         }else{
             return httpClient.requestAsync(method, backendConfig.getIp(), backendConfig.getPort(), path, payloadAsBuffer);
+        }
+    }
+
+    private void handleBackendBufferedPolicyResponse(RoutingContext context, AsyncResult<ProfHttpClient.ResponseWithStatusTuple> ar) {
+        if (ar.succeeded()) {
+            context.response().setStatusCode(ar.result().getStatusCode());
+            try {
+                PolicyDTO.VersionedPolicyDetails responseVersionedPolicyDetails = ProtoUtil.buildProtoFromBuffer(PolicyDTO.VersionedPolicyDetails.parser(), ar.result().getResponse());//ar.result().getResponse();//PolicyDTO.VersionedPolicyDetails.parseFrom(ar.result().getResponse().getBytes());
+                context.response().end(JsonFormat.printer().print(responseVersionedPolicyDetails));
+            } catch (InvalidProtocolBufferException e) {
+                UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(e);
+                UserapiHttpHelper.handleFailure(context, httpFailure);
+            }
+        } else {
+            UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(ar.cause());
+            UserapiHttpHelper.handleFailure(context, httpFailure);
+        }
+    }
+
+    private void handleBackendResponse(RoutingContext context, AsyncResult<ProfHttpClient.ResponseWithStatusTuple> ar) {
+        if(ar.succeeded()) {
+            context.response().setStatusCode(ar.result().getStatusCode());
+            context.response().end(ar.result().getResponse());
+        } else {
+            UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(ar.cause());
+            UserapiHttpHelper.handleFailure(context, httpFailure);
         }
     }
 

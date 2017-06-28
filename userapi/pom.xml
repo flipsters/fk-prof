@@ -86,6 +86,11 @@
       <artifactId>vertx-dropwizard-metrics</artifactId>
       <version>${vertx.version}</version>
     </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java-util</artifactId>
+      <version>3.1.0</version>
+    </dependency>
   </dependencies>
   <build>
     <plugins>

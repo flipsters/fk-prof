@@ -1,6 +1,7 @@
 package fk.prof.userapi.verticles;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import fk.prof.userapi.Configuration;
 import fk.prof.userapi.UserapiConfigManager;
 import fk.prof.userapi.api.ProfileStoreAPI;
@@ -50,11 +51,6 @@ public class UserapiPolicyAPITest {
     private static int backendPort;
     private static int userapiPort;
 
-    @BeforeClass
-    public static void setup() {
-        ProtoSerializers.registerSerializers(Json.mapper);
-    }
-
     @Before
     public void setup(TestContext context) throws IOException {
         final Async async = context.async();
@@ -93,8 +89,12 @@ public class UserapiPolicyAPITest {
         Router router = Router.router(vertx);
         UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
                 UserapiApiPathConstants.GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, req ->{
-                    PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),0);
-                    req.response().end(versionedPolicyDetails.toString());
+                    try {
+                        PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),0);
+                        req.response().end(ProtoUtil.buildBufferFromProto(versionedPolicyDetails));
+                    } catch (IOException e) {
+                        context.fail(e);
+                    }
                 });
         backendServer.requestHandler(router::accept);
         backendServer.listen(backendPort, result -> {
@@ -102,7 +102,11 @@ public class UserapiPolicyAPITest {
                 String userapiPolicyPath = UserapiApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
                 client.getNow(userapiPort, "localhost", userapiPolicyPath, res -> {
                     res.bodyHandler(buffer -> {
-                        context.assertEquals(buffer.toString(), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),0).toString());
+                        try {
+                            context.assertEquals(buffer.toString(), JsonFormat.printer().print(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0)));
+                        } catch (InvalidProtocolBufferException e) {
+                            context.fail(e);
+                        }
                         async.complete();
                    });
                 });
@@ -116,34 +120,40 @@ public class UserapiPolicyAPITest {
     public void TestPutPolicyProxiedToLeader(TestContext context) {
         final Async async = context.async();
         Router router = Router.router(vertx);
-        String payloadAsBuffer = null;
-        payloadAsBuffer = Json.encode(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0));
-        System.err.println(payloadAsBuffer);
-        String finalPayloadAsBuffer = payloadAsBuffer;
+        String jsonPayload = null;
+        try {
+            jsonPayload = JsonFormat.printer().print(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0));
+        } catch (IOException e) {
+            context.fail(e);
+        }
+        String finalJsonPayload = jsonPayload;
         UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.PUT,
                 UserapiApiPathConstants.PUT_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
                 BodyHandler.create().setBodyLimit(1024 * 10), req -> {
                     try {
-                        System.out.println("POLICY RECEIVED BY BACKEND : " + req.getBody());
-                        PolicyDTO.VersionedPolicyDetails expected = PolicyDTO.VersionedPolicyDetails.parseFrom(finalPayloadAsBuffer.getBytes());
+                        PolicyDTO.VersionedPolicyDetails expected = MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),0);
                         PolicyDTO.VersionedPolicyDetails got = PolicyDTO.VersionedPolicyDetails.parseFrom(req.getBody().getBytes());
                         context.assertEquals(expected, got);
-                        req.response().end(got.toBuilder().setVersion(got.getVersion() + 1).toString());
-                    } catch (InvalidProtocolBufferException e) {
+                        req.response().end(ProtoUtil.buildBufferFromProto(got.toBuilder().setVersion(got.getVersion() + 1).build()));
+                    } catch (IOException e) {
                         context.fail(e);
                     }
                 });
         backendServer.requestHandler(router::accept);
         backendServer.listen(backendPort, result -> {
             if (result.succeeded()) {
-                String backendPolicyPath = UserapiApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
+                String userapiPolicyPath = UserapiApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
 
-                client.put(userapiPort, "localhost", backendPolicyPath, res -> {
+                client.put(userapiPort, "localhost", userapiPolicyPath, res -> {
                     res.bodyHandler(buffer -> {
-                        context.assertEquals(buffer.toString(), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 1).toString());
+                        try {
+                            context.assertEquals(buffer.toString(), JsonFormat.printer().print(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 1)));
+                        } catch (InvalidProtocolBufferException e) {
+                            context.fail(e);
+                        }
                         async.complete();
                     });
-                }).end(finalPayloadAsBuffer);
+                }).end(finalJsonPayload);
             } else {
                 context.fail();
             }
@@ -154,22 +164,22 @@ public class UserapiPolicyAPITest {
     public void TestPostPolicyProxiedToLeader(TestContext context) {
         final Async async = context.async();
         Router router = Router.router(vertx);
-        Buffer payloadAsBuffer = null;
+        String jsonPayload = null;
         try {
-            payloadAsBuffer = ProtoUtil.buildBufferFromProto(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), -1));
+            jsonPayload = JsonFormat.printer().print(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), -1));
         } catch (IOException e) {
             context.fail(e);
         }
-        Buffer finalPayloadAsBuffer = payloadAsBuffer;
+        String finalJsonPayload = jsonPayload;
         UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.POST,
                 UserapiApiPathConstants.POST_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
                 BodyHandler.create().setBodyLimit(1024 * 10), req -> {
                     try {
-                        PolicyDTO.VersionedPolicyDetails expected = PolicyDTO.VersionedPolicyDetails.parseFrom(finalPayloadAsBuffer.getBytes());
+                        PolicyDTO.VersionedPolicyDetails expected = MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),-1);
                         PolicyDTO.VersionedPolicyDetails got = PolicyDTO.VersionedPolicyDetails.parseFrom(req.getBody().getBytes());
                         context.assertEquals(expected, got);
-                        req.response().end(got.toBuilder().setVersion(got.getVersion() + 1).toString());
-                    } catch (InvalidProtocolBufferException e) {
+                        req.response().end(ProtoUtil.buildBufferFromProto(got.toBuilder().setVersion(got.getVersion() + 1).build()));
+                    } catch (IOException e) {
                         context.fail(e);
                     }
                 });
@@ -177,13 +187,16 @@ public class UserapiPolicyAPITest {
         backendServer.listen(backendPort, result -> {
             if (result.succeeded()) {
                 String userapiPolicyPath = UserapiApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
-
                 client.post(userapiPort, "localhost", userapiPolicyPath, res -> {
                     res.bodyHandler(buffer -> {
-                        context.assertEquals(buffer.toString(), MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0).toString());
+                        try {
+                            context.assertEquals(buffer.toString(), JsonFormat.printer().print(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0)));
+                        } catch (InvalidProtocolBufferException e) {
+                            context.fail(e);
+                        }
                         async.complete();
                     });
-                }).end(finalPayloadAsBuffer);
+                }).end(finalJsonPayload);
             } else {
                 context.fail();
             }
