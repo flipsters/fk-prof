@@ -248,6 +248,10 @@ void ftrace::Server::handle_pkt(ClientFd fd, v_curr::PktType type, std::uint8_t*
         assert(len == sizeof(v_curr::payload::DelTid));
         do_del_tid(fd, reinterpret_cast<v_curr::payload::DelTid*>(buff));
         break;
+    case v_curr::PktType::toggle_features:
+        assert(len == sizeof(v_curr::payload::Features));
+        logger->warn("Feature toggling is not implemented yet, request is being ignored.");
+        break;
     default:
         logger->error("Received pkt with unexpected type ({}) of RPC", std::to_string(type));
         throw std::runtime_error("Unexpected rpc class: " + std::to_string(type));

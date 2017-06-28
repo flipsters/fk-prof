@@ -41,11 +41,12 @@ namespace ftrace {
         typedef std::uint8_t PayloadLen;
 
         enum class PktType : std::uint8_t {
-            add_tid           = 0,
-            del_tid           = 1,
-            lost_events       = 2,
-            sched_switch      = 3,
-            sched_wakeup      = 4
+            toggle_features   = 0,
+            add_tid           = 1,
+            del_tid           = 2,
+            lost_events       = 3,
+            sched_switch      = 4,
+            sched_wakeup      = 5
         };
 
         struct __attribute__((packed)) Header {
@@ -55,6 +56,11 @@ namespace ftrace {
         };
 
         namespace payload {
+            struct __attribute__((packed)) Features {
+                bool show_wakeups;
+                bool show_syscalls;
+            };
+
             typedef pid_t AddTid;
             
             typedef pid_t DelTid;
