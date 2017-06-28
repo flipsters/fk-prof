@@ -112,12 +112,12 @@ ftrace::Tracer::~Tracer() {
         close(dl.stats_fd);
     }
     //close(set_event_pid); //not enabled yet
-    close(syscall_exit_enable);
-    close(syscall_enter_enable);
-    close(sched_wakeup_enable);
-    close(sched_switch_enable);
-    close(trace_options);
-    close(tracing_on);
+    close(ctrl_fds.syscall_exit_enable);
+    close(ctrl_fds.syscall_enter_enable);
+    close(ctrl_fds.sched_wakeup_enable);
+    close(ctrl_fds.sched_switch_enable);
+    close(ctrl_fds.trace_options);
+    close(ctrl_fds.tracing_on);
 }
 
 void ftrace::Tracer::trace_on(pid_t pid, void* ctx) {
