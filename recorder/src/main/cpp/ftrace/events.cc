@@ -254,14 +254,14 @@ ftrace::EventReader::~EventReader() {}
 
 std::size_t r_u32(const std::uint8_t* buff, std::size_t remaining, std::uint32_t& val) {
     auto sz = sizeof(std::uint32_t);
-    assert(remaining > sz);
+    assert(remaining >= sz);
     val = *reinterpret_cast<const std::uint32_t*>(buff);
     return sz;
 }
 
 std::size_t r_i64(const std::uint8_t* buff, std::size_t remaining, std::int64_t& val) {
     auto sz = sizeof(std::int64_t);
-    assert(remaining > sz);
+    assert(remaining >= sz);
     val = *reinterpret_cast<const std::int64_t*>(buff);
     return sz;
 }
