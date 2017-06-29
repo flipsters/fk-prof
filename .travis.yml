@@ -29,9 +29,12 @@ install:
   - sed -i 's/{{elfutil_version}}/'${elfutil_version}'/g' libelf.pc
   - sudo mv libelf.pc /usr/lib/pkgconfig/libelf.pc
 before_script:
-  - mkdir -p libcuckoo && pushd libcuckoo && git init && git remote add origin https://github.com/efficient/libcuckoo.git && git pull origin master && git checkout v0.2 && cmake . && sudo make install && popd
-  - mkdir -p medida && pushd medida && git init && git remote https://github.com/janmejay/medida.git && git pull origin master && cmake CMakeLists.txt && sudo make install && popd
-  - mkdir -p cityhash && pushd cityhash && git init && git remote add origin https://github.com/google/cityhash.git && git pull origin master && git checkout 8af9b8c2b889d80c22d6bc26ba0df1afb79a30db && ./configure && make all check CXXFLAGS="-g -O3" && sudo make install && sudo ldconfig && popd
+  - [ ! -d libcuckoo] && git clone https://github.com/efficient/libcuckoo.git
+  - pushd libcuckoo && git checkout v0.2 && cmake . && sudo make install && popd
+  - [ ! -d medida ] &&  git clone https://github.com/janmejay/medida.git
+  - pushd medida && cmake CMakeLists.txt && sudo make install && popd
+  - [ ! -d cityhash ] && git clone https://github.com/google/cityhash.git
+  - pushd cityhash && git checkout 8af9b8c2b889d80c22d6bc26ba0df1afb79a30db && ./configure && make all check CXXFLAGS="-g -O3" && sudo make install && sudo ldconfig && popd
 script:
   - pushd recorder && cmake CMakeLists.txt && make && popd
   - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
