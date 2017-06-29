@@ -162,63 +162,63 @@ public class CpuSamplingTest {
         }}, new TraceIdPivotResolver(), new HashMap<Integer, TraceInfo>(), new HashMap<Integer, ThreadInfo>(), new HashMap<Long, MthdInfo>(), new HashMap<String, SampledStackNode>());
     }
 
-    @Test
-    public void should_Report_Alloc_Burn() throws ExecutionException, InterruptedException, IOException, TimeoutException {
-        List<Recorder.Wse> profileEntries = new ArrayList<>();
-        MutableObject<Recorder.RecordingHeader> hdr = new MutableObject<>();
-        MutableBoolean profileCalledSecondTime = new MutableBoolean(false);
-        String cpuSamplingWorkIssueTime = ISODateTimeFormat.dateTime().print(DateTime.now());
+//    @Test
+//    public void should_Report_Alloc_Burn() throws ExecutionException, InterruptedException, IOException, TimeoutException {
+//        List<Recorder.Wse> profileEntries = new ArrayList<>();
+//        MutableObject<Recorder.RecordingHeader> hdr = new MutableObject<>();
+//        MutableBoolean profileCalledSecondTime = new MutableBoolean(false);
+//        String cpuSamplingWorkIssueTime = ISODateTimeFormat.dateTime().print(DateTime.now());
+//
+//        stubRecorderInteraction(profileEntries, hdr, profileCalledSecondTime, cpuSamplingWorkIssueTime, WorkHandlingTest.CPU_SAMPLING_MAX_FRAMES);
+//
+//        runner = new AgentRunner(AllocBurner.class.getCanonicalName(), USUAL_RECORDER_ARGS + ",noctx_cov_pct=50");
+//        runner.start();
+//
+//        assocAction[0].get(4, TimeUnit.SECONDS);
+//
+//        assertThat(assocAction[0].isDone(), is(true));
+//        pollAction[poll.length - 1].get(poll.length + 4, TimeUnit.SECONDS); //some grace time
+//
+//        assertRecordingHeaderIsGood(cpuSamplingWorkIssueTime, hdr, CPU_SAMPLING_MAX_FRAMES);
+//
+//        //debug aid
+//        //Map<Integer, TraceInfo> traceInfoMap = new HashMap<>();
+//        //Map<Integer, ThreadInfo> thdInfoMap = new HashMap<>();
+//        //Map<Long, MthdInfo> mthdInfoMap = new HashMap<>();
+//        //Map<String, SampledStackNode> aggregations = new HashMap<>();
+//        //makeTree(profileEntries, false, new TraceIdPivotResolver(), traceInfoMap, thdInfoMap, mthdInfoMap, aggregations);
+//
+//        assertOnStackPctIsAbove(Pattern.compile(".*ParallelScavengeHeap::mem_allocate.*"), 90.0, profileEntries);
+//    }
 
-        stubRecorderInteraction(profileEntries, hdr, profileCalledSecondTime, cpuSamplingWorkIssueTime, WorkHandlingTest.CPU_SAMPLING_MAX_FRAMES);
-
-        runner = new AgentRunner(AllocBurner.class.getCanonicalName(), USUAL_RECORDER_ARGS + ",noctx_cov_pct=50");
-        runner.start();
-
-        assocAction[0].get(4, TimeUnit.SECONDS);
-
-        assertThat(assocAction[0].isDone(), is(true));
-        pollAction[poll.length - 1].get(poll.length + 4, TimeUnit.SECONDS); //some grace time
-
-        assertRecordingHeaderIsGood(cpuSamplingWorkIssueTime, hdr, CPU_SAMPLING_MAX_FRAMES);
-
-        //debug aid
-        //Map<Integer, TraceInfo> traceInfoMap = new HashMap<>();
-        //Map<Integer, ThreadInfo> thdInfoMap = new HashMap<>();
-        //Map<Long, MthdInfo> mthdInfoMap = new HashMap<>();
-        //Map<String, SampledStackNode> aggregations = new HashMap<>();
-        //makeTree(profileEntries, false, new TraceIdPivotResolver(), traceInfoMap, thdInfoMap, mthdInfoMap, aggregations);
-
-        assertOnStackPctIsAbove(Pattern.compile(".*ParallelScavengeHeap::mem_allocate.*"), 90.0, profileEntries);
-    }
-
-    @Test
-    public void should_Report_Intrinsic_Burn() throws ExecutionException, InterruptedException, IOException, TimeoutException {
-        List<Recorder.Wse> profileEntries = new ArrayList<>();
-        MutableObject<Recorder.RecordingHeader> hdr = new MutableObject<>();
-        MutableBoolean profileCalledSecondTime = new MutableBoolean(false);
-        String cpuSamplingWorkIssueTime = ISODateTimeFormat.dateTime().print(DateTime.now());
-
-        stubRecorderInteraction(profileEntries, hdr, profileCalledSecondTime, cpuSamplingWorkIssueTime, WorkHandlingTest.CPU_SAMPLING_MAX_FRAMES);
-
-        runner = new AgentRunner(IntrinsicBurner.class.getCanonicalName(), USUAL_RECORDER_ARGS + ",noctx_cov_pct=50");
-        runner.start();
-
-        assocAction[0].get(4, TimeUnit.SECONDS);
-
-        assertThat(assocAction[0].isDone(), is(true));
-        pollAction[poll.length - 1].get(poll.length + 4, TimeUnit.SECONDS); //some grace time
-
-        assertRecordingHeaderIsGood(cpuSamplingWorkIssueTime, hdr, CPU_SAMPLING_MAX_FRAMES);
-
-        //debug aid
-        //Map<Integer, TraceInfo> traceInfoMap = new HashMap<>();
-        //Map<Integer, ThreadInfo> thdInfoMap = new HashMap<>();
-        //Map<Long, MthdInfo> mthdInfoMap = new HashMap<>();
-        //Map<String, SampledStackNode> aggregations = new HashMap<>();
-        //makeTree(profileEntries, false, new TraceIdPivotResolver(), traceInfoMap, thdInfoMap, mthdInfoMap, aggregations);
-
-        assertOnStackPctIsAbove(Pattern.compile(".*(sin|cos).*"), 2.0, profileEntries);
-    }
+//    @Test
+//    public void should_Report_Intrinsic_Burn() throws ExecutionException, InterruptedException, IOException, TimeoutException {
+//        List<Recorder.Wse> profileEntries = new ArrayList<>();
+//        MutableObject<Recorder.RecordingHeader> hdr = new MutableObject<>();
+//        MutableBoolean profileCalledSecondTime = new MutableBoolean(false);
+//        String cpuSamplingWorkIssueTime = ISODateTimeFormat.dateTime().print(DateTime.now());
+//
+//        stubRecorderInteraction(profileEntries, hdr, profileCalledSecondTime, cpuSamplingWorkIssueTime, WorkHandlingTest.CPU_SAMPLING_MAX_FRAMES);
+//
+//        runner = new AgentRunner(IntrinsicBurner.class.getCanonicalName(), USUAL_RECORDER_ARGS + ",noctx_cov_pct=50");
+//        runner.start();
+//
+//        assocAction[0].get(4, TimeUnit.SECONDS);
+//
+//        assertThat(assocAction[0].isDone(), is(true));
+//        pollAction[poll.length - 1].get(poll.length + 4, TimeUnit.SECONDS); //some grace time
+//
+//        assertRecordingHeaderIsGood(cpuSamplingWorkIssueTime, hdr, CPU_SAMPLING_MAX_FRAMES);
+//
+//        //debug aid
+//        //Map<Integer, TraceInfo> traceInfoMap = new HashMap<>();
+//        //Map<Integer, ThreadInfo> thdInfoMap = new HashMap<>();
+//        //Map<Long, MthdInfo> mthdInfoMap = new HashMap<>();
+//        //Map<String, SampledStackNode> aggregations = new HashMap<>();
+//        //makeTree(profileEntries, false, new TraceIdPivotResolver(), traceInfoMap, thdInfoMap, mthdInfoMap, aggregations);
+//
+//        assertOnStackPctIsAbove(Pattern.compile(".*(sin|cos).*"), 2.0, profileEntries);
+//    }
 
     private void assertOnStackPctIsAbove(Pattern pattern, double minPct, List<Recorder.Wse> entries) {
         Set<Long> methodIds = new TreeSet<>();
