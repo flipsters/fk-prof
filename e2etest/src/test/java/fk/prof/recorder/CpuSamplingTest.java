@@ -37,7 +37,6 @@ import static fk.prof.recorder.utils.Matchers.approximatelyBetween;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.lessThan;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 public class CpuSamplingTest {
@@ -348,7 +347,7 @@ public class CpuSamplingTest {
         }
 
         double ratio = (double) blackholeCallSites / allCallSites;
-        double expectedMin = 0.9;
+        double expectedMin = 0.7;
         assertThat("The line-no/bci distribution was somehow not right (expected " + expectedMin + "x calls to be on hot fn call-site, but it was only " + ratio + "x (details: " + bci_lineNo_Histo + ")", ratio, greaterThan(expectedMin));
     }
 
@@ -1014,8 +1013,7 @@ public class CpuSamplingTest {
             if (klass != null ? !klass.equals(that.klass) : that.klass != null) return false;
             if (file != null ? !file.equals(that.file) : that.file != null) return false;
             if (fnName != null ? !fnName.equals(that.fnName) : that.fnName != null) return false;
-            if (fnSig != null ? !fnSig.equals(that.fnSig) : that.fnSig != null) return false;
-            return true;
+            return fnSig != null ? fnSig.equals(that.fnSig) : that.fnSig == null;
         }
 
         @Override
@@ -1147,7 +1145,7 @@ public class CpuSamplingTest {
         return children;
     }
 
-    public static interface PivotResolver {
+    public interface PivotResolver {
         List<Integer> getAggregatingPivotIds(Recorder.StackSample stackSample);
 
         String getAggregatingPivotName(Map<Integer, TraceInfo> traceInfoMap, Map<Integer, ThreadInfo> thdInfoMap, Integer traceId);
