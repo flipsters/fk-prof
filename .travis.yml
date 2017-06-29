@@ -29,11 +29,11 @@ install:
   - sed -i 's/{{elfutil_version}}/'${elfutil_version}'/g' libelf.pc
   - sudo mv libelf.pc /usr/lib/pkgconfig/libelf.pc
 before_script:
-  - [ ! -d libcuckoo] && git clone https://github.com/efficient/libcuckoo.git
+  - test ! -d libcuckoo && git clone https://github.com/efficient/libcuckoo.git
   - pushd libcuckoo && git checkout v0.2 && cmake . && sudo make install && popd
-  - [ ! -d medida ] &&  git clone https://github.com/janmejay/medida.git
+  - test ! -d medida  &&  git clone https://github.com/janmejay/medida.git
   - pushd medida && cmake CMakeLists.txt && sudo make install && popd
-  - [ ! -d cityhash ] && git clone https://github.com/google/cityhash.git
+  - test ! -d cityhash  && git clone https://github.com/google/cityhash.git
   - pushd cityhash && git checkout 8af9b8c2b889d80c22d6bc26ba0df1afb79a30db && ./configure && make all check CXXFLAGS="-g -O3" && sudo make install && sudo ldconfig && popd
 script:
   - pushd recorder && cmake CMakeLists.txt && make && popd
