@@ -4,6 +4,8 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include "logging.hh"
+#include "ftrace/proto.hh"
+#include <sys/uio.h>
 
 void ctx_switch_feed_reader(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *arg) {
     logger->trace("Ctx-Switch tracker thread target entered");
@@ -18,12 +20,39 @@ void close_connection(int& fd) {
     }
 }
 
-void track_pid(int fd, pid_t tid) {
+#define SEND_ME(h, p)                           \
+    {                                           \
+        auto h_sz = sizeof(h);                  \
+        auto p_sz = sizeof(p);                  \
+        h.len = h_sz + p_sz;                    \
+        const size_t iov_len = 2;               \
+        iovec iov[iov_len];                     \
+        iov[0].iov_base = &h;                   \
+        iov[0].iov_len = h_sz;                  \
+        iov[1].iov_base = &p;                   \
+        iov[1].iov_len = p_sz;                  \
+        send_msg(iov, iov_len, h.len);          \
+    }
 
+void CtxSwitchTracer::track_pid(pid_t tid) {
+    ftrace::v_curr::payload::AddTid p = tid;
+    ftrace::v_curr::Header h { .v = ftrace::v_curr::VERSION, .type = ftrace::v_curr::PktType::add_tid };
+    SEND_ME(h, p);
 }
 
-void untrack_pid(int fd, pid_t tid) {
+void CtxSwitchTracer::untrack_pid(pid_t tid) {
+    ftrace::v_curr::payload::DelTid p = tid;
+    ftrace::v_curr::Header h { .v = ftrace::v_curr::VERSION, .type = ftrace::v_curr::PktType::del_tid };
+    SEND_ME(h, p);
+}
 
+void CtxSwitchTracer::send_msg(iovec *iov, std::size_t iov_len, std::size_t expected_len) {
+    auto written = writev(trace_conn, iov, iov_len);
+    if (written < expected_len) {
+        logger->error("Couldn't send message to ftrace-server, failing work");
+        s_c_send_errors.inc();
+        fail_work();
+    }
 }
 
 #define METRIC_TYPE "ctxsw_tracer"
@@ -38,6 +67,7 @@ CtxSwitchTracer::CtxSwitchTracer(JavaVM *jvm, jvmtiEnv *jvmti, ThreadMap& _threa
 
     s_c_peer_disconnected(get_metrics_registry().new_counter({METRICS_DOMAIN, METRIC_TYPE, "peer", "disconnects"})),
     s_c_recv_errors(get_metrics_registry().new_counter({METRICS_DOMAIN, METRIC_TYPE, "recv", "errors"})),
+    s_c_send_errors(get_metrics_registry().new_counter({METRICS_DOMAIN, METRIC_TYPE, "send", "errors"})),
     s_t_recv_wait(get_metrics_registry().new_timer({METRICS_DOMAIN, METRIC_TYPE, "read_wait_time"})),
     s_t_recv_total(get_metrics_registry().new_timer({METRICS_DOMAIN, METRIC_TYPE, "recv_total_time"})),
     s_m_data_received(get_metrics_registry().new_meter({METRICS_DOMAIN, METRIC_TYPE, "bytes", "received"}, "rate")),
@@ -58,10 +88,10 @@ CtxSwitchTracer::CtxSwitchTracer(JavaVM *jvm, jvmtiEnv *jvmti, ThreadMap& _threa
 
             switch (op) {
             case ThreadOp::created:
-                track_pid(trace_conn, thd.tid);
+                track_pid(thd.tid);
                 break;
             case ThreadOp::retired:
-                untrack_pid(trace_conn, thd.tid);
+                untrack_pid(thd.tid);
                 break;
             default:
                 throw std::runtime_error("Found unknown thd-op: " + std::to_string(static_cast<std::uint16_t>(op)));
@@ -73,6 +103,7 @@ CtxSwitchTracer::CtxSwitchTracer(JavaVM *jvm, jvmtiEnv *jvmti, ThreadMap& _threa
 
 CtxSwitchTracer::~CtxSwitchTracer() {
     close(trace_conn);
+    thread_map.remove_watch(THREAD_WATCHER_NAME);
 }
 
 void CtxSwitchTracer::run() {}

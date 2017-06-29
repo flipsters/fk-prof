@@ -23,6 +23,12 @@ public:
 private:
     void connect_tracer(const char* listener_socket_path, const char* proc);
 
+    void track_pid(pid_t tid);
+
+    void untrack_pid(pid_t tid);
+
+    void send_msg(iovec *iov, std::size_t iov_len, std::size_t expected_len);
+
     ThreadMap& thread_map;
 
     std::atomic<bool> do_stop;
@@ -35,6 +41,8 @@ private:
 
     metrics::Ctr& s_c_recv_errors;
 
+    metrics::Ctr& s_c_send_errors;
+
     metrics::Timer& s_t_recv_wait;
 
     metrics::Timer& s_t_recv_total;
@@ -44,8 +52,6 @@ private:
     metrics::Mtr& s_m_events_received;
 
     ThdProcP thd_proc;
-
-    std::mutex send_mutex;
 
     DISALLOW_COPY_AND_ASSIGN(CtxSwitchTracer);
 };
