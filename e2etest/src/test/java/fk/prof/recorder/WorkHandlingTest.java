@@ -165,7 +165,7 @@ public class WorkHandlingTest {
             previousTick = AssociationTest.assertRecorderInfoAllGood_AndGetTick(prwt.req.getRecorderInfo(), recorderTickMatcher, rc(true));
             recorderTickMatcher = greaterThan(previousTick);
             if (idx > 0) {
-                assertThat(prwt.time - prevTime, approximatelyBetween(1000l, 2000l)); //~1 sec tolerance
+                assertThat(prwt.time - prevTime, approximatelyBetween(900l, 2100l)); //~1 sec tolerance
             }
             prevTime = prwt.time;
             idx++;
@@ -269,7 +269,7 @@ public class WorkHandlingTest {
             previousTick = AssociationTest.assertRecorderInfoAllGood_AndGetTick(prwt.req.getRecorderInfo(), recorderTickMatcher, rc);
             recorderTickMatcher = greaterThan(previousTick);
             if (idx > 0) {
-                assertThat("idx = " + idx, prwt.time - prevTime, approximatelyBetween(970l, 2000l)); //~1 sec tolerance
+                assertThat("idx = " + idx, prwt.time - prevTime, approximatelyBetween(900l, 2100l)); //~1 sec tolerance
             }
             prevTime = prwt.time;
             idx++;
