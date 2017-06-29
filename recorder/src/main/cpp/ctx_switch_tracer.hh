@@ -8,11 +8,9 @@
 
 class CtxSwitchTracer : public Process {
 public:
-    explicit CtxSwitchTracer(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap& _thread_map, ProfileSerializingWriter& _serializer, std::uint32_t _max_stack_depth, ProbPct& _prob_pct, std::uint8_t _noctx_cov_pct, std::uint64_t _latency_threshold_ns, bool _track_wakeup_lag, bool _use_global_clock, bool _track_syscall, const char* listener_socket_path, const char* proc);
+    explicit CtxSwitchTracer(JavaVM *_jvm, jvmtiEnv *_jvmti, ThreadMap& _thread_map, ProfileSerializingWriter& _serializer, std::uint32_t _max_stack_depth, ProbPct& _prob_pct, std::uint8_t _noctx_cov_pct, std::uint64_t _latency_threshold_ns, bool _track_wakeup_lag, bool _use_global_clock, bool _track_syscall, const char* listener_socket_path, const char* proc, std::function<void()>& _fail_work);
 
     ~CtxSwitchTracer();
-
-    void start(JNIEnv* env);
 
     void run();
 
@@ -25,7 +23,13 @@ public:
 private:
     void connect_tracer(const char* listener_socket_path, const char* proc);
 
+    ThreadMap& thread_map;
+
     std::atomic<bool> do_stop;
+
+    std::function<void()>& fail_work;
+
+    int trace_conn;
 
     metrics::Ctr& s_c_peer_disconnected;
 
@@ -39,9 +43,9 @@ private:
 
     metrics::Mtr& s_m_events_received;
 
-    int trace_conn;
-
     ThdProcP thd_proc;
+
+    std::mutex send_mutex;
 
     DISALLOW_COPY_AND_ASSIGN(CtxSwitchTracer);
 };

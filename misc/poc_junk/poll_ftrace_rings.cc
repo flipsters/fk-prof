@@ -101,8 +101,8 @@ std::int64_t r_i64(std::uint8_t** ev_buff) {
 
 #define ID_SYS_EXIT 16
 #define ID_SYS_ENTER 17
-#define ID_SCHED_SWITCH 232
-#define ID_SCHED_WAKEUP 234
+#define ID_SCHED_SWITCH 273
+#define ID_SCHED_WAKEUP 275
 
 template <typename T> T* read(std::uint8_t** ev_buff) {
     auto p = reinterpret_cast<T*>(*ev_buff);
@@ -167,7 +167,7 @@ void parse(std::uint8_t* ev_buff, const PgHeader& pg_hdr, int cpu) {
         if (fhp->type_len == 0) {
             auto arr_0 = r_u32(&ev_buff);
             ts += fhp->time_delta;
-            handle_event(&ev_buff, arr_0, ts, cpu);
+            handle_event(&ev_buff, arr_0 - sizeof(arr_0), ts, cpu);
         } else if (fhp->type_len <= RINGBUF_TYPE_DATA_TYPE_LEN_MAX) {
             std::uint32_t len = fhp->type_len;
             len <<= 2;
@@ -179,8 +179,9 @@ void parse(std::uint8_t* ev_buff, const PgHeader& pg_hdr, int cpu) {
                 return;
             }
             auto arr_0 = r_u32(&ev_buff);
-            ev_buff += arr_0;
+            ev_buff += (arr_0 - sizeof(arr_0));
             ts += fhp->time_delta;
+            std::cerr << "Padding ate: " << arr_0 << " bytes, curr pos: " << static_cast<void*>(ev_buff) << "\n";
         } else if (fhp->type_len == RINGBUF_TYPE_TIME_EXTEND) {
             auto arr_0 = r_u32(&ev_buff);
             std::uint64_t time_delta = arr_0;

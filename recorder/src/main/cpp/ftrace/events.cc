@@ -286,6 +286,7 @@ std::size_t ftrace::EventReader::read(std::int32_t cpu, std::uint64_t timestamp_
             std::uint32_t arr_0;
             MARK_CONSUMED(r_u32(buff, remaining, arr_0));
             timestamp_ns += fhp->time_delta;
+            arr_0 -= sizeof(arr_0);
             assert(remaining >= arr_0);
             MARK_CONSUMED(read_payload(buff, arr_0, timestamp_ns, cpu));
         } else if (fhp->type_len <= RINGBUF_TYPE_DATA_TYPE_LEN_MAX) {
@@ -301,6 +302,7 @@ std::size_t ftrace::EventReader::read(std::int32_t cpu, std::uint64_t timestamp_
             }
             std::uint32_t arr_0;
             MARK_CONSUMED(r_u32(buff, remaining, arr_0));
+            arr_0 -= sizeof(arr_0);
             assert(remaining >= arr_0);
             MARK_CONSUMED(arr_0);
             timestamp_ns += fhp->time_delta;
