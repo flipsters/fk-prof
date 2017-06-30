@@ -30,5 +30,5 @@ before_script:
   - pushd cityhash && git checkout 8af9b8c2b889d80c22d6bc26ba0df1afb79a30db && ./configure && make all check CXXFLAGS="-g -O3" && sudo make install && sudo ldconfig && popd
 script:
   - pushd recorder && cmake CMakeLists.txt && make && popd
-  - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+  - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V -q
   - mvn test -B
