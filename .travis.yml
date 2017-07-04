@@ -31,4 +31,4 @@ before_script:
 script:
   - pushd recorder && cmake CMakeLists.txt && make && popd
   - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V -q
-  - mvn test -B
+  - mvn test -B --projects '!e2etest'
