@@ -2,10 +2,6 @@ language: java
 jdk:
   - oraclejdk8
 
-branches:
-  only:
-  - eval-travis-ci
-
 dist: trusty
 group: edge
 
