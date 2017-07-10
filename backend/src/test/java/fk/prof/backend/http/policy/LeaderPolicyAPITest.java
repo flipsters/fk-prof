@@ -170,7 +170,7 @@ public class LeaderPolicyAPITest {
         CompletableFuture<Void> f3 = new CompletableFuture<>();
 
         client.put(leaderPort, "localhost", ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
-            context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.CREATED.code());
+            context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
             httpClientResponse.bodyHandler(buffer -> {
                 try {
                     context.assertEquals(buffer, ProtoUtil.buildBufferFromProto(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),1)));
