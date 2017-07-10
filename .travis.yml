@@ -22,7 +22,7 @@ before_script:
   - pushd libcuckoo && cmake . && sudo make install && popd
   - git clone https://github.com/janmejay/medida.git
   - pushd medida && cmake CMakeLists.txt && sudo make install && popd
-  - ldconfig
+  - sudo ldconfig
 script:
   - pushd recorder && cmake CMakeLists.txt && make && popd
   - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V -q
