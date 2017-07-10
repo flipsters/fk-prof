@@ -19,7 +19,7 @@ install:
   - sudo mv libelf.pc /usr/lib/pkgconfig/libelf.pc
 before_script:
   - git clone https://github.com/efficient/libcuckoo.git
-  - pushd libcuckoo && git checkout v0.2 && cmake . && sudo make install && popd
+  - pushd libcuckoo && cmake . && sudo make install && popd
   - git clone https://github.com/janmejay/medida.git
   - pushd medida && cmake CMakeLists.txt && sudo make install && popd
 script:
