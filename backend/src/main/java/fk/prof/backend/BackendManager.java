@@ -118,7 +118,7 @@ public class BackendManager {
 
           BackendAssociationStore backendAssociationStore = createBackendAssociationStore(vertx, curatorClient);
 
-          PolicyStore policyStore = createPolicyStoreAPI(vertx, curatorClient);
+          PolicyStore policyStore = createPolicyStore(vertx, curatorClient);
           VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore);
           Runnable leaderElectedTask = createLeaderElectedTask(vertx, leaderHttpVerticleDeployer, backendDeployments, backendAssociationStore, policyStore);
 
@@ -200,7 +200,7 @@ public class BackendManager {
         loadReportIntervalInSeconds, loadMissTolerance, new ProcessGroupCountBasedBackendComparator());
   }
 
-  private PolicyStore createPolicyStoreAPI(Vertx vertx, CuratorFramework curatorClient) {
+  private PolicyStore createPolicyStore(Vertx vertx, CuratorFramework curatorClient) {
     return new ZookeeperBasedPolicyStore(vertx, curatorClient, config.getPolicyBaseDir(), config.getPolicyVersion());
   }
 

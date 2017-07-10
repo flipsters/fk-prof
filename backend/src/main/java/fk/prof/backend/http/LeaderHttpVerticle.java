@@ -72,15 +72,15 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, apiPathForGetWork,
         BodyHandler.create().setBodyLimit(1024 * 100), this::handleGetWork);
 
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER_GET_APPIDS, this::handleGetAppIds);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER_GET_CLUSTERIDS_GIVEN_APPID, this::handleGetClusterIds);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER_GET_PROCNAMES_GIVEN_APPID_CLUSTERID, this::handleGetProcNames);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER_GET_APPS, this::handleGetAppIds);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER_GET_CLUSTERS_FOR_APP, this::handleGetClusterIds);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER_GET_PROCS_FOR_APP_CLUSTER, this::handleGetProcNames);
 
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER_GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, this::handleGetPolicy);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT, ApiPathConstants.LEADER_PUT_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
-        BodyHandler.create().setBodyLimit(1024), this::handleUpdatePolicy);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.LEADER_POST_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
-        BodyHandler.create().setBodyLimit(1024), this::handleCreatePolicy);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.LEADER_GET_POLICY_FOR_APP_CLUSTER_PROC, this::handleGetPolicy);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT, ApiPathConstants.LEADER_PUT_POLICY_FOR_APP_CLUSTER_PROC,
+        BodyHandler.create().setBodyLimit(1024 * 10), this::handleUpdatePolicy);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.LEADER_POST_POLICY_FOR_APP_CLUSTER_PROC,
+        BodyHandler.create().setBodyLimit(1024 * 10), this::handleCreatePolicy);
 
     return router;
   }
@@ -98,10 +98,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
   private void handleGetClusterIds(RoutingContext context) {
     try {
       final String appId = context.request().getParam("appId");
-      String prefix = context.request().getParam("prefix");
-      if (prefix == null) {
-        prefix = "";
-      }
+      final String prefix = context.request().getParam("prefix");
       context.response().end(Json.encode(policyStore.getClusterIds(appId, prefix)));
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
@@ -113,10 +110,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     try {
       final String appId = context.request().getParam("appId");
       final String clusterId = context.request().getParam("clusterId");
-      String prefix = context.request().getParam("prefix");
-      if (prefix == null) {
-        prefix = "";
-      }
+      final String prefix = context.request().getParam("prefix");
       context.response().end(Json.encode(policyStore.getProcNames(appId, clusterId, prefix)));
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
@@ -216,7 +210,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
         if (recordingPolicy == null) {
           mtrPolicyMiss.mark();
           context.response().setStatusCode(400);
-          context.response().end("Policy not found for process_group" + RecorderProtoUtil.processGroupCompactRepr(processGroup));
+          context.response().end("Policy not found for process group " + RecorderProtoUtil.processGroupCompactRepr(processGroup));
         } else {
           context.response().end(ProtoUtil.buildBufferFromProto(recordingPolicy));
         }
@@ -229,10 +223,10 @@ public class LeaderHttpVerticle extends AbstractVerticle {
 
   private void handleGetPolicy(RoutingContext context) {
     try {
-      Recorder.ProcessGroup pG = parseProcessGroup(context);
-      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = policyStore.getVersionedPolicy(pG);
+      Recorder.ProcessGroup pg = parseProcessGroup(context);
+      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = policyStore.getVersionedPolicy(pg);
       if (versionedPolicyDetails == null) {
-        context.response().setStatusCode(400).end("Policy not found for ProcessGroup " + RecorderProtoUtil.processGroupCompactRepr(pG));
+        context.response().setStatusCode(400).end("Policy not found for process group " + RecorderProtoUtil.processGroupCompactRepr(pg));
       } else {
         context.response().end(ProtoUtil.buildBufferFromProto(versionedPolicyDetails));
       }
@@ -244,9 +238,9 @@ public class LeaderHttpVerticle extends AbstractVerticle {
 
   private void handleCreatePolicy(RoutingContext context) {
     try {
-      Recorder.ProcessGroup pG = parseProcessGroup(context);
-      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionedPolicyFromPayload(context);
-      policyStore.createVersionedPolicy(pG, versionedPolicyDetails).setHandler(ar -> setResponse(ar, context));
+      Recorder.ProcessGroup pg = parseProcessGroup(context);
+      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = ProtoUtil.buildProtoFromBuffer(PolicyDTO.VersionedPolicyDetails.parser(), context.getBody());
+      policyStore.createVersionedPolicy(pg, versionedPolicyDetails).setHandler(ar -> setResponse(ar, context, 201));
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
       HttpHelper.handleFailure(context, httpFailure);
@@ -255,19 +249,19 @@ public class LeaderHttpVerticle extends AbstractVerticle {
 
   private void handleUpdatePolicy(RoutingContext context) {
     try {
-      Recorder.ProcessGroup pG = parseProcessGroup(context);
-      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionedPolicyFromPayload(context);
-      policyStore.updateVersionedPolicy(pG, versionedPolicyDetails).setHandler(ar -> setResponse(ar, context));
+      Recorder.ProcessGroup pg = parseProcessGroup(context);
+      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = ProtoUtil.buildProtoFromBuffer(PolicyDTO.VersionedPolicyDetails.parser(), context.getBody());
+      policyStore.updateVersionedPolicy(pg, versionedPolicyDetails).setHandler(ar -> setResponse(ar, context, 200));
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
       HttpHelper.handleFailure(context, httpFailure);
     }
   }
 
-  private void setResponse(AsyncResult<? extends AbstractMessage> ar, RoutingContext context){
+  private void setResponse(AsyncResult<? extends AbstractMessage> ar, RoutingContext context, int statusCode){
     if (ar.succeeded()) {
       try {
-        context.response().setStatusCode(201).end(ProtoUtil.buildBufferFromProto(ar.result()));
+        context.response().setStatusCode(statusCode).end(ProtoUtil.buildBufferFromProto(ar.result()));
       } catch (IOException ex) {
         HttpFailure httpFailure = HttpFailure.failure(ex);
         HttpHelper.handleFailure(context, httpFailure);
@@ -278,15 +272,10 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     }
   }
 
-  private PolicyDTO.VersionedPolicyDetails parseVersionedPolicyFromPayload(RoutingContext context) throws Exception {
-    byte[] payload = context.getBody().getBytes();
-    return PolicyDTO.VersionedPolicyDetails.parseFrom(payload);
-  }
-
-  private Recorder.ProcessGroup parseProcessGroup(RoutingContext context) throws Exception {
-    String appId = context.request().getParam("appId");
-    String clusterId = context.request().getParam("clusterId");
-    String procName = context.request().getParam("procName");
+  private Recorder.ProcessGroup parseProcessGroup(RoutingContext context) {
+    final String appId = context.request().getParam("appId");
+    final String clusterId = context.request().getParam("clusterId");
+    final String procName = context.request().getParam("procName");
 
     return Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).setProcName(procName).build();
   }

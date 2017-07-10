@@ -106,14 +106,14 @@ public class BackendHttpVerticle extends AbstractVerticle {
 
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_HEALTHCHECK, this::handleGetHealthCheck);
 
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_APPIDS, this::proxyToLeader);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_CLUSTERIDS_GIVEN_APPID, this::proxyToLeader);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_PROCNAMES_GIVEN_APPID_CLUSTERID, this::proxyToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_APPS, this::proxyToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_CLUSTERS_FOR_APP, this::proxyToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_PROCS_FOR_APP_CLUSTER, this::proxyToLeader);
 
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, this::proxyToLeader);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT, ApiPathConstants.BACKEND_PUT_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_POLICY_FOR_APP_CLUSTER_PROC, this::proxyToLeader);
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT, ApiPathConstants.BACKEND_PUT_POLICY_FOR_APP_CLUSTER_PROC,
             BodyHandler.create().setBodyLimit(1024 * 10), this::proxyToLeader);
-    HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.BACKEND_POST_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
+    HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.BACKEND_POST_POLICY_FOR_APP_CLUSTER_PROC,
             BodyHandler.create().setBodyLimit(1024 * 10), this::proxyToLeader);
 
     return router;
@@ -233,7 +233,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
 
         //Proxy request to leader if self(backend) is not associated with the recorder
         makeRequestToLeader(leaderDetail, HttpMethod.POST, ApiPathConstants.BACKEND_POST_ASSOCIATION, recorderInfoAsBuffer, true)
-          .setHandler(ar -> handleLeaderResponse(context, ar));
+          .setHandler(ar -> proxyResponseFromLeader(context, ar));
       } catch (Exception ex) {
         HttpFailure httpFailure = HttpFailure.failure(ex);
         HttpHelper.handleFailure(context, httpFailure);
@@ -282,7 +282,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
     if (leaderDetail != null) {
       try {
         makeRequestToLeader(leaderDetail, context.request().method(),  context.normalisedPath(), context.getBody(), false)
-                .setHandler(ar -> handleLeaderResponse(context, ar));
+                .setHandler(ar -> proxyResponseFromLeader(context, ar));
       } catch (Exception ex) {
         HttpFailure httpFailure = HttpFailure.failure(ex);
         HttpHelper.handleFailure(context, httpFailure);
@@ -308,15 +308,15 @@ public class BackendHttpVerticle extends AbstractVerticle {
   }
 
   private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestToLeader(BackendDTO.LeaderDetail leaderDetail, HttpMethod method, String path, Buffer payloadAsBuffer, boolean withRetry) {
-    path = ApiPathConstants.LEADER + path;
-    if(withRetry){
+    path = ApiPathConstants.LEADER_API_PREFIX + path;
+    if (withRetry) {
       return httpClient.requestAsyncWithRetry(method, leaderDetail.getHost(), leaderDetail.getPort(), path, payloadAsBuffer);
-    }else{
+    } else {
       return httpClient.requestAsync(method, leaderDetail.getHost(), leaderDetail.getPort(), path, payloadAsBuffer);
     }
   }
 
-  private void handleLeaderResponse(RoutingContext context, AsyncResult<ProfHttpClient.ResponseWithStatusTuple> ar) {
+  private void proxyResponseFromLeader(RoutingContext context, AsyncResult<ProfHttpClient.ResponseWithStatusTuple> ar) {
     if(ar.succeeded()) {
       context.response().setStatusCode(ar.result().getStatusCode());
       context.response().end(ar.result().getResponse());

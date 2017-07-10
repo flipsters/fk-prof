@@ -37,7 +37,7 @@ public class PolicyDTOProtoUtil {
             case monitor_wait_work:
                 return BackendDTO.WorkType.monitor_wait_work;
             default:
-                return BackendDTO.WorkType.cpu_sample_work;
+                return null;
         }
     }
 
