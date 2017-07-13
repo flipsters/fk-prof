@@ -1,11 +1,12 @@
-import React, { Component, PropTypes } from 'react';
-import { connect } from 'react-redux';
-import Select from 'react-select';
+import React, {Component, PropTypes} from "react";
+import {connect} from "react-redux";
+import Select from "react-select";
 
-import fetchClustersAction from 'actions/ClusterActions';
-import safeTraverse from 'utils/safeTraverse';
-
-import styles from './ClusterSelectComponent.css';
+import fetchClustersAction from "actions/ClusterActions";
+import fetchPolicyClustersAction from "actions/PolicyClusterActions";
+import safeTraverse from "utils/safeTraverse";
+import debounce from "utils/debounce";
+import styles from "./ClusterSelectComponent.css";
 
 const noop = () => {};
 
@@ -13,20 +14,23 @@ class ClusterSelectComponent extends Component {
   componentDidMount () {
     const { app } = this.props;
     if (app) {
-      this.props.getClusters({ app });
+      this.props.isSettings? this.props.getPolicyClusters({ policyApp: app }): this.props.getClusters({ app });
     }
   }
 
   componentWillReceiveProps (nextProps) {
     if (nextProps.app !== this.props.app) {
-      this.props.getClusters({ app: nextProps.app });
+      this.props.isSettings? this.props.getPolicyClusters({ policyApp: nextProps.app }): this.props.getClusters({ app: nextProps.app });
     }
   }
 
   render () {
-    const { onChange, clusters } = this.props;
-    const clusterList = clusters.asyncStatus === 'SUCCESS'
-      ? clusters.data.map(c => ({ name: c })) : [];
+
+    const { onChange, clusters, policyClusters } = this.props;
+    const finalClusters = this.props.isSettings ? policyClusters: clusters;
+
+    const clusterList = finalClusters.asyncStatus === 'SUCCESS'
+      ? finalClusters.data.map(c => ({ name: c })) : [];
     const valueOption = this.props.value && { name: this.props.value };
     return (
       <div>
@@ -38,9 +42,10 @@ class ClusterSelectComponent extends Component {
           onChange={onChange || noop}
           labelKey="name"
           valueKey="name"
-          isLoading={clusters.asyncStatus === 'PENDING'}
+          onInputChange={debounce(this.props.isSettings ? this.props.getPolicyClusters: this.props.getClusters, 500)}
+          isLoading={finalClusters.asyncStatus === 'PENDING'}
           value={valueOption}
-          noResultsText={clusters.asyncStatus !== 'PENDING' ? 'No results found!' : 'Searching...'}
+          noResultsText={finalClusters.asyncStatus !== 'PENDING' ? 'No results found!' : 'Searching...'}
           placeholder="Type to search..."
         />
       </div>
@@ -50,18 +55,23 @@ class ClusterSelectComponent extends Component {
 
 const mapStateToProps = (state, ownProps) => ({
   clusters: safeTraverse(state, ['clusters', ownProps.app]) || {},
+  policyClusters: safeTraverse(state, ['policyClusters', ownProps.app]) || {}
 });
 
 const mapDispatchToProps = dispatch => ({
   getClusters: params => dispatch(fetchClustersAction(params)),
+  getPolicyClusters: params => dispatch(fetchPolicyClustersAction(params)),
 });
 
 ClusterSelectComponent.propTypes = {
   app: PropTypes.string,
   clusters: PropTypes.object.isRequired,
+  policyClusters: PropTypes.object.isRequired,
   getClusters: PropTypes.func.isRequired,
+  getPolicyClusters: PropTypes.func.isRequired,
   onChange: PropTypes.func,
   selectedCluster: PropTypes.string,
+  isSettings: PropTypes.bool.isRequired,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(ClusterSelectComponent);

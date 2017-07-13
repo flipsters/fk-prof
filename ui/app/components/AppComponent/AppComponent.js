@@ -1,13 +1,13 @@
-import React from 'react';
-import { withRouter } from 'react-router';
-import DateTime from 'react-datetime';
+import React from "react";
+import {withRouter} from "react-router";
+import DateTime from "react-datetime";
 
-import AppSelect from 'components/AppSelectComponent';
-import ClusterSelect from 'components/ClusterSelectComponent';
-import ProcSelect from 'components/ProcSelectComponent';
-import ProfileList from 'components/ProfileListComponent';
+import AppSelect from "components/AppSelectComponent";
+import ClusterSelect from "components/ClusterSelectComponent";
+import ProcSelect from "components/ProcSelectComponent";
+import ProfileList from "components/ProfileListComponent";
 
-import styles from './AppComponent.scss';
+import styles from "./AppComponent.scss";
 
 const AppComponent = (props) => {
   const selectedApp = props.location.query.app;
@@ -17,11 +17,15 @@ const AppComponent = (props) => {
   const end = start ? (new Date(start).getTime() + (24 * 3600 * 1000)) : '';
 
   const updateQueryParams = ({ pathname = '/', query }) => props.router.push({ pathname, query });
+  const updatePolicyQueryParams = ({ pathname = '/profiler/settings', query }) => props.router.push({ pathname, query });
   const updateAppQueryParam = o => updateQueryParams({ query: { app: o.name } });
-  const updatePolicyAppQueryParam = o => updateQueryParams({ query: { app: o.name } });
+  const updatePolicyAppQueryParam = o => updatePolicyQueryParams({ query: { app: o.name } });
 
   const updateClusterQueryParam = (o) => {
     updateQueryParams({ query: { app: selectedApp, cluster: o.name } });
+  };
+  const updatePolicyClusterQueryParam = (o) => {
+    updatePolicyQueryParams({ query: { app: selectedApp, cluster: o.name } });
   };
   const updateProcQueryParam = (o) => {
     updateQueryParams({ query: { app: selectedApp, cluster: selectedCluster, proc: o.name } });
@@ -52,8 +56,9 @@ const AppComponent = (props) => {
             {selectedApp && (
               <ClusterSelect
                 app={selectedApp}
-                onChange={updateClusterQueryParam}
+                onChange={isSettings? updatePolicyClusterQueryParam: updateClusterQueryParam}
                 value={selectedCluster}
+                isSettings={isSettings}
               />
             )}
           </div>
