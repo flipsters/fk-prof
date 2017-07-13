@@ -3,6 +3,7 @@ import { connect } from 'react-redux';
 import Select from 'react-select';
 
 import fetchAppsAction from 'actions/AppActions';
+import fetchPolicyAppsAction from 'actions/PolicyAppActions';
 import debounce from 'utils/debounce';
 import styles from './AppSelectComponent.css';
 
@@ -10,15 +11,16 @@ const noop = () => {};
 
 class AppSelectComponent extends React.Component {
   componentDidMount () {
-    this.props.getApps('');
+    this.props.isSettings ? this.props.getPolicyApps(''): this.props.getApps('');
   }
 
   render () {
-    const options = this.props.apps.asyncStatus === 'SUCCESS'
-      ? this.props.apps.data.map(a => ({ name: a })) : [];
+    const finalApps = this.props.isSettings ? this.props.policyApps: this.props.apps;
+    const options = finalApps.asyncStatus === 'SUCCESS'
+      ? finalApps.data.map(a => ({ name: a })) : [];
 
-    const noResultsText = this.props.apps.asyncStatus === 'SUCCESS'
-      && this.props.apps.data.length === 0 ? 'No results found!' : 'Searching...';
+    const noResultsText = finalApps.asyncStatus === 'SUCCESS'
+      && finalApps.data.length === 0 ? 'No results found!' : 'Searching...';
     const valueOption = this.props.value && { name: this.props.value };
     return (
       <div>
@@ -31,8 +33,8 @@ class AppSelectComponent extends React.Component {
           onChange={this.props.onChange || noop}
           labelKey="name"
           valueKey="name"
-          onInputChange={debounce(this.props.getApps, 500)}
-          isLoading={this.props.apps.asyncStatus === 'PENDING'}
+          onInputChange={debounce(this.props.isSettings ? this.props.getPolicyApps: this.props.getApps, 500)}
+          isLoading={finalApps.asyncStatus === 'PENDING'}
           noResultsText={noResultsText}
           placeholder="Type to search..."
         />
@@ -41,9 +43,10 @@ class AppSelectComponent extends React.Component {
   }
 }
 
-const mapStateToProps = state => ({ apps: state.apps });
+const mapStateToProps = state => ({ apps: state.apps, policyApps: state.policyApps });
 const mapDispatchToProps = dispatch => ({
   getApps: prefix => dispatch(fetchAppsAction(prefix)),
+  getPolicyApps: prefix => dispatch(fetchPolicyAppsAction(prefix))
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(AppSelectComponent);

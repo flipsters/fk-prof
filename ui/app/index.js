@@ -18,6 +18,7 @@ import store from './store';
 import Root from 'components/RootComponent';
 import App from 'components/AppComponent';
 import CPUSampling from 'components/CPUSamplingComponent';
+import Settings from 'components/SettingsComponent';
 import AggregatedProfileDataContainer from 'components/AggregatedProfileDataContainer';
 
 import './assets/styles/global.css';
@@ -27,6 +28,7 @@ const routes = (
     <IndexRedirect to="/profiler" />
     <Route path="/profiler" component={App}>
       <Route path="/profiler/profile-data/:traceName" component={AggregatedProfileDataContainer} />
+      <Route path="/profiler/settings" component={Settings}/>
     </Route>
     <Route path="/work-type/cpu_sample_work/:traceName" component={CPUSampling} />
   </Route>

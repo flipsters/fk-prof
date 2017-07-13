@@ -4,7 +4,7 @@ import { connect } from 'react-redux';
 
 import CPUSampling from 'components/CPUSamplingComponent';
 import safeTraverse from 'utils/safeTraverse';
-import styles from './AggregatedProfileDataContainer.css';
+import styles from './AggregatedProfileDataContainer.scss';
 
 const workTypeMap = {
   cpu_sample_work: {

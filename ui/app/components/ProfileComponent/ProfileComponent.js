@@ -6,7 +6,7 @@ import moment from 'moment';
 import $ from 'jquery';
 import Select from 'react-select';
 
-import styles from './ProfileComponent.css';
+import styles from './ProfileComponent.scss';
 import SubProfileStat from 'components/SubProfileStatComponent';
 
 class ProfileComponent extends React.Component {

@@ -14,7 +14,7 @@ const BaseComponent = Komponent => class extends Component {
 
 const RootComponent = props => (
   <div>
-    <Header color={props.location.pathname.includes('settings')? '#898984': 'rgb(63,81,181)'}/>
+    <Header isSettingsPage={props.location.pathname.includes('settings')}/>
     <main style={{ paddingTop: 64, position: 'relative', zIndex: 1 }}>
       <div className="page-content">
         { props.children }

@@ -1,50 +1,26 @@
 import React from "react";
-import {connect} from "react-redux";
-import Select from "react-select";
 
-import fetchAppsAction from "actions/AppActions";
-import debounce from "utils/debounce";
-import styles from "./SettingsComponent.css";
-
-const noop = () => {};
-
-class SettingsComponent extends React.Component {
-  componentDidMount () {
-    this.props.getApps('');
-  }
+export default class SettingsComponent extends React.Component {
 
   render () {
-    const options = this.props.apps.asyncStatus === 'SUCCESS'
-      ? this.props.apps.data.map(a => ({ name: a })) : [];
-
-    const noResultsText = this.props.apps.asyncStatus === 'SUCCESS'
-      && this.props.apps.data.length === 0 ? 'No results found!' : 'Searching...';
-    const valueOption = this.props.value && { name: this.props.value };
-    return (
-      <div>
-        <label className={styles.label} htmlFor="appid">App</label>
-        <Select
-          clearable={false}
-          id="appid"
-          options={options}
-          value={valueOption}
-          onChange={this.props.onChange || noop}
-          labelKey="name"
-          valueKey="name"
-          onInputChange={debounce(this.props.getApps, 500)}
-          isLoading={this.props.apps.asyncStatus === 'PENDING'}
-          noResultsText={noResultsText}
-          placeholder="Type to search..."
-        />
+    return(<div className="demo-card-wide mdl-card mdl-shadow--2dp">
+      <div className="mdl-card__title">
+        <h2 className="mdl-card__title-text">Welcome</h2>
       </div>
-    );
+      <div className="mdl-card__supporting-text">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+        Mauris sagittis pellentesque lacus eleifend lacinia...
+      </div>
+      <div className="mdl-card__actions mdl-card--border">
+        <a className="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect">
+          Get Started
+        </a>
+      </div>
+      <div className="mdl-card__menu">
+        <button className="mdl-button mdl-button--icon mdl-js-button mdl-js-ripple-effect">
+          <i className="material-icons">share</i>
+        </button>
+      </div>
+    </div>);
   }
 }
-
-const mapStateToProps = state => ({ apps: state.apps });
-const mapDispatchToProps = dispatch => ({
-  getApps: prefix => dispatch(fetchAppsAction(prefix)),
-});
-
-export default connect(mapStateToProps, mapDispatchToProps)(SettingsComponent);
-

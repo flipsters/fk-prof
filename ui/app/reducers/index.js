@@ -5,6 +5,7 @@ import clusters from 'reducers/ClusterReducer';
 import procs from 'reducers/ProcReducer';
 import profiles from 'reducers/ProfilesReducer';
 import aggregatedProfileData from 'reducers/AggregatedProfileDataReducer';
+import policyApps from 'reducers/PolicyAppReducer';
 
 export default combineReducers({
   apps,
@@ -12,4 +13,5 @@ export default combineReducers({
   procs,
   profiles,
   aggregatedProfileData,
+  policyApps,
 });

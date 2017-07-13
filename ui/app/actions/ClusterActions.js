@@ -21,7 +21,7 @@ export default function fetchClustersAction ({ app, query }) {
   return (dispatch) => {
     dispatch(getClustersRequestAction({ req: { app } }));
     const queryParams = objectToQueryParams(query);
-    const baseUrl = `/api/cluster/${app}`;
+    const baseUrl = `/api/clusterIds/${app}`;
     const url = queryParams ? `${baseUrl}?${queryParams}` : baseUrl;
     return http.get(url)
       .then(res => dispatch(getClustersSuccessAction({ res, req: { app } })))

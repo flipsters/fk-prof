@@ -1,19 +1,25 @@
 import React from "react";
+import { Link } from 'react-router';
 
-const Header = props => (
-  <div className="mdl-layout mdl-js-layout mdl-layout--fixed-header" >
-    <header className="mdl-layout__header">
-      <div className="mdl-layout__header-row" style={{backgroundColor: props.color}}>
-        <span className="mdl-layout-title">Flipkart Profiler</span>
-        <div className="mdl-layout-spacer" />
-        <a href={`/profiler/settings`}>
-          <button className="mdl-button mdl-js-button mdl-button--icon" style={{color: "white"}}>
-            <span className="material-icons">settings</span>
-          </button>
-        </a>
-      </div>
-    </header>
-  </div>
+const Header = props => {
+  return (
+    <div className="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+      <header className="mdl-layout__header">
+        <div className="mdl-layout__header-row" style={{backgroundColor: props.isSettingsPage ? '#898984': 'rgb(63,81,181)'}}>
+          <Link to={loc => ({ pathname: '/profiler', query: ''})} style={{ color: "white", textDecoration : "none"}}>
+          <span className="mdl-layout-title" >Flipkart Profiler</span>
+          </Link>
+          <div className="mdl-layout-spacer"/>
+          { !props.isSettingsPage &&
+          <Link to={loc => ({pathname: '/profiler/settings', query: ''})}>
+            <button className="mdl-button mdl-js-button mdl-button--icon" style={{color: "white"}}>
+              <i className="material-icons">settings</i>
+            </button>
+          </Link>
+          }
+        </div>
+      </header>
+    </div>
   );
-
+}
 export default Header;
