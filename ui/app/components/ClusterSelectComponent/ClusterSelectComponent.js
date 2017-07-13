@@ -70,7 +70,6 @@ ClusterSelectComponent.propTypes = {
   getClusters: PropTypes.func.isRequired,
   getPolicyClusters: PropTypes.func.isRequired,
   onChange: PropTypes.func,
-  selectedCluster: PropTypes.string,
   isSettings: PropTypes.bool.isRequired,
 };
 

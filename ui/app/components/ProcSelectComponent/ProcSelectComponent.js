@@ -1,11 +1,12 @@
-import React, { Component, PropTypes } from 'react';
-import { connect } from 'react-redux';
-import Select from 'react-select';
+import React, {Component, PropTypes} from "react";
+import {connect} from "react-redux";
+import Select from "react-select";
 
-import fetchProcsAction from 'actions/ProcActions';
-import safeTraverse from 'utils/safeTraverse';
-
-import styles from './ProcSelectComponent.css';
+import fetchProcsAction from "actions/ProcActions";
+import fetchPolicyProcsAction from "actions/PolicyProcActions";
+import safeTraverse from "utils/safeTraverse";
+import debounce from "utils/debounce";
+import styles from "./ProcSelectComponent.css";
 
 const noop = () => {};
 
@@ -13,7 +14,7 @@ class ProcSelectComponent extends Component {
   componentDidMount () {
     const { cluster, app } = this.props;
     if (cluster && app) {
-      this.props.getProcs({ cluster, app });
+      this.props.isSettings? this.props.getPolicyProcs({ policyCluster: cluster, policyApp: app }): this.props.getProcs({ cluster, app });
     }
   }
 
@@ -21,17 +22,25 @@ class ProcSelectComponent extends Component {
     const didAppChange = nextProps.app !== this.props.app;
     const didClusterChange = nextProps.cluster !== this.props.cluster;
     if (didAppChange || didClusterChange) {
-      this.props.getProcs({
-        app: nextProps.app,
-        cluster: nextProps.cluster,
-      });
+      if(this.props.isSettings) {
+        this.props.getProcs({
+          app: nextProps.app,
+          cluster: nextProps.cluster,
+        });
+      }else{
+        this.props.getPolicyProcs({
+          policyApp: nextProps.app,
+          policyCluster: nextProps.cluster,
+        });
+      }
     }
   }
 
   render () {
-    const { onChange, procs } = this.props;
-    const procList = procs.asyncStatus === 'SUCCESS'
-      ? procs.data.map(c => ({ name: c })) : [];
+    const { onChange, procs, policyProcs } = this.props;
+    const finalProcs = this.props.isSettings? policyProcs: procs;
+    const procList = finalProcs.asyncStatus === 'SUCCESS'
+      ? finalProcs.data.map(c => ({ name: c })) : [];
     const valueOption = this.props.value && { name: this.props.value };
     return (
       <div>
@@ -43,9 +52,10 @@ class ProcSelectComponent extends Component {
           onChange={onChange || noop}
           labelKey="name"
           valueKey="name"
-          isLoading={procs.asyncStatus === 'PENDING'}
+          onInputChange={debounce(this.props.isSettings ? this.props.getPolicyProcs: this.props.getProcs, 500)}
+          isLoading={finalProcs.asyncStatus === 'PENDING'}
           value={valueOption}
-          noResultsText={procs.asyncStatus !== 'PENDING' ? 'No results found!' : 'Searching...'}
+          noResultsText={finalProcs.asyncStatus !== 'PENDING' ? 'No results found!' : 'Searching...'}
           placeholder="Type to search..."
         />
       </div>
@@ -55,19 +65,24 @@ class ProcSelectComponent extends Component {
 
 const mapStateToProps = (state, ownProps) => ({
   procs: safeTraverse(state, ['procs', ownProps.cluster]) || {},
+  policyProcs: safeTraverse(state, ['policyProcs', ownProps.cluster]) || {},
 });
 
 const mapDispatchToProps = dispatch => ({
   getProcs: params => dispatch(fetchProcsAction(params)),
+  getPolicyProcs: params => dispatch(fetchPolicyProcsAction(params)),
 });
 
 ProcSelectComponent.propTypes = {
   app: PropTypes.string,
   cluster: PropTypes.string,
   procs: PropTypes.object.isRequired,
+  policyProcs: PropTypes.object.isRequired,
   getProcs: PropTypes.func.isRequired,
+  getPolicyProcs: PropTypes.func.isRequired,
   onChange: PropTypes.func,
   value: PropTypes.string,
+  isSettings: PropTypes.bool.isRequired,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProcSelectComponent);

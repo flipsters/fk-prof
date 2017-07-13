@@ -7,6 +7,7 @@ import profiles from "reducers/ProfilesReducer";
 import aggregatedProfileData from "reducers/AggregatedProfileDataReducer";
 import policyApps from "reducers/PolicyAppReducer";
 import policyClusters from "reducers/PolicyClusterReducer";
+import policyProcs from "reducers/PolicyProcReducer";
 
 export default combineReducers({
   apps,
@@ -16,4 +17,5 @@ export default combineReducers({
   aggregatedProfileData,
   policyApps,
   policyClusters,
+  policyProcs,
 });

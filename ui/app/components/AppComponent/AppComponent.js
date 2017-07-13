@@ -30,6 +30,9 @@ const AppComponent = (props) => {
   const updateProcQueryParam = (o) => {
     updateQueryParams({ query: { app: selectedApp, cluster: selectedCluster, proc: o.name } });
   };
+  const updatePolicyProcQueryParam = (o) => {
+    updatePolicyQueryParams({ query: { app: selectedApp, cluster: selectedCluster, proc: o.name } });
+  };
   const updateStartTime = (dateTimeObject) => {
     updateQueryParams({
       query: {
@@ -67,13 +70,13 @@ const AppComponent = (props) => {
               <ProcSelect
                 app={selectedApp}
                 cluster={selectedCluster}
-                onChange={updateProcQueryParam}
+                onChange={isSettings? updatePolicyProcQueryParam: updateProcQueryParam}
                 value={selectedProc}
+                isSettings={isSettings}
               />
             )}
           </div>
-          {
-            selectedApp && selectedCluster && selectedProc && (
+          {!isSettings && selectedApp && selectedCluster && selectedProc && (
               <div className="mdl-cell mdl-cell--3-col">
                 <label className={styles['label']} htmlFor="startTime">Date</label>
                 <div>
@@ -89,8 +92,7 @@ const AppComponent = (props) => {
             )
           }
         </div>
-        {
-          selectedProc && start && end && (
+        {!isSettings && selectedProc && start && end && (
             <div className="mdl-grid">
               <div className="mdl-cell mdl-cell--3-col">
                 <ProfileList
