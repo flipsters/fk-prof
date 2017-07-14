@@ -5,18 +5,17 @@ import clusters from "reducers/ClusterReducer";
 import procs from "reducers/ProcReducer";
 import profiles from "reducers/ProfilesReducer";
 import aggregatedProfileData from "reducers/AggregatedProfileDataReducer";
+import policyApps from "reducers/PolicyAppReducer";
 import policyClusters from "reducers/PolicyClusterReducer";
 import policyProcs from "reducers/PolicyProcReducer";
-import isPolicyPage from "reducers/IsPolicyPageReducer";
 
 export default combineReducers({
-  apps: apps({isSettings: false}),
-  policyApps: apps({isSettings: true}),
+  apps,
   clusters,
   procs,
   profiles,
   aggregatedProfileData,
+  policyApps,
   policyClusters,
   policyProcs,
-  isPolicyPage,
 });

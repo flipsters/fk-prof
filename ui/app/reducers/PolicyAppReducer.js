@@ -1,8 +1,11 @@
+/**
+ * Created by rohit.patiyal on 12/07/17.
+ */
 import {
-  GET_APPS_REQUEST,
-  GET_APPS_SUCCESS,
-  GET_APPS_FAILURE,
-} from 'actions/AppActions';
+  GET_POLICY_APPS_REQUEST,
+  GET_POLICY_APPS_SUCCESS,
+  GET_POLICY_APPS_FAILURE,
+} from 'actions/PolicyAppActions';
 
 const INITIAL_STATE = {
   data: [],
@@ -11,13 +14,13 @@ const INITIAL_STATE = {
 
 export default function (state = INITIAL_STATE, action) {
   switch (action.type) {
-    case GET_APPS_REQUEST:
+    case GET_POLICY_APPS_REQUEST:
       return { ...state, asyncStatus: 'PENDING' };
 
-    case GET_APPS_SUCCESS:
+    case GET_POLICY_APPS_SUCCESS:
       return { data: action.data, asyncStatus: 'SUCCESS' };
 
-    case GET_APPS_FAILURE:
+    case GET_POLICY_APPS_FAILURE:
       return { ...state, asyncStatus: 'ERROR' };
 
     default: return state;
