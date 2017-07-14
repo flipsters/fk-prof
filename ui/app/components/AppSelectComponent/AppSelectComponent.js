@@ -1,17 +1,22 @@
-import React from 'react';
-import { connect } from 'react-redux';
-import Select from 'react-select';
+import React from "react";
+import {connect} from "react-redux";
+import Select from "react-select";
 
-import fetchAppsAction from 'actions/AppActions';
-import fetchPolicyAppsAction from 'actions/PolicyAppActions';
-import debounce from 'utils/debounce';
-import styles from './AppSelectComponent.css';
+import fetchAppsAction from "actions/AppActions";
+import fetchPolicyAppsAction from "actions/PolicyAppActions";
+import debounce from "utils/debounce";
+import styles from "./AppSelectComponent.css";
 
 const noop = () => {};
 
 class AppSelectComponent extends React.Component {
   componentDidMount () {
     this.props.isSettings ? this.props.getPolicyApps(''): this.props.getApps('');
+  }
+  componentWillReceiveProps (nextProps) {
+    if(nextProps.isSettings !== this.props.isSettings) {
+      nextProps.isSettings ? this.props.getPolicyApps('') : this.props.getApps('');
+    }
   }
 
   render () {
