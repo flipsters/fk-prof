@@ -8,6 +8,7 @@ import ProcSelect from "components/ProcSelectComponent";
 import ProfileList from "components/ProfileListComponent";
 
 import styles from "./AppComponent.scss";
+import SettingsComponent from "../SettingsComponent/SettingsComponent";
 
 const AppComponent = (props) => {
   const selectedApp = props.location.query.app;
@@ -108,6 +109,19 @@ const AppComponent = (props) => {
               </div>
             </div>
           )}
+         {isSettings && selectedProc && (
+           <div className="mdl-grid">
+             <div className="mdl-cell">
+               <SettingsComponent
+                 app={selectedApp}
+                 cluster={selectedCluster}
+                 proc={selectedProc}
+                 start={start}
+                 end={end}
+               />
+             </div>
+           </div>
+         )}
       </div>
 
     </div>
