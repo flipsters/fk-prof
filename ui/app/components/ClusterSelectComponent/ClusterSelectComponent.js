@@ -14,20 +14,20 @@ class ClusterSelectComponent extends Component {
   componentDidMount () {
     const { app } = this.props;
     if (app) {
-      this.props.isSettings? this.props.getPolicyClusters({ policyApp: app }): this.props.getClusters({ app });
+      this.props.isPolicyPage? this.props.getPolicyClusters({ policyApp: app }): this.props.getClusters({ app });
     }
   }
 
   componentWillReceiveProps (nextProps) {
     if (nextProps.app !== this.props.app) {
-      this.props.isSettings? this.props.getPolicyClusters({ policyApp: nextProps.app }): this.props.getClusters({ app: nextProps.app });
+      this.props.isPolicyPage? this.props.getPolicyClusters({ policyApp: nextProps.app }): this.props.getClusters({ app: nextProps.app });
     }
   }
 
   render () {
 
     const { onChange, clusters, policyClusters } = this.props;
-    const finalClusters = this.props.isSettings ? policyClusters: clusters;
+    const finalClusters = this.props.isPolicyPage ? policyClusters: clusters;
 
     const clusterList = finalClusters.asyncStatus === 'SUCCESS'
       ? finalClusters.data.map(c => ({ name: c })) : [];
@@ -42,7 +42,7 @@ class ClusterSelectComponent extends Component {
           onChange={onChange || noop}
           labelKey="name"
           valueKey="name"
-          onInputChange={debounce(this.props.isSettings ? this.props.getPolicyClusters: this.props.getClusters, 500)}
+          onInputChange={debounce(this.props.isPolicyPage ? this.props.getPolicyClusters: this.props.getClusters, 500)}
           isLoading={finalClusters.asyncStatus === 'PENDING'}
           value={valueOption}
           noResultsText={finalClusters.asyncStatus !== 'PENDING' ? 'No results found!' : 'Searching...'}
@@ -70,7 +70,7 @@ ClusterSelectComponent.propTypes = {
   getClusters: PropTypes.func.isRequired,
   getPolicyClusters: PropTypes.func.isRequired,
   onChange: PropTypes.func,
-  isSettings: PropTypes.bool.isRequired,
+  isPolicyPage: PropTypes.bool.isRequired,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(ClusterSelectComponent);

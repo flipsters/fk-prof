@@ -14,7 +14,7 @@ const BaseComponent = Komponent => class extends Component {
 
 const RootComponent = props => (
   <div>
-    <Header isSettingsPage={props.location.pathname.includes('settings')}/>
+    <Header isPolicyPage={props.location.pathname.includes('policy')}/>
     <main style={{ paddingTop: 64, position: 'relative', zIndex: 1 }}>
       <div className="page-content">
         { props.children }

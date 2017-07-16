@@ -8,7 +8,7 @@ import ProcSelect from "components/ProcSelectComponent";
 import ProfileList from "components/ProfileListComponent";
 
 import styles from "./AppComponent.scss";
-import SettingsComponent from "../SettingsComponent/SettingsComponent";
+import PolicyComponent from "../PolicyComponent/PolicyComponent";
 
 const AppComponent = (props) => {
   const selectedApp = props.location.query.app;
@@ -18,7 +18,7 @@ const AppComponent = (props) => {
   const end = start ? (new Date(start).getTime() + (24 * 3600 * 1000)) : '';
 
   const updateQueryParams = ({ pathname = '/', query }) => props.router.push({ pathname, query });
-  const updatePolicyQueryParams = ({ pathname = '/profiler/settings', query }) => props.router.push({ pathname, query });
+  const updatePolicyQueryParams = ({ pathname = '/profiler/policy', query }) => props.router.push({ pathname, query });
   const updateAppQueryParam = o => updateQueryParams({ query: { app: o.name } });
   const updatePolicyAppQueryParam = o => updatePolicyQueryParams({ query: { app: o.name } });
 
@@ -44,26 +44,26 @@ const AppComponent = (props) => {
       },
     });
   };
-  const isSettings = props.location.pathname.includes('settings');
-  const columnWidth = isSettings ? 4:3;
+  const isPolicyPage = props.location.pathname.includes('policy');
+  const columnWidth = isPolicyPage ? 4:3;
   return (
     <div>
        <div>
         <div className="mdl-grid">
           <div className={`mdl-cell mdl-cell--${columnWidth}-col`}>
             <AppSelect
-              onChange={isSettings? updatePolicyAppQueryParam: updateAppQueryParam}
+              onChange={isPolicyPage? updatePolicyAppQueryParam: updateAppQueryParam}
               value={selectedApp}
-              isSettings={isSettings}
+              isPolicyPage={isPolicyPage}
             />
           </div>
           <div className={`mdl-cell mdl-cell--${columnWidth}-col`}>
             {selectedApp && (
               <ClusterSelect
                 app={selectedApp}
-                onChange={isSettings? updatePolicyClusterQueryParam: updateClusterQueryParam}
+                onChange={isPolicyPage? updatePolicyClusterQueryParam: updateClusterQueryParam}
                 value={selectedCluster}
-                isSettings={isSettings}
+                isPolicyPage={isPolicyPage}
               />
             )}
           </div>
@@ -72,13 +72,13 @@ const AppComponent = (props) => {
               <ProcSelect
                 app={selectedApp}
                 cluster={selectedCluster}
-                onChange={isSettings? updatePolicyProcQueryParam: updateProcQueryParam}
+                onChange={isPolicyPage? updatePolicyProcQueryParam: updateProcQueryParam}
                 value={selectedProc}
-                isSettings={isSettings}
+                isPolicyPage={isPolicyPage}
               />
             )}
           </div>
-          {!isSettings && selectedApp && selectedCluster && selectedProc && (
+          {!isPolicyPage && selectedApp && selectedCluster && selectedProc && (
               <div className="mdl-cell mdl-cell--3-col">
                 <label className={styles['label']} htmlFor="startTime">Date</label>
                 <div>
@@ -94,7 +94,7 @@ const AppComponent = (props) => {
             )
           }
         </div>
-        {!isSettings && selectedProc && start && end && (
+        {!isPolicyPage && selectedProc && start && end && (
             <div className="mdl-grid">
               <div className="mdl-cell mdl-cell--3-col">
                 <ProfileList
@@ -110,10 +110,10 @@ const AppComponent = (props) => {
               </div>
             </div>
           )}
-         {isSettings && selectedProc && (
+         {isPolicyPage && selectedProc && (
            <div className="mdl-grid">
              <div className="mdl-cell">
-               <SettingsComponent
+               <PolicyComponent
                  app={selectedApp}
                  cluster={selectedCluster}
                  proc={selectedProc}

@@ -14,7 +14,7 @@ class ProcSelectComponent extends Component {
   componentDidMount () {
     const { cluster, app } = this.props;
     if (cluster && app) {
-      this.props.isSettings? this.props.getPolicyProcs({ policyCluster: cluster, policyApp: app }): this.props.getProcs({ cluster, app });
+      this.props.isPolicyPage? this.props.getPolicyProcs({ policyCluster: cluster, policyApp: app }): this.props.getProcs({ cluster, app });
     }
   }
 
@@ -22,7 +22,7 @@ class ProcSelectComponent extends Component {
     const didAppChange = nextProps.app !== this.props.app;
     const didClusterChange = nextProps.cluster !== this.props.cluster;
     if (didAppChange || didClusterChange) {
-      if(this.props.isSettings) {
+      if(this.props.isPolicyPage) {
         this.props.getProcs({
           app: nextProps.app,
           cluster: nextProps.cluster,
@@ -38,7 +38,7 @@ class ProcSelectComponent extends Component {
 
   render () {
     const { onChange, procs, policyProcs } = this.props;
-    const finalProcs = this.props.isSettings? policyProcs: procs;
+    const finalProcs = this.props.isPolicyPage? policyProcs: procs;
     const procList = finalProcs.asyncStatus === 'SUCCESS'
       ? finalProcs.data.map(c => ({ name: c })) : [];
     const valueOption = this.props.value && { name: this.props.value };
@@ -52,7 +52,7 @@ class ProcSelectComponent extends Component {
           onChange={onChange || noop}
           labelKey="name"
           valueKey="name"
-          onInputChange={debounce(this.props.isSettings ? this.props.getPolicyProcs: this.props.getProcs, 500)}
+          onInputChange={debounce(this.props.isPolicyPage ? this.props.getPolicyProcs: this.props.getProcs, 500)}
           isLoading={finalProcs.asyncStatus === 'PENDING'}
           value={valueOption}
           noResultsText={finalProcs.asyncStatus !== 'PENDING' ? 'No results found!' : 'Searching...'}
@@ -82,7 +82,7 @@ ProcSelectComponent.propTypes = {
   getPolicyProcs: PropTypes.func.isRequired,
   onChange: PropTypes.func,
   value: PropTypes.string,
-  isSettings: PropTypes.bool.isRequired,
+  isPolicyPage: PropTypes.bool.isRequired,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProcSelectComponent);

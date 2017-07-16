@@ -1,6 +1,6 @@
 import React from "react";
 
-export default class SettingsComponent extends React.Component {
+export default class PolicyComponent extends React.Component {
 
   render () {
     return(<div className="demo-card-wide mdl-card mdl-shadow--2dp">

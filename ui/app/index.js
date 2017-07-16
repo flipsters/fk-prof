@@ -1,34 +1,29 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import {
-  Route,
-  Router,
-  IndexRedirect,
-  browserHistory,
-} from 'react-router';
-import { Provider } from 'react-redux';
+import React from "react";
+import ReactDOM from "react-dom";
+import {browserHistory, IndexRedirect, Route, Router} from "react-router";
+import {Provider} from "react-redux";
 
-import 'react-select/dist/react-select.css';
-import 'react-datetime/css/react-datetime.css';
-import 'material-design-lite/material.min';
-import 'material-design-lite/material.css';
+import "react-select/dist/react-select.css";
+import "react-datetime/css/react-datetime.css";
+import "material-design-lite/material.min";
+import "material-design-lite/material.css";
 
-import store from './store';
+import store from "./store";
 
-import Root from 'components/RootComponent';
-import App from 'components/AppComponent';
-import CPUSampling from 'components/CPUSamplingComponent';
-import Settings from 'components/SettingsComponent';
-import AggregatedProfileDataContainer from 'components/AggregatedProfileDataContainer';
+import Root from "components/RootComponent";
+import App from "components/AppComponent";
+import CPUSampling from "components/CPUSamplingComponent";
+import Policy from "components/PolicyComponent";
+import AggregatedProfileDataContainer from "components/AggregatedProfileDataContainer";
 
-import './assets/styles/global.css';
+import "./assets/styles/global.css";
 
 const routes = (
   <Route path="/" component={Root}>
     <IndexRedirect to="/profiler" />
     <Route path="/profiler" component={App}>
       <Route path="/profiler/profile-data/:traceName" component={AggregatedProfileDataContainer} />
-      <Route path="/profiler/settings" component={Settings}/>
+      <Route path="/profiler/policy" component={Policy}/>
     </Route>
     <Route path="/work-type/cpu_sample_work/:traceName" component={CPUSampling} />
   </Route>

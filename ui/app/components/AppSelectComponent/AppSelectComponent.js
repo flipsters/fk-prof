@@ -11,16 +11,16 @@ const noop = () => {};
 
 class AppSelectComponent extends React.Component {
   componentDidMount () {
-    this.props.isSettings ? this.props.getPolicyApps(''): this.props.getApps('');
+    this.props.isPolicyPage ? this.props.getPolicyApps(''): this.props.getApps('');
   }
   componentWillReceiveProps (nextProps) {
-    if(nextProps.isSettings !== this.props.isSettings) {
-      nextProps.isSettings ? this.props.getPolicyApps('') : this.props.getApps('');
+    if(nextProps.isPolicyPage !== this.props.isPolicyPage) {
+      nextProps.isPolicyPage ? this.props.getPolicyApps('') : this.props.getApps('');
     }
   }
 
   render () {
-    const finalApps = this.props.isSettings ? this.props.policyApps: this.props.apps;
+    const finalApps = this.props.isPolicyPage ? this.props.policyApps: this.props.apps;
     const options = finalApps.asyncStatus === 'SUCCESS'
       ? finalApps.data.map(a => ({ name: a })) : [];
 
@@ -38,7 +38,7 @@ class AppSelectComponent extends React.Component {
           onChange={this.props.onChange || noop}
           labelKey="name"
           valueKey="name"
-          onInputChange={debounce(this.props.isSettings ? this.props.getPolicyApps: this.props.getApps, 500)}
+          onInputChange={debounce(this.props.isPolicyPage ? this.props.getPolicyApps: this.props.getApps, 500)}
           isLoading={finalApps.asyncStatus === 'PENDING'}
           noResultsText={noResultsText}
           placeholder="Type to search..."
