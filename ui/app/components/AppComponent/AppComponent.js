@@ -45,18 +45,19 @@ const AppComponent = (props) => {
     });
   };
   const isSettings = props.location.pathname.includes('settings');
+  const columnWidth = isSettings ? 4:3;
   return (
     <div>
        <div>
         <div className="mdl-grid">
-          <div className="mdl-cell mdl-cell--3-col">
+          <div className={`mdl-cell mdl-cell--${columnWidth}-col`}>
             <AppSelect
               onChange={isSettings? updatePolicyAppQueryParam: updateAppQueryParam}
               value={selectedApp}
               isSettings={isSettings}
             />
           </div>
-          <div className="mdl-cell mdl-cell--3-col">
+          <div className={`mdl-cell mdl-cell--${columnWidth}-col`}>
             {selectedApp && (
               <ClusterSelect
                 app={selectedApp}
@@ -66,7 +67,7 @@ const AppComponent = (props) => {
               />
             )}
           </div>
-          <div className="mdl-cell mdl-cell--3-col">
+          <div className={`mdl-cell mdl-cell--${columnWidth}-col`}>
             {selectedApp && selectedCluster && (
               <ProcSelect
                 app={selectedApp}
