@@ -3,7 +3,7 @@
   padding: 6px;
 }
 .demo-card-wide.mdl-card {
-  width: 512px;
+  width: 80%;
 }
 .demo-card-wide > .mdl-card__title {
   color: #fff;
@@ -11,4 +11,31 @@
 }
 .demo-card-wide > .mdl-card__menu {
   color: #fff;
+}
+.add_work_button {
+  position: absolute;
+  bottom: 0;
+  left: 30%;
+}
+
+.disabledDiv {
+  pointer-events: none;
+  opacity: 0.4;
+  position: relative;
+  /*-webkit-filter: grayscale(1); !* Old WebKit *!*/
+  /*filter: grayscale(1);*/
+}
+
+.comingSoon {
+  background: url("../../assets/coming-soon-banner.png") no-repeat bottom right;
+  background-size: 50%;
+  background-blend-mode: darken;
+}
+
+.comingSoonAbsolute{
+  position: absolute;
+  width: 40%;
+  bottom: 0;
+  right: 0;
+  opacity: 2;
 }

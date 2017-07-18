@@ -5,7 +5,7 @@ import { withRouter } from 'react-router';
 import { ScrollSync, AutoSizer, Grid } from 'react-virtualized';
 import debounce from 'utils/debounce';
 
-import styles from './MethodTreeComponent.css';
+import styles from './MethodTreeComponent.scss';
 import HotMethodNode from '../../pojos/HotMethodNode';
 import 'react-virtualized/styles.css';
 
@@ -82,7 +82,7 @@ class MethodTreeComponent extends Component {
     this.renderData = this.getInitialRenderData(props.location.query[props.filterKey]);
     this.state.itemCount = this.renderData.length;
 
-    this.setup(props.containerWidth); 
+    this.setup(props.containerWidth);
   }
 
   componentWillUpdate(nextProps, nextState) {
@@ -100,7 +100,7 @@ class MethodTreeComponent extends Component {
       return null;
     }
 
-    const filterText = this.props.location.query[this.props.filterKey];    
+    const filterText = this.props.location.query[this.props.filterKey];
     const { nextNodesAccessorField } = this.props;
     const containerHeight = window.innerHeight - everythingOnTopHeight; //subtracting height of everything above the container
     const gridHeight = containerHeight - filterBoxHeight; //subtracting height of filter box
@@ -163,7 +163,7 @@ class MethodTreeComponent extends Component {
                       className={styles.RightGrid}
                       overscanRowCount={10}
                       scrollTop={scrollTop}
-                      ref={el => this.stacklineStatGrid = el}                      
+                      ref={el => this.stacklineStatGrid = el}
                     />
                   </div>
                 </div>
@@ -193,7 +193,7 @@ class MethodTreeComponent extends Component {
       //expand
       var childRenderData = this.getRenderData(nodeIndexes, null, uniqueId, rowdata[3] > 1, rowdata[2]);
       var postarr = this.renderData.splice(listIdx + 1);
-      this.renderData = this.renderData.concat(childRenderData, postarr);            
+      this.renderData = this.renderData.concat(childRenderData, postarr);
     } else {
       //collapse
       const descendants = this.getRenderedDescendantCountForListItem(listIdx);
@@ -289,8 +289,8 @@ class MethodTreeComponent extends Component {
           subdued={rowdata[3] == 1 ? true : false}
           onHighlight={this.highlight.bind(this, uniqueId)}
           onClick={newNodeIndexes ? this.toggle.bind(this, params.rowIndex) : noop}>
-        </StacklineDetail> 
-      
+        </StacklineDetail>
+
     );
   }
 
@@ -395,13 +395,13 @@ class MethodTreeComponent extends Component {
           newNodeIndexes = n.children;
           displayName = displayName + ':' + n.lineNo;
         }
-    
+
         // If only single node is being rendered, expand the node
         // Or if the node has no children, then expand the node, so that expanded icon is rendered against this node
         if(se.node.dn.length == 1 || newNodeIndexes.length == 0) {
           this.opened[uniqueId] = true;
         }
-        
+
         const stackEntryWidth = getTextWidth(displayName, "14px Arial") + 28 + se.node.ind; //28 is space taken up by icons
         const nodeData = [uniqueId, n, se.node.ind, se.node.dn.length, stackEntryWidth];
         renderData.push(nodeData);
@@ -451,7 +451,7 @@ class MethodTreeComponent extends Component {
       if(this.opened[uniqueId]) {
         if(this.isNodeHavingChildren(rowdata[1])) {
           //At least one rendered child item is going to be present for this item
-          //Cannot rely on childNodeIndexes(calculated in isNodeHavingChildren method) to get count of children because actual rendered children can be lesser after deduping of nodes for hot method tree          
+          //Cannot rely on childNodeIndexes(calculated in isNodeHavingChildren method) to get count of children because actual rendered children can be lesser after deduping of nodes for hot method tree
           let child_rowdata = this.renderData[listIdx + 1];
           if(child_rowdata) {
             return child_rowdata[3]; //this is siblings count of child node which implies children count for parent node

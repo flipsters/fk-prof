@@ -112,15 +112,16 @@ const AppComponent = (props) => {
           )}
          {isPolicyPage && selectedProc && (
            <div className="mdl-grid">
-             <div className="mdl-cell">
-               <PolicyComponent
-                 app={selectedApp}
-                 cluster={selectedCluster}
-                 proc={selectedProc}
-                 start={start}
-                 end={end}
-               />
-             </div>
+             <div className="mdl-layout-spacer"/>
+             <PolicyComponent
+               app={selectedApp}
+               cluster={selectedCluster}
+               proc={selectedProc}
+               start={start}
+               end={end}
+             />
+           <div className="mdl-layout-spacer"/>
+
            </div>
          )}
       </div>

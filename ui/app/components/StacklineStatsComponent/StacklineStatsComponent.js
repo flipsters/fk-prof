@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import styles from './StacklineStatsComponent.css';
+import styles from './StacklineStatsComponent.scss';
 
 export default class StacklineStatsComponent extends Component {
   constructor (props) {
