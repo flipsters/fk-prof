@@ -171,7 +171,7 @@ CPUSamplingComponent.propTypes = {
       workType: PropTypes.string,
       profileStart: PropTypes.string,
       selectedWorkType: PropTypes.string,
-      profileDuration: PropTypes.number
+      profileDuration: PropTypes.string
     }),
   }),
 };
