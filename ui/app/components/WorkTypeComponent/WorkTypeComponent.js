@@ -6,9 +6,7 @@ import styles from './WorkTypeComponent.css';
 
 export default (props) => {
   return (
-
     <div
-
       className={`mdl-cell mdl-shadow--2dp mdl-cell--3-col mdl-cell--4-col-tablet mdl-cell--4-col-phone ${props.isDisabled? styles.disabledDiv + " " + styles.comingSoon: ""}`}>
       {/*<img src={coming_soon} className={}/>*/}
       <div className="mdl-card__title">

@@ -2,12 +2,11 @@
   pointer-events: none;
   opacity: 0.4;
   position: relative;
-  /*-webkit-filter: grayscale(1); !* Old WebKit *!*/
-  /*filter: grayscale(1);*/
 }
 
 .comingSoon {
   background: url("../../assets/coming-soon-banner.png") no-repeat bottom right;
   background-size: 50%;
-  background-blend-mode: darken;
+  -webkit-filter: grayscale(1); /* Old WebKit */
+  filter: grayscale(1);
 }
