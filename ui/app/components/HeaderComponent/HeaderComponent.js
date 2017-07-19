@@ -24,6 +24,7 @@ export default class Header extends React.Component {
         <header className="mdl-layout__header"
                 style={{backgroundColor: this.props.isPolicyPage ? '#898984' : 'rgb(63,81,181)'}}>
           <div className="mdl-layout__header-row">
+            <img src={fk_logo} className="mdl-shadow--4dp" style={{width: '3.5%', margin: '5px'}}/>
             <span className="mdl-layout-title">Flipkart Profiler</span>
             <div className="mdl-layout-spacer"/>
             <nav className="mdl-navigation mdl-layout--large-screen-only">
@@ -41,7 +42,7 @@ export default class Header extends React.Component {
           </div>
         </header>
         <div className="mdl-layout__drawer">
-          <span className="mdl-layout-title"><img src={fk_logo} style={{width: '20%'}}/> FK Profiler</span>
+          <span className="mdl-layout-title"><img src={fk_logo} className="mdl-shadow--4dp" style={{width: '18%'}}/> FK Profiler</span>
           <nav className="mdl-navigation">
             <Link className={profileLinkClassName}
                   to={loc => ({pathname: '/profiler/', query: ''} )} onClick={this.hideNavDrawer}>
@@ -57,24 +58,3 @@ export default class Header extends React.Component {
     );
   }
 };
-
-//
-// <div className="mdl-layout mdl-js-layout mdl-layout--fixed-header">
-//   <header className="mdl-layout__header">
-//
-//     <div className="mdl-layout__header-row" style={{backgroundColor: this.props.isPolicyPage ? '#898984': 'rgb(63,81,181)'}}>
-//       <img src={fk_logo} style={{width: '4%', padding: '1em'}}/>
-//       <Link to={loc => ({ pathname: '/profiler', query: ''})} style={{ color: "white", textDecoration : "none"}}>
-//         <span className="mdl-layout-title" >Flipkart Profiler</span>
-//       </Link>
-//       <div className="mdl-layout-spacer"/>
-//       { !this.props.isPolicyPage &&
-//       <Link to={loc => ({pathname: '/profiler/policy', query: ''})}>
-//         <button className="mdl-button mdl-js-button mdl-button--icon" style={{color: "white"}}>
-//           <i className="material-icons">settings</i>
-//         </button>
-//       </Link>
-//       }
-//     </div>
-//   </header>
-// </div>

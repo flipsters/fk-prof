@@ -8,6 +8,19 @@ export default class PolicyComponent extends React.Component {
         <div className="mdl-grid mdl-grid--no-spacing">
           <div className="mdl-cell mdl-cell--12-col mdl-shadow--2dp">
             <div className="mdl-grid">
+              <div className="mdl-cell mdl-cell--11-col mdl-layout--middle">
+                <h2 className="mdl-card__title-text">No policy found</h2>Create a new one by adding details below
+              </div>
+              <div className="mdl-layout-spacer"/>
+              <div className="mdl-cell mdl-cell--1-col mdl-layout--middle">
+                <button className="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent"
+                        style={{background: 'rgb(137, 137, 132)', margin: '0 auto'}}>Save
+                </button>
+              </div>
+            </div>
+           </div>
+          <div className="mdl-cell mdl-cell--12-col mdl-shadow--2dp">
+            <div className="mdl-grid">
               <div className="mdl-cell mdl-cell--4-col mdl-cell--middle">
                 Duration (in secs)
                 <div className="mdl-textfield mdl-js-textfield">
@@ -40,17 +53,6 @@ export default class PolicyComponent extends React.Component {
               <WorkType name="Thread Sampling" attributes={["Frequency", "Max Frames"]} isDisabled={true}/>
               <WorkType name="Monitor Contention" attributes={["Max Monitors", "Max Frames"]} isDisabled={true}/>
               <WorkType name="Monitor Wait" attributes={["Max Monitors", "Max Frames"]} isDisabled={true}/>
-            </div>
-          </div>
-          <div className="mdl-cell mdl-cell--12-col mdl-shadow--2dp">
-            <div className="mdl-grid">
-              <div className="mdl-layout-spacer"/>
-              <div className="mdl-cell mdl-cell--1-col">
-                <button className="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent"
-                        style={{background: 'rgb(137, 137, 132)', margin: '0 auto'}}>Save
-                </button>
-              </div>
-              <div className="mdl-layout-spacer"/>
             </div>
           </div>
         </div>
