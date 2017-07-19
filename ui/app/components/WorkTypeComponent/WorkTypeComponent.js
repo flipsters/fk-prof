@@ -14,7 +14,7 @@ export default (props) => {
       </div>
       <div className="mdl-grid">
         <div className="mdl-cell mdl-cell--12-col">
-          {props.attributes[0]}
+          <div>{props.attributes[0]}</div>
           <div className="mdl-textfield mdl-js-textfield">
             <input className="mdl-textfield__input" type="text" pattern="^[5-9][0-9]$|^100$"
                    id={props.name + " " + props.attributes[0]}/>
@@ -23,7 +23,7 @@ export default (props) => {
           </div>
         </div>
         <div className="mdl-cell mdl-cell--12-col">
-          {props.attributes[1]}
+          <div>{props.attributes[1]}</div>
           <div className="mdl-textfield mdl-js-textfield">
             <input className="mdl-textfield__input" type="text"
                    pattern="^([1-9]|[1-9][0-9]|[1-9][0-9][0-9])$" id={props.name + " " + props.attributes[1]}/>

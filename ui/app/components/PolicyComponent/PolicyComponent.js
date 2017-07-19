@@ -22,7 +22,7 @@ export default class PolicyComponent extends React.Component {
           <div className="mdl-cell mdl-cell--12-col mdl-shadow--2dp">
             <div className="mdl-grid">
               <div className="mdl-cell mdl-cell--4-col mdl-cell--middle">
-                Duration (in secs)
+                <div>Duration (in secs)</div>
                 <div className="mdl-textfield mdl-js-textfield">
                   <input className="mdl-textfield__input" type="text" pattern="^[1-9][0-9][0-9]$" id="sample1"/>
                   <label className="mdl-textfield__label" htmlFor="sample1">120</label>
@@ -30,7 +30,7 @@ export default class PolicyComponent extends React.Component {
                 </div>
               </div>
               <div className="mdl-cell mdl-cell--4-col mdl-cell--middle">
-                Coverage Percentage
+                <div>Coverage Percentage</div>
                 <div className="mdl-textfield mdl-js-textfield">
                   <input className="mdl-textfield__input" type="text" pattern="^[0-9][0-9]?$|^100$" id="sample2"/>
                   <label className="mdl-textfield__label" htmlFor="sample2">10</label>
@@ -38,7 +38,7 @@ export default class PolicyComponent extends React.Component {
                 </div>
               </div>
               <div className="mdl-cell mdl-cell--4-col mdl-cell--middle">
-                Description
+                <div>Description</div>
                 <div className="mdl-textfield mdl-js-textfield">
                 <textarea className="mdl-textfield__input" type="text" rows="3" id="sample5">
                 </textarea>
