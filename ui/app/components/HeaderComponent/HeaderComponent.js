@@ -24,7 +24,7 @@ export default class Header extends React.Component {
         <header className="mdl-layout__header"
                 style={{backgroundColor: this.props.isPolicyPage ? '#898984' : 'rgb(63,81,181)'}}>
           <div className="mdl-layout__header-row">
-            <img src={fk_logo} className="mdl-shadow--4dp" style={{width: '3.5%', margin: '5px'}}/>
+            <img src={fk_logo} className="mdl-shadow--4dp" style={{height: '70%', margin: '5px', borderRadius: '2px'}}/>
             <span className="mdl-layout-title">Flipkart Profiler</span>
             <div className="mdl-layout-spacer"/>
             <nav className="mdl-navigation mdl-layout--large-screen-only">
@@ -42,7 +42,7 @@ export default class Header extends React.Component {
           </div>
         </header>
         <div className="mdl-layout__drawer">
-          <span className="mdl-layout-title"><img src={fk_logo} className="mdl-shadow--4dp" style={{width: '18%'}}/> FK Profiler</span>
+          <span className="mdl-layout-title"><img src={fk_logo} className="mdl-shadow--4dp" style={{width: '18%', borderRadius: '2px'}}/> FK Profiler</span>
           <nav className="mdl-navigation">
             <Link className={profileLinkClassName}
                   to={loc => ({pathname: '/profiler/', query: ''} )} onClick={this.hideNavDrawer}>
