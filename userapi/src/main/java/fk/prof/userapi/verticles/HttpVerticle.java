@@ -61,6 +61,10 @@ public class HttpVerticle extends AbstractVerticle {
         router.get(UserapiApiPathConstants.PROC_GIVEN_APPID_CLUSTERID).handler(this::getProcId);
         router.get(UserapiApiPathConstants.PROFILES_GIVEN_APPID_CLUSTERID_PROCID).handler(this::getProfiles);
         router.get(UserapiApiPathConstants.PROFILE_GIVEN_APPID_CLUSTERID_PROCID_WORKTYPE_TRACENAME).handler(this::getCpuSamplingTraces);
+
+        router.get(UserapiApiPathConstants.CALLERS_WITH_CPU_SAMPLING_INFO).handler(this::getCallersWithCpuSamplingInfo);
+        router.get(UserapiApiPathConstants.CALLEES_WITH_CPU_SAMPLING_INFO).handler(this::getCalleesWithCpuSamplingInfo);
+
         router.get(UserapiApiPathConstants.HEALTHCHECK).handler(this::handleGetHealth);
 
         return router;
@@ -186,6 +190,52 @@ public class HttpVerticle extends AbstractVerticle {
 
         profileStoreAPI.getProfilesInTimeWindow(foundProfiles,
             baseDir, appId, clusterId, proc, startTime, duration);
+    }
+
+    private void getCallersWithCpuSamplingInfo(RoutingContext routingContext) {
+        String appId = routingContext.request().getParam("appId");
+        String clusterId = routingContext.request().getParam("clusterId");
+        String procId = routingContext.request().getParam("procId");
+        String traceName = routingContext.request().getParam("traceName");
+
+        String autoExpand = routingContext.
+
+        /* @2
+        - call getCallTree method
+        - if succeeded
+        - - get callers and return   ?? what about methodsLookup
+        - if failed
+        - - case: ResourceNotFound
+        - - - if present somewhere else
+        - - - - return redirect
+        - - - if absent in cache, i.e. not loaded
+        - - - - call load method and return 503 with retry
+        - - case: LoadingInProgress
+        - - - return 503 with retry
+         */
+
+
+    }
+
+    private void getCalleesWithCpuSamplingInfo(RoutingContext routingContext) {
+        String appId = routingContext.request().getParam("appId");
+        String clusterId = routingContext.request().getParam("clusterId");
+        String procId = routingContext.request().getParam("procId");
+        String traceName = routingContext.request().getParam("traceName");
+
+        /*
+        - call getCallTree method
+        - if succeeded
+        - - get callers and return
+        - if failed
+        - - case: ResourceNotFound
+        - - - if present somewhere else
+        - - - - return redirect
+        - - - if absent in cache, i.e. not loaded
+        - - - - call load method and return 503 with retry
+        - - case: LoadingInProgress
+        - - - return 503 with retry
+         */
     }
 
     private void getCpuSamplingTraces(RoutingContext routingContext) {

@@ -1,0 +1,21 @@
+package fk.prof.userapi.api.cache;
+
+import fk.prof.aggregation.AggregatedProfileNamingStrategy;
+import fk.prof.userapi.ServiceUnavailableException;
+
+/**
+ * Created by gaurav.ashok on 26/06/17.
+ */
+public class ProfileLoadInProgressException extends Exception {
+
+    private final AggregatedProfileNamingStrategy profileName;
+
+    public ProfileLoadInProgressException(AggregatedProfileNamingStrategy profileName) {
+        super("Loading in progress for file: " + profileName.getFileName(0));
+        this.profileName = profileName;
+    }
+
+    public AggregatedProfileNamingStrategy getProfileName() {
+        return profileName;
+    }
+}

@@ -10,6 +10,7 @@ import fk.prof.storage.AsyncStorage;
 import fk.prof.storage.buffer.StorageBackedInputStream;
 import fk.prof.userapi.Deserializer;
 import fk.prof.userapi.model.*;
+import fk.prof.userapi.model.tree.CallTree;
 import io.vertx.core.Future;
 
 import java.io.IOException;
@@ -130,7 +131,7 @@ public class AggregatedProfileLoader {
                 case cpu_sample_work:
                     for (String traceName : traceNames.getNameList()) {
                         samplesPerTrace.put(traceName,
-                                new AggregatedSamplesPerTraceCtx(methodLookUp, new AggregatedCpuSamplesData(parseStacktraceTree(cin))));
+                                new AggregatedSamplesPerTraceCtx(methodLookUp, new AggregatedOnCpuSamples(CallTree.parseFrom(cin))));
                     }
                     break;
                 default:
@@ -198,22 +199,5 @@ public class AggregatedProfileLoader {
 
     private void checksumVerify(int actualChecksum, int expectedChecksum, String msg) {
         assert actualChecksum == expectedChecksum : msg;
-    }
-
-    private StacktraceTreeIterable parseStacktraceTree(InputStream in) throws IOException {
-        // tree is serialized in DFS manner. First node being the root.
-        int nodeCount = 1; // for root node
-        int parsedNodeCount = 0;
-        List<AggregatedProfileModel.FrameNodeList> parsedFrameNodes = new ArrayList<>();
-        do {
-            AggregatedProfileModel.FrameNodeList frameNodeList = AggregatedProfileModel.FrameNodeList.parseDelimitedFrom(in);
-            for(AggregatedProfileModel.FrameNode node: frameNodeList.getFrameNodesList()) {
-                nodeCount += node.getChildCount();
-            }
-            parsedNodeCount += frameNodeList.getFrameNodesCount();
-            parsedFrameNodes.add(frameNodeList);
-        } while(parsedNodeCount < nodeCount && parsedNodeCount > 0);
-
-        return new StacktraceTreeIterable(parsedFrameNodes);
     }
 }

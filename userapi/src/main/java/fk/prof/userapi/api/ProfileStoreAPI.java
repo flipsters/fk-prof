@@ -1,8 +1,12 @@
 package fk.prof.userapi.api;
 
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
+import fk.prof.userapi.Pair;
 import fk.prof.userapi.model.AggregatedProfileInfo;
+import fk.prof.userapi.model.AggregatedSamplesPerTraceCtx;
 import fk.prof.userapi.model.AggregationWindowSummary;
+import fk.prof.userapi.model.tree.CallTreeView;
+import fk.prof.userapi.model.tree.CalleesTreeView;
 import io.vertx.core.Future;
 
 import java.time.ZonedDateTime;
@@ -66,4 +70,18 @@ public interface ProfileStoreAPI {
      * @param filename
      */
     void loadSummary(Future<AggregationWindowSummary> future, AggregatedProfileNamingStrategy filename);
+
+    /**
+     *
+     * @param profileName
+     * @param traceName
+     */
+    Future<Pair<AggregatedSamplesPerTraceCtx,CallTreeView>> getCpuSamplingCallersTreeView(AggregatedProfileNamingStrategy profileName, String traceName);
+
+    /**
+     *
+     * @param profileName
+     * @param traceName
+     */
+    Future<Pair<AggregatedSamplesPerTraceCtx,CalleesTreeView>> getCpuSamplingCalleesTreeView(AggregatedProfileNamingStrategy profileName, String traceName);
 }

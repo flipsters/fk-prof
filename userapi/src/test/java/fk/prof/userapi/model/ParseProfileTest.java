@@ -12,7 +12,9 @@ import fk.prof.userapi.Deserializer;
 import fk.prof.userapi.UserapiConfigManager;
 import fk.prof.userapi.api.ProfileStoreAPI;
 import fk.prof.userapi.api.ProfileStoreAPIImpl;
+import fk.prof.userapi.api.cache.ClusterAwareCache;
 import fk.prof.userapi.model.json.ProtoSerializers;
+import fk.prof.userapi.model.tree.CallTree;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -69,7 +71,7 @@ public class ParseProfileTest {
         vertx = Vertx.vertx();
         asyncStorage = mock(AsyncStorage.class);
         config = UserapiConfigManager.loadConfig(ParseProfileTest.class.getClassLoader().getResource("userapi-conf.json").getFile());
-        profileDiscoveryAPI = new ProfileStoreAPIImpl(vertx, asyncStorage, 30, config.getProfileLoadTimeout(), config.getVertxWorkerPoolSize());
+        profileDiscoveryAPI = new ProfileStoreAPIImpl(vertx, asyncStorage, mock(ClusterAwareCache.class), config);
     }
 
     @After
@@ -92,7 +94,7 @@ public class ParseProfileTest {
             throw new ObjectNotFoundException("not found");
         }));
 
-        profileDiscoveryAPI = new ProfileStoreAPIImpl(vertx, storage, 30, config.getProfileLoadTimeout(), config.getVertxWorkerPoolSize());
+        profileDiscoveryAPI = new ProfileStoreAPIImpl(vertx, asyncStorage, mock(ClusterAwareCache.class), config);
 
         Future<AggregatedProfileInfo> future1 = Future.future();
         Future<AggregatedProfileInfo> future2 = Future.future();
@@ -136,31 +138,29 @@ public class ParseProfileTest {
         context.assertEquals(expected.getAggregatedSamples(traceName1).getMethodLookup(), actual.getAggregatedSamples(traceName1).getMethodLookup());
         context.assertEquals(expected.getAggregatedSamples(traceName2).getMethodLookup(), actual.getAggregatedSamples(traceName2).getMethodLookup());
 
-        if(expected.getAggregatedSamples(traceName1).getAggregatedSamples() instanceof AggregatedCpuSamplesData) {
-            testEquality(context, (AggregatedCpuSamplesData)expected.getAggregatedSamples(traceName1).getAggregatedSamples(),
-                    (AggregatedCpuSamplesData)actual.getAggregatedSamples(traceName1).getAggregatedSamples());
+        if(expected.getAggregatedSamples(traceName1).getAggregatedSamples() instanceof AggregatedOnCpuSamples) {
+            testEquality(context, (AggregatedOnCpuSamples)expected.getAggregatedSamples(traceName1).getAggregatedSamples(),
+                    (AggregatedOnCpuSamples)actual.getAggregatedSamples(traceName1).getAggregatedSamples());
 
-            testEquality(context, (AggregatedCpuSamplesData)expected.getAggregatedSamples(traceName2).getAggregatedSamples(),
-                    (AggregatedCpuSamplesData)actual.getAggregatedSamples(traceName2).getAggregatedSamples());
+            testEquality(context, (AggregatedOnCpuSamples)expected.getAggregatedSamples(traceName2).getAggregatedSamples(),
+                    (AggregatedOnCpuSamples)actual.getAggregatedSamples(traceName2).getAggregatedSamples());
         }
         else {
             context.fail("Unexpected type of AggregatedSamples in profileInfo");
         }
     }
 
-    private void testEquality(TestContext context, AggregatedCpuSamplesData expected, AggregatedCpuSamplesData actual) {
-        Iterator<AggregatedProfileModel.FrameNode> expectedFN = expected.getFrameNodes().iterator();
-        Iterator<AggregatedProfileModel.FrameNode> actualFN = actual.getFrameNodes().iterator();
+    private void testEquality(TestContext context, AggregatedOnCpuSamples expected, AggregatedOnCpuSamples actual) {
+        CallTree expectedCallTree = expected.getCallTree();
+        CallTree actualCallTree = actual.getCallTree();
+        testTreeEquality(context, expectedCallTree, actualCallTree, 0);
+    }
 
-        while(expectedFN.hasNext() && actualFN.hasNext()) {
-            context.assertEquals(expectedFN.next(), actualFN.next());
-        }
-
-        if(expectedFN.hasNext() && !actualFN.hasNext()) {
-            context.fail("expected more FrameNodes in the actual list");
-        }
-        else if(!expectedFN.hasNext() && actualFN.hasNext()) {
-            context.fail("found more frameNodes than expected in the actual list");
+    private <T> void testTreeEquality(TestContext context, Tree<T> expected, Tree<T> actual, int idx) {
+        context.assertEquals(expected.get(idx), actual.get(idx));
+        testListEquality(context, expected.getChildren(idx), actual.getChildren(idx), "children for node at id: " + idx + " are not same");
+        for(Integer i : expected.getChildren(idx)) {
+            testTreeEquality(context, expected, actual, i);
         }
     }
 
@@ -185,9 +185,9 @@ public class ParseProfileTest {
         List<AggregatedProfileModel.FrameNodeList> frameNodes = buildFrameNodes();
         Map<String, AggregatedSamplesPerTraceCtx> samples = new HashMap<>();
         // first 2 elements belong to trace1
-        samples.put(traceName1, new AggregatedSamplesPerTraceCtx(buildMethodLookup(), new AggregatedCpuSamplesData(new StacktraceTreeIterable(frameNodes.subList(0,2)))));
+        samples.put(traceName1, new AggregatedSamplesPerTraceCtx(buildMethodLookup(), new AggregatedOnCpuSamples(new CallTree(reduce(frameNodes.subList(0,2))))));
         // next 2 elements belong to trace 2
-        samples.put(traceName2, new AggregatedSamplesPerTraceCtx(buildMethodLookup(), new AggregatedCpuSamplesData(new StacktraceTreeIterable(frameNodes.subList(2,4)))));
+        samples.put(traceName2, new AggregatedSamplesPerTraceCtx(buildMethodLookup(), new AggregatedOnCpuSamples(new CallTree(reduce(frameNodes.subList(2,4))))));
 
         return new AggregatedProfileInfo(buildHeader(), buildTraceName(traceName1, traceName2), buildTraceCtxList(), buildProfilesSummary(), samples);
     }
@@ -287,6 +287,12 @@ public class ParseProfileTest {
                 .setTraceCtxIdx(1)
                 .build());
 
+        return list;
+    }
+
+    private List<AggregatedProfileModel.FrameNode> reduce(List<AggregatedProfileModel.FrameNodeList> nodes) {
+        List<AggregatedProfileModel.FrameNode> list = new ArrayList<>();
+        nodes.forEach(e -> list.addAll(e.getFrameNodesList()));
         return list;
     }
 
