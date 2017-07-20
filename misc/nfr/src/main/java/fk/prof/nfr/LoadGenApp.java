@@ -70,7 +70,7 @@ public class LoadGenApp {
 
         int[] iterationCounts = new int[loadTypes];
         for(int i = 0; i < loadTypes; ++i) {
-            iterationCounts[i] = (int)(1000 * (factor * loadShare[i] / (traceDuplicatesFactor) / (totalTimings[i] / 1000.0f)));
+            iterationCounts[i] = (int)(2000 * (factor * loadShare[i] / (traceDuplicatesFactor) / (totalTimings[i] / 1000.0f)));
         }
 
         System.out.println("iterations for each load: " + iterationCounts[0] + "\t" + iterationCounts[1] + "\t" + iterationCounts[2]);
@@ -78,13 +78,16 @@ public class LoadGenApp {
         ExecutorService execSvc = Executors.newCachedThreadPool();
 
         for(int i = 0; i < totalThreadCounts; ++i) {
+            final int tid = i;
             execSvc.submit(() -> {
                 RndGen rndGen = new RndGen();
                 Runnable[] work = getWork(rndGen);
                 Inception inception = new Inception(iterationCounts, work, perfctxs, rndGen, maxFanOut, stackLevelDepth);
-
                 while (true) {
+                    long start = System.currentTimeMillis();
                     inception.doWorkOnSomeLevel();
+                    long end = System.currentTimeMillis();
+                    System.out.println("thread\t" + tid + "\t" + (end - start));
                     if (Thread.currentThread().isInterrupted()) {
                         return;
                     }
