@@ -9,15 +9,16 @@ export default (props) => {
   const second_attribute = props.attributes[1].toLowerCase().split(" ").join("_");
   return (
     <div
-      className={`mdl-cell mdl-shadow--2dp mdl-cell--3-col mdl-cell--4-col-tablet mdl-cell--4-col-phone ${props.isDisabled ? styles.disabledDiv + " " + styles.comingSoon : ""}`}>
+      // className={`mdl-cell mdl-shadow--2dp mdl-cell--3-col mdl-cell--4-col-tablet mdl-cell--4-col-phone ${props.isDisabled ? styles.disabledDiv + " " + styles.comingSoon : ""}`}>
+      className={`mdl-cell mdl-shadow--2dp mdl-cell--12-col ${props.isDisabled ? styles.disabledDiv + " " + styles.comingSoon : ""}`}>
       {/*<img src={coming_soon} className={}/>*/}
-      <div className="mdl-card__title">
-        <h2 className="mdl-card__title-text">{props.name}</h2>
-        {console.log(props)}
-        <span className="mdl-textfield__error">Input should be between 1-999!</span>
-      </div>
       <div className="mdl-grid">
-        <div className="mdl-cell mdl-cell--12-col" >
+        <div className="mdl-cell mdl-cell--4-col mdl-cell--middle" >
+          <div className="mdl-card__title">
+            <h2 className="mdl-card__title-text">{props.name}</h2>
+          </div>
+        </div>
+        <div className="mdl-cell mdl-cell--4-col" >
           <div>{props.attributes[0]}</div>
           <div className="mdl-textfield mdl-js-textfield">
             <input className="mdl-textfield__input" type="number" min="50" max="100"
@@ -28,7 +29,7 @@ export default (props) => {
             <span className="mdl-textfield__error">Input should be between 50-100</span>
           </div>
         </div>
-        <div className="mdl-cell mdl-cell--12-col">
+        <div className="mdl-cell mdl-cell--4-col">
           <div>{props.attributes[1]}</div>
           <div className="mdl-textfield mdl-js-textfield">
             <input className="mdl-textfield__input" type="number" min="1" max="999" name={props.w_type}

@@ -183,14 +183,12 @@ export default class PolicyComponent extends React.Component {
         <div className="mdl-grid mdl-grid--no-spacing">
           <div className="mdl-cell mdl-cell--12-col mdl-shadow--2dp">
             <div className="mdl-grid">
-              <div className="mdl-layout-spacer"/>
-              <div className="mdl-cell mdl-cell--9-col mdl-layout--middle">
+              <div className="mdl-cell mdl-cell--6-col mdl-layout--middle">
                 <h2 className="mdl-card__title-text">{this.state.alert.msg}</h2>{this.state.alert.instr}
               </div>
               <div className="mdl-layout-spacer"/>
-              <div className="mdl-cell mdl-cell--2-col mdl-layout--middle">
-                <button
-                  className="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent"
+              <div className="mdl-layout--middle" style={{margin: 'auto 10px auto auto'}}>
+                <button className="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent"
                   style={{background: 'rgb(137, 137, 132)'}}>{this.state.form.state === "UPDATE"? "UPDATE": "CREATE"}
                 </button>
               </div>
@@ -232,15 +230,15 @@ export default class PolicyComponent extends React.Component {
               <WorkType name="CPU Sampling" attributes={["Frequency", "Max Frames"]} isDisabled={false}
                         w_type="cpu_sample" onChange={this.handleWorkTypeChangeInForm}
                         value={cpu_sample_work}/>
-              <WorkType name="Thread Sampling" attributes={["Frequency", "Max Frames"]} isDisabled={true}
-                        w_type="thread_sample" onChange={this.handleWorkTypeChangeInForm}
-                        value={thread_sample_work}/>
-              <WorkType name="Monitor Contention" attributes={["Max Monitors", "Max Frames"]} isDisabled={true}
-                        w_type="monitor_block" onChange={this.handleWorkTypeChangeInForm}
-                        value={monitor_block_work}/>
-              <WorkType name="Monitor Wait" attributes={["Max Monitors", "Max Frames"]} isDisabled={true}
-                        w_type="monitor_wait" onChange={this.handleWorkTypeChangeInForm}
-                        value={monitor_wait_work}/>
+              {/*<WorkType name="Thread Sampling" attributes={["Frequency", "Max Frames"]} isDisabled={true}*/}
+                        {/*w_type="thread_sample" onChange={this.handleWorkTypeChangeInForm}*/}
+                        {/*value={thread_sample_work}/>*/}
+              {/*<WorkType name="Monitor Contention" attributes={["Max Monitors", "Max Frames"]} isDisabled={true}*/}
+                        {/*w_type="monitor_block" onChange={this.handleWorkTypeChangeInForm}*/}
+                        {/*value={monitor_block_work}/>*/}
+              {/*<WorkType name="Monitor Wait" attributes={["Max Monitors", "Max Frames"]} isDisabled={true}*/}
+                        {/*w_type="monitor_wait" onChange={this.handleWorkTypeChangeInForm}*/}
+                        {/*value={monitor_wait_work}/>*/}
             </div>
           </div>
         </div>
