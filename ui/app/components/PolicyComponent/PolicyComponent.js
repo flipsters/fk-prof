@@ -175,9 +175,6 @@ export default class PolicyComponent extends React.Component {
     const workArray = this.state.form.values.work;
 
     const cpu_sample_work = workArray.some((w) => w.w_type === "cpu_sample")? workArray.filter((w) => w.w_type === "cpu_sample")[0].cpu_sample : " ";
-    const thread_sample_work = workArray.some((w) => w.w_type === "thread_sample")? workArray.filter((w) => w.w_type === "thread_sample")[0].thread_sample : " ";
-    const monitor_block_work = workArray.some((w) => w.w_type === "monitor_block")? workArray.filter((w) => w.w_type === "monitor_block")[0].monitor_block : " ";
-    const monitor_wait_work = workArray.some((w) => w.w_type === "monitor_wait")? workArray.filter((w) => w.w_type === "monitor_wait")[0].monitor_wait : " ";
     return (
       <div className="mdl-cell mdl-cell--11-col  mdl-shadow--3dp">
         <div className="mdl-grid mdl-grid--no-spacing">
@@ -230,15 +227,6 @@ export default class PolicyComponent extends React.Component {
               <WorkType name="CPU Sampling" attributes={["Frequency", "Max Frames"]} isDisabled={false}
                         w_type="cpu_sample" onChange={this.handleWorkTypeChangeInForm}
                         value={cpu_sample_work}/>
-              {/*<WorkType name="Thread Sampling" attributes={["Frequency", "Max Frames"]} isDisabled={true}*/}
-                        {/*w_type="thread_sample" onChange={this.handleWorkTypeChangeInForm}*/}
-                        {/*value={thread_sample_work}/>*/}
-              {/*<WorkType name="Monitor Contention" attributes={["Max Monitors", "Max Frames"]} isDisabled={true}*/}
-                        {/*w_type="monitor_block" onChange={this.handleWorkTypeChangeInForm}*/}
-                        {/*value={monitor_block_work}/>*/}
-              {/*<WorkType name="Monitor Wait" attributes={["Max Monitors", "Max Frames"]} isDisabled={true}*/}
-                        {/*w_type="monitor_wait" onChange={this.handleWorkTypeChangeInForm}*/}
-                        {/*value={monitor_wait_work}/>*/}
             </div>
           </div>
         </div>
