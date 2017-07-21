@@ -18,7 +18,7 @@ class ProfileListComponent extends Component {
     this.state = {
       hideEmptyProfiles: true
     }
-    this.toggleEmptyProfiles = this.toggleEmptyProfiles.bind(this);    
+    this.toggleEmptyProfiles = this.toggleEmptyProfiles.bind(this);
   }
 
   componentDidUpdate () {
@@ -84,7 +84,7 @@ class ProfileListComponent extends Component {
       const sortedProfiles = profiles.data.succeeded
         .slice()
         .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime());
-      
+
       const profilesWithTracesScoreAndIndicator = [];
       for(let i = 0;i<sortedProfiles.length;i++) {
         let p = sortedProfiles[i];
@@ -105,7 +105,7 @@ class ProfileListComponent extends Component {
           <div style={{margin: "0px 4px 16px 4px"}}>
             <div style={{display: "inline-block", marginRight: "16px"}}>
               Hide empty profiles
-            </div>          
+            </div>
             <div style={{display: "inline-block"}}>
               <label htmlFor="hideEmptySwitch" className="mdl-switch mdl-js-switch" style={{zIndex: 0}}>
                 <input type="checkbox" id="hideEmptySwitch" className="mdl-switch__input"
@@ -113,7 +113,7 @@ class ProfileListComponent extends Component {
                   onChange={this.toggleEmptyProfiles}
                 />
               </label>
-            </div>  
+            </div>
           </div>
           <div style={{ maxHeight: '70vh', overflow: 'auto' }}>
             {profilesWithTracesScoreAndIndicator.map((profileDetail) => {

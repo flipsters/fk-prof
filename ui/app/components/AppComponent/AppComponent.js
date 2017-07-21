@@ -17,22 +17,22 @@ const AppComponent = (props) => {
   const start = props.location.query.start;
   const end = start ? (new Date(start).getTime() + (24 * 3600 * 1000)) : '';
 
-  const updateQueryParams = ({ pathname = '/', query }) => props.router.push({ pathname, query });
-  const updatePolicyQueryParams = ({ pathname = '/profiler/policy', query }) => props.router.push({ pathname, query });
-  const updateAppQueryParam = o => updateQueryParams({ query: { app: o.name } });
-  const updatePolicyAppQueryParam = o => updatePolicyQueryParams({ query: { app: o.name } });
+  const updateQueryParams = ({pathname = '/', query}) => props.router.push({pathname, query});
+  const updatePolicyQueryParams = ({pathname = '/profiler/policy', query}) => props.router.push({pathname, query});
+  const updateAppQueryParam = o => updateQueryParams({query: {app: o.name}});
+  const updatePolicyAppQueryParam = o => updatePolicyQueryParams({query: {app: o.name}});
 
   const updateClusterQueryParam = (o) => {
-    updateQueryParams({ query: { app: selectedApp, cluster: o.name } });
+    updateQueryParams({query: {app: selectedApp, cluster: o.name}});
   };
   const updatePolicyClusterQueryParam = (o) => {
-    updatePolicyQueryParams({ query: { app: selectedApp, cluster: o.name } });
+    updatePolicyQueryParams({query: {app: selectedApp, cluster: o.name}});
   };
   const updateProcQueryParam = (o) => {
-    updateQueryParams({ query: { app: selectedApp, cluster: selectedCluster, proc: o.name } });
+    updateQueryParams({query: {app: selectedApp, cluster: selectedCluster, proc: o.name}});
   };
   const updatePolicyProcQueryParam = (o) => {
-    updatePolicyQueryParams({ query: { app: selectedApp, cluster: selectedCluster, proc: o.name } });
+    updatePolicyQueryParams({query: {app: selectedApp, cluster: selectedCluster, proc: o.name}});
   };
   const updateStartTime = (dateTimeObject) => {
     updateQueryParams({
@@ -45,14 +45,14 @@ const AppComponent = (props) => {
     });
   };
   const isPolicyPage = props.location.pathname.includes('policy');
-  const columnWidth = isPolicyPage ? 4:3;
+  const columnWidth = isPolicyPage ? 4 : 3;
   return (
     <div>
-       <div>
+      <div>
         <div className="mdl-grid">
           <div className={`mdl-cell mdl-cell--${columnWidth}-col`}>
             <AppSelect
-              onChange={isPolicyPage? updatePolicyAppQueryParam: updateAppQueryParam}
+              onChange={isPolicyPage ? updatePolicyAppQueryParam : updateAppQueryParam}
               value={selectedApp}
               isPolicyPage={isPolicyPage}
             />
@@ -61,7 +61,7 @@ const AppComponent = (props) => {
             {selectedApp && (
               <ClusterSelect
                 app={selectedApp}
-                onChange={isPolicyPage? updatePolicyClusterQueryParam: updateClusterQueryParam}
+                onChange={isPolicyPage ? updatePolicyClusterQueryParam : updateClusterQueryParam}
                 value={selectedCluster}
                 isPolicyPage={isPolicyPage}
               />
@@ -72,58 +72,55 @@ const AppComponent = (props) => {
               <ProcSelect
                 app={selectedApp}
                 cluster={selectedCluster}
-                onChange={isPolicyPage? updatePolicyProcQueryParam: updateProcQueryParam}
+                onChange={isPolicyPage ? updatePolicyProcQueryParam : updateProcQueryParam}
                 value={selectedProc}
                 isPolicyPage={isPolicyPage}
               />
             )}
           </div>
           {!isPolicyPage && selectedApp && selectedCluster && selectedProc && (
-              <div className="mdl-cell mdl-cell--3-col">
-                <label className={styles['label']} htmlFor="startTime">Date</label>
-                <div>
-                  <DateTime
-                    className={styles['date-time']}
-                    defaultValue={start ? new Date(start) : ''}
-                    onChange={updateStartTime}
-                    dateFormat="DD-MM-YYYY"
-                    timeFormat={false}
-                  />
-                </div>
+            <div className="mdl-cell mdl-cell--3-col">
+              <label className={styles['label']} htmlFor="startTime">Date</label>
+              <div>
+                <DateTime
+                  className={styles['date-time']}
+                  defaultValue={start ? new Date(start) : ''}
+                  onChange={updateStartTime}
+                  dateFormat="DD-MM-YYYY"
+                  timeFormat={false}
+                />
               </div>
-            )
+            </div>
+          )
           }
         </div>
         {!isPolicyPage && selectedProc && start && end && (
-            <div className="mdl-grid">
-              <div className="mdl-cell mdl-cell--3-col">
-                <ProfileList
-                  app={selectedApp}
-                  cluster={selectedCluster}
-                  proc={selectedProc}
-                  start={start}
-                  end={end}
-                />
-              </div>
-              <div className="mdl-cell mdl-cell--9-col">
-                {props.children || <h2 className={styles.ingrained}>Select a Trace</h2>}
-              </div>
+          <div className="mdl-grid">
+            <div className="mdl-cell mdl-cell--3-col">
+              <ProfileList
+                app={selectedApp}
+                cluster={selectedCluster}
+                proc={selectedProc}
+                start={start}
+                end={end}
+              />
             </div>
-          )}
-         {isPolicyPage && selectedProc && (
-           <div className="mdl-grid">
-             <div className="mdl-layout-spacer"/>
-             <PolicyComponent
-               app={selectedApp}
-               cluster={selectedCluster}
-               proc={selectedProc}
-               start={start}
-               end={end}
-             />
-           <div className="mdl-layout-spacer"/>
-
-           </div>
-         )}
+            <div className="mdl-cell mdl-cell--9-col">
+              { props.children || <h2 className={styles.ingrained}>Select a Trace</h2>}
+            </div>
+          </div>
+        )}
+        {isPolicyPage && selectedProc && (
+          <div className="mdl-grid">
+            <div className="mdl-layout-spacer"/>
+            <PolicyComponent
+              app={selectedApp}
+              cluster={selectedCluster}
+              proc={selectedProc}
+            />
+            <div className="mdl-layout-spacer"/>
+          </div>
+        )}
       </div>
 
     </div>
