@@ -1,6 +1,5 @@
 import React from "react";
 import styles from './PolicyComponent.css';
-import WorkType from '../WorkTypeComponent/WorkTypeComponent';
 import Loader from '../LoaderComponent/LoaderComponent';
 
 import http from 'utils/http';
@@ -10,9 +9,10 @@ export default class PolicyComponent extends React.Component {
 
   constructor(props) {
     super(props);
-    this.handleFormChange = this.handleFormChange.bind(this);
+    this.handleScheduleChange = this.handleScheduleChange.bind(this);
+    this.handleDescriptionChange = this.handleDescriptionChange.bind(this);
     this.handleSubmitClick = this.handleSubmitClick.bind(this);
-    this.handleWorkTypeChangeInForm = this.handleWorkTypeChangeInForm.bind(this);
+    this.handleWorkChange = this.handleWorkChange.bind(this);
     this.fetchPolicy = this.fetchPolicy.bind(this);
     this.postPolicy = this.postPolicy.bind(this);
     this.state = {
@@ -65,7 +65,7 @@ export default class PolicyComponent extends React.Component {
     });
   }
 
-  postPolicy(){
+  postPolicy() {
     // if(verifyJson())
 
     this.setState({
@@ -102,69 +102,82 @@ export default class PolicyComponent extends React.Component {
     }
   }
 
-  handleFormChange(e) {
+  handleScheduleChange(e) {
     const target = e.target;
-    const value = target.value;
+    const value = parseInt(target.value);
     const id = target.id;
     const schedule = {...this.state.json.policyDetails.policy.schedule, [id]: value};
     this.setState((prevState) => ({
-        json: {
-          version: prevState.json.version,
-          policyDetails: {...prevState.json.policyDetails, policy: {...prevState.json.policyDetails.policy , schedule}}
-          },
-      }));
+      json: {
+        version: prevState.json.version,
+        policyDetails: {...prevState.json.policyDetails, policy: {...prevState.json.policyDetails.policy, schedule}}
+      },
+    }));
   }
 
-  handleWorkTypeChangeInForm(e) {
-    const prevWorks = this.state.form.values.work;
+  handleDescriptionChange(e) {
+    const value = e.target.value;
+    this.setState((prevState) => ({
+      json: {
+        version: prevState.json.version,
+        policyDetails: {
+          ...prevState.json.policyDetails,
+          policy: {...prevState.json.policyDetails.policy, description: value}
+        }
+      },
+    }));
+  }
 
+  handleWorkChange(e) {
+    const prevWorks = this.state.json.policyDetails.policy.work;
     const target = e.target;
-    const value = target.value;
+    const value = parseInt(target.value);
 
-    const w_type = target.dataset.wType;
-    const attribute = target.dataset.attribute;
+    const wType = target.name;
+    const [wKey, attribute] = target.id.split('_');
 
-    const works = prevWorks.filter((work) => {
-      return work.w_type === w_type;
+    const work = prevWorks.filter((work) => {
+      return work.wType === wType;
     });
+
     let w = {};
-    if (works.length === 0) {
+    if (work.length === 0) {
       w = {
-        w_type,
-        [w_type]: {
+        wType,
+        [wKey]: {
           [attribute]: value
         }
       }
     } else {
-      //works array must be of size one in this block
       w = {
-        w_type,
-        [w_type]: {...works[0][w_type], [attribute]: value}
+        wType,
+        [wKey]: {...work[0][wKey], [attribute]: value}
       }
     }
-    if (Object.values(w[w_type]).every((el) => (el === ""))) { //Remove work type element from work array if all of the attributes are empty
+    if (Object.values(w[wKey]).every((el) => (el === ""))) { //Remove work type element from work array if all of the attributes are empty
       this.setState((prevState) => ({
-          form: {
-            state: prevState.form.state,
-            values: {
-              ...prevState.form.values,
-              work: [...prevState.form.values.work.filter((w) => {
-                return w.w_type !== w_type
+        json: {
+          version: prevState.json.version,
+          policyDetails: {
+            ...prevState.json.policyDetails, policy: {
+              ...prevState.json.policyDetails.policy, work: [...prevWorks.filter((w) => {
+                return w.wType !== wType
               })]
             }
-          }
-        })
-      );
+          },
+        }
+      }));
     } else {
       this.setState((prevState) => ({
-          form: {
-            state: prevState.form.state,
-            values: {
-              ...prevState.form.values,
-              work: [...prevState.form.values.work.filter((w) => {
-                return w.w_type !== w_type
-              }), w]
-            }
+          json: {
+            version: prevState.json.version,
+            policyDetails: {
+              ...prevState.json.policyDetails, policy: {
+                ...prevState.json.policyDetails.policy, work: [...prevWorks.filter((w) => {
+                  return w.wType !== wType
+                }), w]
+              }
+            },
           }
         })
       );
@@ -198,72 +211,106 @@ export default class PolicyComponent extends React.Component {
       );
     }
 
-    // const workArray = this.state.form.values.work;
-
-    // const cpu_sample_work = workArray.some((w) => w.w_type === "cpu_sample") ? workArray.filter((w) => w.w_type === "cpu_sample")[0].cpu_sample : " ";
     return (
-      <div className="mdl-cell mdl-cell--11-col  mdl-shadow--3dp">
-        <div className="mdl-grid mdl-grid--no-spacing">
-          <div className="mdl-cell mdl-cell--12-col mdl-shadow--2dp">
-            <div className="mdl-grid">
-              <div className="mdl-cell mdl-cell--6-col mdl-layout--middle">
-                {/*<h2 className="mdl-card__title-text">{this.state.alert.msg}</h2>{this.state.alert.instr}*/}
-              </div>
-              <div className="mdl-layout-spacer"/>
-              <div className="mdl-layout--middle" style={{margin: 'auto 10px auto auto'}}>
-                <button id="submit_button" onClick={this.handleSubmitClick}
-                        className={"mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent "}
-                        style={{background: 'rgb(137, 137, 132)'}}>
-                  {/*{this.state.form.state === "UPDATE" ? "UPDATE" : "CREATE"}*/}
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="mdl-cell mdl-cell--12-col mdl-shadow--2dp">
-            <div className="mdl-grid">
-              <div className="mdl-cell mdl-cell--4-col mdl-cell--middle">
-                <div>Duration (in secs)</div>
-                <div className="mdl-textfield mdl-js-textfield">
-                  <input className="mdl-textfield__input" type="number" min="100" max="960" id="duration"
-                         onChange={this.handleFormChange} value={this.state.json.policyDetails.policy.schedule.duration}/>
-                  <label className="mdl-textfield__label" htmlFor="duration">120</label>
-                  <span className="mdl-textfield__error">Input should be between 100-960</span>
-                </div>
-              </div>
-              {/*<div className="mdl-cell mdl-cell--4-col mdl-cell--middle">*/}
-                {/*<div>Coverage Percentage</div>*/}
-                {/*<div className="mdl-textfield mdl-js-textfield">*/}
-                  {/*<input className="mdl-textfield__input" type="number" min="0" max="100" id="coverage_pct"*/}
-                         {/*onChange={this.handleFormChange} value={this.state.form.values.coverage_pct}/>*/}
-                  {/*<label className="mdl-textfield__label" htmlFor="coverage_pct">10</label>*/}
-                  {/*<span className="mdl-textfield__error">Input should be between 0-100</span>*/}
-                {/*</div>*/}
-              {/*</div>*/}
-              {/*<div className="mdl-cell mdl-cell--4-col mdl-cell--middle">*/}
-                {/*<div>Description</div>*/}
-                {/*<div className="mdl-textfield mdl-js-textfield">*/}
-              {/*<textarea className="mdl-textfield__input" type="text" rows="3" id="description"*/}
-                        {/*onChange={this.handleFormChange} value={this.state.form.values.description}>*/}
-                {/*</textarea>*/}
-                  {/*<label className="mdl-textfield__label" htmlFor="description">#servicename #nfrpolicy ...</label>*/}
-                {/*</div>*/}
-              {/*</div>*/}
-            </div>
-          </div>
-          {/*<div className="mdl-cell mdl-cell--12-col">*/}
-            {/*<div className="mdl-grid mdl-grid--no-spacing">*/}
-              {/*<WorkType name="CPU Sampling" attributes={["Frequency", "Max Frames"]} isDisabled={false}*/}
-                        {/*w_type="cpu_sample" onChange={this.handleWorkTypeChangeInForm}*/}
-                        {/*value={cpu_sample_work}/>*/}
-            {/*</div>*/}
-          {/*</div>*/}
-        </div>
+      <div className="mdl-grid mdl-grid--no-spacing mdl-cell--11-col mdl-shadow--3dp">
+        {this.getDisplayDetails()}
+        {this.getSchedule()}
+        {this.getDescription()}
+        {this.getWork()}
+        {this.getSubmit()}
         <div id="demo-toast-example" className="mdl-js-snackbar mdl-snackbar"
              style={{background: 'rgb(137, 137, 132)'}}>
-          <div className="mdl-snackbar__text"></div>
-          <button className="mdl-snackbar__action" type="button"></button>
+          <div className="mdl-snackbar__text"/>
+          <button className="mdl-snackbar__action" type="button"/>
         </div>
       </div>
     );
+  }
+
+
+  getDisplayDetails() {
+    return (<div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
+      <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Policy Found</div>
+      <div className="mdl-cell--2-col">Version: {this.state.json.version}</div>
+      <div className="mdl-layout-spacer"/>
+      <div className="mdl-cell--3-col">Created at: {this.state.json.policyDetails.createdAt}</div>
+      <div className="mdl-layout-spacer"/>
+      <div className="mdl-cell--3-col">Modified at: {this.state.json.policyDetails.modifiedAt}</div>
+      <div className="mdl-layout-spacer"/>
+
+    </div>);
+  }
+
+  getSchedule() {
+    return (<div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
+      <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Schedule</div>
+      <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+        <input className="mdl-textfield__input" type="number" min="60" max="960" id="duration"
+               onChange={this.handleScheduleChange} value={this.state.json.policyDetails.policy.schedule.duration}/>
+        <label className="mdl-textfield__label" htmlFor="duration">Duration...</label>
+        <span className="mdl-textfield__error">Duration must be between 120-960</span>
+      </div>
+      <div className="mdl-layout-spacer"/>
+      <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+        <input className="mdl-textfield__input" type="number" min="0" max="100" id="pgCovPct"
+               onChange={this.handleScheduleChange} value={this.state.json.policyDetails.policy.schedule.pgCovPct}/>
+        <label className="mdl-textfield__label" htmlFor="pgCovPct">Coverage Percentage...</label>
+        <span className="mdl-textfield__error">Coverage % must be between 0-100</span>
+      </div>
+      <div className="mdl-layout-spacer"/>
+    </div>);
+  }
+
+  getDescription() {
+    return (<div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
+      <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Description</div>
+
+      <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+        <textarea className="mdl-textfield__input" type="text" id="description" rows="2"
+                  onChange={this.handleDescriptionChange}
+                  value={this.state.json.policyDetails.policy.description}/>
+        <label className="mdl-textfield__label" htmlFor="description">Some details about the policy...</label>
+      </div>
+    </div>);
+  }
+
+  getWork() {
+    const workArray = this.state.json.policyDetails.policy.work;
+    const cpu_sample_work = workArray.some((w) => w.wType === "cpu_sample_work") ? workArray.filter((w) => w.wType === "cpu_sample_work")[0].cpuSample : " ";
+    return (<div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
+      <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Work</div>
+      <div className="mdl-grid mdl-cell--12-col">
+        <div className="mdl-typography--body-1 mdl-typography--font-thin mdl-cell--3-col mdl-cell--middle">
+          CPU Sampling
+        </div>
+        <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+          <input name="cpu_sample_work" className="mdl-textfield__input" type="number" min="50" max="100"
+                 id={"cpuSample_frequency"}
+                 onChange={this.handleWorkChange} value={cpu_sample_work.frequency}/>
+          <label className="mdl-textfield__label" htmlFor={"cpuSample_frequency"}>Frequency...</label>
+          <span className="mdl-textfield__error">Frequency must be between 50-100</span>
+        </div>
+        <div className="mdl-layout-spacer"/>
+        <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+          <input name="cpu_sample_work" className="mdl-textfield__input" type="number" min="50" max="100"
+                 id={"cpuSample_maxFrames"}
+                 onChange={this.handleWorkChange} value={cpu_sample_work.maxFrames}/>
+          <label className="mdl-textfield__label" htmlFor={"cpuSample_maxFrames"}>Max Frames...</label>
+          <span className="mdl-textfield__error">Max Frames should be between 1-999</span>
+        </div>
+        <div className="mdl-layout-spacer"/>
+      </div>
+    </div>);
+  }
+
+  getSubmit() {
+    return (
+      <div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
+        <button className="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect"
+                style={{background: 'rgb(137, 137, 132)', color: 'white', margin: 'auto'}}
+                onClick={this.handleSubmitClick}>
+          Submit
+        </button>
+      </div>)
   }
 }
