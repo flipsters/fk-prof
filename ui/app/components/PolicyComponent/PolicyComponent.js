@@ -154,7 +154,7 @@ export default class PolicyComponent extends React.Component {
         [wKey]: {...work[0][wKey], [attribute]: value}
       }
     }
-    if (Object.values(w[wKey]).every((el) => (el === ""))) { //Remove work type element from work array if all of the attributes are empty
+    if (Object.values(w[wKey]).every((el) => isNaN(el))) { //Remove work type element from work array if all of the attributes are empty
       this.setState((prevState) => ({
         json: {
           version: prevState.json.version,
@@ -248,7 +248,7 @@ export default class PolicyComponent extends React.Component {
         <input className="mdl-textfield__input" type="number" min="60" max="960" id="duration"
                onChange={this.handleScheduleChange} value={this.state.json.policyDetails.policy.schedule.duration}/>
         <label className="mdl-textfield__label" htmlFor="duration">Duration...</label>
-        <span className="mdl-textfield__error">Duration must be between 120-960</span>
+        <span className="mdl-textfield__error">Duration must be between 60-960</span>
       </div>
       <div className="mdl-layout-spacer"/>
       <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
@@ -292,7 +292,7 @@ export default class PolicyComponent extends React.Component {
         </div>
         <div className="mdl-layout-spacer"/>
         <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-          <input name="cpu_sample_work" className="mdl-textfield__input" type="number" min="50" max="100"
+          <input name="cpu_sample_work" className="mdl-textfield__input" type="number" min="1" max="999"
                  id={"cpuSample_maxFrames"}
                  onChange={this.handleWorkChange} value={cpu_sample_work.maxFrames}/>
           <label className="mdl-textfield__label" htmlFor={"cpuSample_maxFrames"}>Max Frames...</label>
