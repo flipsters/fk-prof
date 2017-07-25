@@ -250,14 +250,17 @@ export default class PolicyComponent extends React.Component {
         msg: "Please wait, your previous policy change is still pending"
       });
     }else{
-      console.log("Making a PUT or POST request");
       let data = {};
-      if((this.state.err.status === 404 && this.state.query.type === 'GET') || (this.state.query.type === 'POST' && this.state.query.state === 'FAILURE')) {
-        this.postPolicy();
-        data = {message: 'Creating policy'};
-      }else{
-        this.putPolicy();
-        data = {message: 'Updating policy'};
+      if(document.querySelectorAll(":invalid").length !== 0){
+        data =  {message: "Please provide appropriate values to the fields marked in red"};
+      }else {
+        if ((this.state.err.status === 404 && this.state.query.type === 'GET') || (this.state.query.type === 'POST' && this.state.query.state === 'FAILURE')) {
+          this.postPolicy();
+          data = {message: 'Creating policy'};
+        } else {
+          this.putPolicy();
+          data = {message: 'Updating policy'};
+        }
       }
       document.querySelector('#policy-submit').MaterialSnackbar.showSnackbar(data);
     }
@@ -300,36 +303,35 @@ export default class PolicyComponent extends React.Component {
   }
 
   getDisplayDetails() {
-    return (<div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
+    return (<div className="mdl-grid mdl-cell--12-col" style={{borderBottom: '1px solid rgba(0,0,0,.13)'}}>
       <div className="mdl-cell--2-col">Version: {this.state.json.version}</div>
       <div className="mdl-layout-spacer"/>
       <div className="mdl-cell--3-col">Created at: {this.state.json.policyDetails.createdAt}</div>
       <div className="mdl-layout-spacer"/>
       <div className="mdl-cell--3-col">Modified at: {this.state.json.policyDetails.modifiedAt}</div>
       <div className="mdl-layout-spacer"/>
-
     </div>);
   }
 
   getMessage() {
-    return (<div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
+    return (<div className="mdl-grid mdl-cell--12-col">
       <div className="mdl-typography--headline  mdl-typography--font-thin mdl-cell--12-col">{this.state.msg}</div>
     </div>);
   }
 
   getSchedule() {
-    return (<div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
+    return (<div className="mdl-grid mdl-cell--12-col" style={{borderBottom: '1px solid rgba(0,0,0,.13)'}}>
       <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Schedule</div>
       <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
         <input className="mdl-textfield__input" type="number" min="60" max="960" id="duration"
-               onChange={this.handleScheduleChange} value={this.state.json.policyDetails.policy.schedule.duration}/>
+               onChange={this.handleScheduleChange} value={this.state.json.policyDetails.policy.schedule.duration} required/>
         <label className="mdl-textfield__label" htmlFor="duration">Duration...</label>
         <span className="mdl-textfield__error">Duration must be between 60-960</span>
       </div>
       <div className="mdl-layout-spacer"/>
       <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
         <input className="mdl-textfield__input" type="number" min="0" max="100" id="pgCovPct"
-               onChange={this.handleScheduleChange} value={this.state.json.policyDetails.policy.schedule.pgCovPct}/>
+               onChange={this.handleScheduleChange} value={this.state.json.policyDetails.policy.schedule.pgCovPct} required/>
         <label className="mdl-textfield__label" htmlFor="pgCovPct">Coverage Percentage...</label>
         <span className="mdl-textfield__error">Coverage % must be between 0-100</span>
       </div>
@@ -338,11 +340,11 @@ export default class PolicyComponent extends React.Component {
   }
 
   getDescription() {
-    return (<div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
+    return (<div className="mdl-grid mdl-cell--12-col" style={{borderBottom: '1px solid rgba(0,0,0,.13)'}}>
       <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Description</div>
       <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield">
         <textarea className="mdl-textfield__input" type="text" id="description" rows="2"
-                  onChange={this.handleDescriptionChange} value={this.state.json.policyDetails.policy.description}/>
+                  onChange={this.handleDescriptionChange} value={this.state.json.policyDetails.policy.description} required/>
       </div>
     </div>);
   }
@@ -350,7 +352,7 @@ export default class PolicyComponent extends React.Component {
   getWork() {
     const workArray = this.state.json.policyDetails.policy.work;
     const cpu_sample_work = workArray.some((w) => w.wType === "cpu_sample_work") ? workArray.filter((w) => w.wType === "cpu_sample_work")[0].cpuSample : " ";
-    return (<div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
+    return (<div className="mdl-grid mdl-cell--12-col" style={{borderBottom: '1px solid rgba(0,0,0,.13)'}}>
       <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Work</div>
       <div className="mdl-grid mdl-cell--12-col">
         <div className="mdl-typography--body-1 mdl-typography--font-thin mdl-cell--3-col mdl-cell--middle">
@@ -359,7 +361,7 @@ export default class PolicyComponent extends React.Component {
         <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
           <input name="cpu_sample_work" className="mdl-textfield__input" type="number" min="50" max="100"
                  id={"cpuSample_frequency"}
-                 onChange={this.handleWorkChange} value={cpu_sample_work.frequency}/>
+                 onChange={this.handleWorkChange} value={cpu_sample_work.frequency} required/>
           <label className="mdl-textfield__label" htmlFor={"cpuSample_frequency"}>Frequency...</label>
           <span className="mdl-textfield__error">Frequency must be between 50-100</span>
         </div>
@@ -367,7 +369,7 @@ export default class PolicyComponent extends React.Component {
         <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
           <input name="cpu_sample_work" className="mdl-textfield__input" type="number" min="1" max="999"
                  id={"cpuSample_maxFrames"}
-                 onChange={this.handleWorkChange} value={cpu_sample_work.maxFrames}/>
+                 onChange={this.handleWorkChange} value={cpu_sample_work.maxFrames} required/>
           <label className="mdl-textfield__label" htmlFor={"cpuSample_maxFrames"}>Max Frames...</label>
           <span className="mdl-textfield__error">Max Frames should be between 1-999</span>
         </div>
@@ -384,7 +386,7 @@ export default class PolicyComponent extends React.Component {
       buttonText = 'UPDATE';
     }
     return (
-      <div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
+      <div className="mdl-grid mdl-cell--12-col">
         <button className="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect"
                 style={{background: 'rgb(137, 137, 132)', color: 'white', margin: 'auto'}}
                 onClick={this.handleSubmitClick}>
