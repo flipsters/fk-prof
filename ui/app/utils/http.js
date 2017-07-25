@@ -15,9 +15,14 @@ function fireRequest (url, config) {
     .then((response) => {
       if (response.ok) {
         return Promise.resolve(response.json());
+      }else if(response.status >= 400){
+        const error = new Error();
+        error.status = response.status;
+        error.response = response.statusText;
+        throw error;
       }
-      return response.json().then(error =>
-        Promise.reject({ status: response.status, response: error }));
+      return response.json().then(error =>{
+        return Promise.reject({ status: response.status, response: error });});
     },
   ).catch(error => Promise.reject(error));
 }

@@ -1,5 +1,4 @@
 import React from "react";
-import styles from './PolicyComponent.css';
 import Loader from '../LoaderComponent/LoaderComponent';
 
 import http from 'utils/http';
@@ -13,7 +12,7 @@ export default class PolicyComponent extends React.Component {
     this.handleDescriptionChange = this.handleDescriptionChange.bind(this);
     this.handleSubmitClick = this.handleSubmitClick.bind(this);
     this.handleWorkChange = this.handleWorkChange.bind(this);
-    this.fetchPolicy = this.fetchPolicy.bind(this);
+    this.getPolicy = this.getPolicy.bind(this);
     this.postPolicy = this.postPolicy.bind(this);
     this.state = {
       query: {
@@ -22,12 +21,12 @@ export default class PolicyComponent extends React.Component {
       },
       json: null,
       err: null,
+      msg: "Failed to fetch the data. Please refresh or try again later"
     };
   }
 
   componentDidMount() {
-    console.log("Making a GET request");
-    this.fetchPolicy();
+    this.getPolicy();
     window['counter'] = 0;
   }
 
@@ -36,7 +35,7 @@ export default class PolicyComponent extends React.Component {
     componentHandler.upgradeDom(); // eslint-disable-line
   }
 
-  fetchPolicy() {
+  getPolicy() {
     this.setState({
       query: {
         type: "GET",
@@ -45,6 +44,7 @@ export default class PolicyComponent extends React.Component {
     });
     http.get(this.url).then(json => {
       this.setState({
+        msg: "Policy found",
         query: {
           type: "GET",
           state: "SUCCESS"
@@ -53,52 +53,111 @@ export default class PolicyComponent extends React.Component {
         err: {}
       })
     }).catch(err => {
-      //Check if error is 404 then populate the json
+      if (err.status === 404) {
+        this.setState({
+          msg: "No policy found, create a new one",
+          query: {
+            type: "GET",
+            state: "SUCCESS"
+          },
+          err,
+          json: {
+            version: -1,
+            policyDetails: {
+              createdAt: "Not yet created",
+              modifiedAt: "Not yet created",
+              modifiedBy: "Not yet created",
+              policy: {
+                description: "",
+                schedule: {
+                  duration: 120,
+                  pgCovPct: 10,
+                  after: 0
+                },
+                work: [{
+                  wType: "cpu_sample_work",
+                  cpuSample: {
+                    frequency: 50,
+                    maxFrames: 64
+                  }
+                }]
+              }
+            }
+          }
+        })
+      } else {
+        this.setState({
+          query: {
+            type: "GET",
+            state: "FAILURE"
+          },
+          err,
+        })
+      }
+    });
+  }
+
+  putPolicy() {
+    this.setState({
+      query: {
+        type: "PUT",
+        state: "PENDING"
+      }
+    });
+    http.put(this.url, this.state.json).then(json => {
       this.setState({
         query: {
-          type: "GET",
+          type: "PUT",
+          state: "SUCCESS"
+        },
+        json,
+        err: {},
+        msg: "Policy has been updated"
+      })
+    }).catch(err => {
+      this.setState({
+        query: {
+          type: "PUT",
           state: "FAILURE"
         },
         err,
-        json: {}
+        msg: "There was a problem updating your policy, try again later"
       })
     });
   }
 
   postPolicy() {
-    // if(verifyJson())
-
-    this.setState({
-      query: {
-        type: "POST",
-        state: "PENDING"
-      }
-    });
-    console.log(this.state.json);
-    http.post(this.url, this.state.json).then(json => {
       this.setState({
         query: {
           type: "POST",
-          state: "SUCCESS"
-        },
-        json,
-        err: {}
-      })
-    }).catch(err => {
-      this.setState({
-        query: {
-          type: "POST",
-          state: "FAILURE"
-        },
-        err,
-      })
-    });
+          state: "PENDING"
+        }
+      });
+      http.post(this.url, this.state.json).then(json => {
+        this.setState({
+          query: {
+            type: "POST",
+            state: "SUCCESS"
+          },
+          json,
+          err: {},
+          msg: "Policy has been created"
+        })
+      }).catch(err => {
+        this.setState({
+          query: {
+            type: "POST",
+            state: "FAILURE"
+          },
+          err,
+          msg: "There was a problem creating your policy, try again later"
+        })
+      });
   }
 
   componentWillReceiveProps(newProps) {
     if (newProps.proc !== this.props.proc) {
-      console.log("Making a GET request");
-      this.fetchPolicy();
+      this.getPolicy();
     }
   }
 
@@ -184,53 +243,64 @@ export default class PolicyComponent extends React.Component {
     }
   }
 
-
   handleSubmitClick(e) {
     'use strict';
-    const data = {message: 'Example Message # ' + ++counter};
-    console.log("Making a PUT or POST request");
-    this.postPolicy();
-    document.querySelector('#demo-toast-example').MaterialSnackbar.showSnackbar(data);
+    if ((this.state.query.type === 'POST' || this.state.query.type === 'PUT') && this.state.query.state === 'PENDING') {
+      this.setState({
+        msg: "Please wait, your previous policy change is still pending"
+      });
+    }else{
+      console.log("Making a PUT or POST request");
+      let data = {};
+      if((this.state.err.status === 404 && this.state.query.type === 'GET') || (this.state.query.type === 'POST' && this.state.query.state === 'FAILURE')) {
+        this.postPolicy();
+        data = {message: 'Creating policy'};
+      }else{
+        this.putPolicy();
+        data = {message: 'Updating policy'};
+      }
+      document.querySelector('#policy-submit').MaterialSnackbar.showSnackbar(data);
+    }
   }
 
   render() {
-    if (!this.state.json) return null;
+    if (!this.state.query) return null;
     if (this.state.query.type === 'GET' && this.state.query.state === 'PENDING') {
       return (
         <div>
-          <h4 style={{textAlign: 'center'}}>Please wait, coming right up!</h4>
+          <h3 style={{textAlign: 'center'}}>Please wait, coming right up!</h3>
           <Loader />
         </div>
       );
     }
-    if (this.state.query.type === 'GET' && this.state.query.state === 'FAILED' && this.state.json === null) {
+
+    if ((this.state.query.type === 'GET' && this.state.query.state === 'SUCCESS') ||
+      this.state.query.type === 'POST' || this.state.query.type === 'PUT') {
       return (
-        <div className={styles.card}>
-          <h2>Failed to fetch the data. Please refresh or try again later</h2>
+        <div className="mdl-grid mdl-grid--no-spacing mdl-cell--11-col mdl-shadow--3dp">
+          {this.getMessage()}
+          {this.getDisplayDetails()}
+          {this.getSchedule()}
+          {this.getDescription()}
+          {this.getWork()}
+          {this.getSubmit()}
+          <div id="policy-submit" className="mdl-js-snackbar mdl-snackbar"
+               style={{background: 'rgb(101, 101, 97)'}}>
+            <div className="mdl-snackbar__text"/>
+            <button className="mdl-snackbar__action" type="button"/>
+          </div>
         </div>
       );
     }
-
     return (
       <div className="mdl-grid mdl-grid--no-spacing mdl-cell--11-col mdl-shadow--3dp">
-        {this.getDisplayDetails()}
-        {this.getSchedule()}
-        {this.getDescription()}
-        {this.getWork()}
-        {this.getSubmit()}
-        <div id="demo-toast-example" className="mdl-js-snackbar mdl-snackbar"
-             style={{background: 'rgb(137, 137, 132)'}}>
-          <div className="mdl-snackbar__text"/>
-          <button className="mdl-snackbar__action" type="button"/>
-        </div>
+        {this.getMessage()}
       </div>
     );
   }
 
-
   getDisplayDetails() {
     return (<div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
-      <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Policy Found</div>
       <div className="mdl-cell--2-col">Version: {this.state.json.version}</div>
       <div className="mdl-layout-spacer"/>
       <div className="mdl-cell--3-col">Created at: {this.state.json.policyDetails.createdAt}</div>
@@ -238,6 +308,12 @@ export default class PolicyComponent extends React.Component {
       <div className="mdl-cell--3-col">Modified at: {this.state.json.policyDetails.modifiedAt}</div>
       <div className="mdl-layout-spacer"/>
 
+    </div>);
+  }
+
+  getMessage() {
+    return (<div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
+      <div className="mdl-typography--headline  mdl-typography--font-thin mdl-cell--12-col">{this.state.msg}</div>
     </div>);
   }
 
@@ -264,12 +340,9 @@ export default class PolicyComponent extends React.Component {
   getDescription() {
     return (<div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
       <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Description</div>
-
-      <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+      <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield">
         <textarea className="mdl-textfield__input" type="text" id="description" rows="2"
-                  onChange={this.handleDescriptionChange}
-                  value={this.state.json.policyDetails.policy.description}/>
-        <label className="mdl-textfield__label" htmlFor="description">Some details about the policy...</label>
+                  onChange={this.handleDescriptionChange} value={this.state.json.policyDetails.policy.description}/>
       </div>
     </div>);
   }
@@ -304,13 +377,20 @@ export default class PolicyComponent extends React.Component {
   }
 
   getSubmit() {
+    let buttonText = '';
+    if((this.state.err.status === 404 && this.state.query.type === 'GET') || (this.state.query.type === 'POST' && (this.state.query.state === 'FAILURE' || this.state.query.state === 'PENDING'))){
+      buttonText = 'CREATE';
+    }else{
+      buttonText = 'UPDATE';
+    }
     return (
       <div className="mdl-grid mdl-cell--12-col mdl-shadow--3dp">
         <button className="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect"
                 style={{background: 'rgb(137, 137, 132)', color: 'white', margin: 'auto'}}
                 onClick={this.handleSubmitClick}>
-          Submit
+          {buttonText}
         </button>
-      </div>)
+      </div>);
   }
+
 }
