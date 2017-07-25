@@ -15,6 +15,7 @@ import org.apache.zookeeper.CreateMode;
 import proto.PolicyDTO;
 import recording.Recorder;
 
+import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -168,8 +169,15 @@ public class ZookeeperBasedPolicyStore implements PolicyStore {
                                 forPath(policyNodePath, requestedVersionedPolicyDetails.getPolicyDetails().toByteArray());
                         String policyNodeName = ZKPaths.getNodeFromPath(policyNodePathWithNodeName);
                         Integer newVersion = Integer.parseInt(policyNodeName);      //Policy Node names are incrementing numbers (the versions)
-
-                        PolicyDTO.VersionedPolicyDetails updated = requestedVersionedPolicyDetails.toBuilder().setVersion(newVersion).build();
+                        PolicyDTO.VersionedPolicyDetails.Builder versionedPolicyDetailsBuilder = requestedVersionedPolicyDetails.toBuilder();
+                        versionedPolicyDetailsBuilder.setVersion(newVersion);
+                        String currentTime = ZonedDateTime.now().toString();
+                        PolicyDTO.PolicyDetails.Builder policyDetailsBuilder = versionedPolicyDetailsBuilder.getPolicyDetails().toBuilder().setModifiedAt(currentTime);
+                        if(create){
+                            policyDetailsBuilder.setCreatedAt(currentTime);
+                        }
+                        versionedPolicyDetailsBuilder.setPolicyDetails(policyDetailsBuilder.build());
+                        PolicyDTO.VersionedPolicyDetails updated = versionedPolicyDetailsBuilder.build();
                         updateProcessGroupHierarchy(processGroup);
                         return updated;
                     } catch (Exception e) {
