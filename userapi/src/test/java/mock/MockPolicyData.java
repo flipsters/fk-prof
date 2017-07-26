@@ -11,9 +11,12 @@ import java.util.List;
  * Created by rohit.patiyal on 10/05/17.
  */
 public class MockPolicyData {
-    private static PolicyDTO.Work mockWork = PolicyDTO.Work.newBuilder().setWType(PolicyDTO.WorkType.cpu_sample_work).build();
-    private static PolicyDTO.Schedule mockSchedule = PolicyDTO.Schedule.newBuilder().setAfter("w1").setDuration(1).setPgCovPct(100).build();
-    private static PolicyDTO.Policy mockPolicy = PolicyDTO.Policy.newBuilder().addWork(mockWork).addWork(mockWork).setSchedule(mockSchedule).setDescription("Test policy").build();
+    private static PolicyDTO.Work mockWork = PolicyDTO.Work.newBuilder().setWType(PolicyDTO.WorkType.cpu_sample_work)
+            .setCpuSample(PolicyDTO.CpuSampleWork.newBuilder().setFrequency(50).setMaxFrames(64).build()).build();
+    private static PolicyDTO.Schedule mockSchedule = PolicyDTO.Schedule.newBuilder()
+            .setAfter("w1").setPgCovPct(100).setDuration(60).build();
+    private static PolicyDTO.Policy mockPolicy = PolicyDTO.Policy.newBuilder()
+            .addWork(mockWork).setSchedule(mockSchedule).setDescription("Test policy").build();
     public static List<Recorder.ProcessGroup> mockProcessGroups = Arrays.asList(
             Recorder.ProcessGroup.newBuilder().setAppId("a1").setCluster("c1").setProcName("p1").build(),
             Recorder.ProcessGroup.newBuilder().setAppId("a1").setCluster("c1").setProcName("p2").build(),

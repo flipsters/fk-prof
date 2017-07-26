@@ -14,6 +14,7 @@ import fk.prof.userapi.http.UserapiHttpHelper;
 import fk.prof.userapi.model.AggregatedProfileInfo;
 import fk.prof.userapi.model.AggregationWindowSummary;
 import fk.prof.userapi.util.ProtoUtil;
+import fk.prof.userapi.util.proto.PolicyDTOProtoUtil;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -45,7 +46,6 @@ import java.util.*;
  * Created by rohit.patiyal on 18/01/17.
  */
 public class HttpVerticle extends AbstractVerticle {
-
     private static Logger LOGGER = LoggerFactory.getLogger(HttpVerticle.class);
 
     private String baseDir;
@@ -62,7 +62,7 @@ public class HttpVerticle extends AbstractVerticle {
         this.httpClientConfig = httpClientConfig;
         this.profileStoreAPI = profileStoreAPI;
         this.baseDir = baseDir;
-        this.maxListProfilesDurationInSecs = maxListProfilesDurationInDays*24*60*60;
+        this.maxListProfilesDurationInSecs = maxListProfilesDurationInDays * 24 * 60 * 60;
     }
 
     private Router configureRouter() {
@@ -163,7 +163,7 @@ public class HttpVerticle extends AbstractVerticle {
         Future<List<AggregatedProfileNamingStrategy>> foundProfiles = Future.future();
         foundProfiles.setHandler(result -> {
             List<Future> profileSummaries = new ArrayList<>();
-            for (AggregatedProfileNamingStrategy filename: result.result()) {
+            for (AggregatedProfileNamingStrategy filename : result.result()) {
                 Future<AggregationWindowSummary> summary = Future.future();
 
                 profileStoreAPI.loadSummary(summary, filename);
@@ -175,26 +175,23 @@ public class HttpVerticle extends AbstractVerticle {
                 List<ErroredGetSummaryResponse> failed = new ArrayList<>();
 
                 // Can only get the underlying list of results of it is a CompositeFutureImpl
-                if(summaryResult instanceof CompositeFutureImpl) {
+                if (summaryResult instanceof CompositeFutureImpl) {
                     CompositeFutureImpl compositeFuture = (CompositeFutureImpl) summaryResult;
                     for (int i = 0; i < compositeFuture.size(); ++i) {
-                        if(compositeFuture.succeeded(i)) {
+                        if (compositeFuture.succeeded(i)) {
                             succeeded.add(compositeFuture.resultAt(i));
-                        }
-                        else {
+                        } else {
                             AggregatedProfileNamingStrategy failedFilename = result.result().get(i);
                             failed.add(new ErroredGetSummaryResponse(failedFilename.startTime, failedFilename.duration, compositeFuture.cause(i).getMessage()));
                         }
                     }
-                }
-                else {
-                    if(summaryResult.succeeded()) {
+                } else {
+                    if (summaryResult.succeeded()) {
                         CompositeFuture compositeFuture = summaryResult.result();
                         for (int i = 0; i < compositeFuture.size(); ++i) {
                             succeeded.add(compositeFuture.resultAt(i));
                         }
-                    }
-                    else {
+                    } else {
                         // composite future failed so set error in response.
                         setResponse(Future.failedFuture(summaryResult.cause()), routingContext);
                         return;
@@ -259,7 +256,10 @@ public class HttpVerticle extends AbstractVerticle {
         try {
             PolicyDTO.VersionedPolicyDetails.Builder payloadVersionedPolicyDetails = PolicyDTO.VersionedPolicyDetails.newBuilder();
             JsonFormat.parser().merge(payloadVersionedPolicyDetailsJsonString, payloadVersionedPolicyDetails);
-            makeRequestToBackend(routingContext.request().method(), routingContext.normalisedPath(), ProtoUtil.buildBufferFromProto(payloadVersionedPolicyDetails.build()), false)
+            PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = payloadVersionedPolicyDetails.build();
+            PolicyDTOProtoUtil.validatePolicyValues(versionedPolicyDetails);
+            LOGGER.info("Making request for policy change: {} to backend", PolicyDTOProtoUtil.versionedPolicyDetailsCompactRepr(versionedPolicyDetails));
+            makeRequestToBackend(routingContext.request().method(), routingContext.normalisedPath(), ProtoUtil.buildBufferFromProto(versionedPolicyDetails), false)
                     .setHandler(ar -> handleBackendBufferedPolicyResponse(routingContext, ar));
         } catch (Exception ex) {
             UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(ex);
@@ -277,7 +277,7 @@ public class HttpVerticle extends AbstractVerticle {
         }
     }
 
-    private void proxyListAPIToBackend(RoutingContext routingContext){
+    private void proxyListAPIToBackend(RoutingContext routingContext) {
         proxyToBackend(routingContext, routingContext.normalisedPath().substring(UserapiApiPathConstants.LIST_POLICY.length()) + "?" + routingContext.request().query());
     }
 
@@ -293,9 +293,9 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     private Future<ProfHttpClient.ResponseWithStatusTuple> makeRequestToBackend(HttpMethod method, String path, Buffer payloadAsBuffer, boolean withRetry) {
-        if(withRetry){
+        if (withRetry) {
             return httpClient.requestAsyncWithRetry(method, backendConfig.getIp(), backendConfig.getPort(), path, payloadAsBuffer);
-        }else{
+        } else {
             return httpClient.requestAsync(method, backendConfig.getIp(), backendConfig.getPort(), path, payloadAsBuffer);
         }
     }
@@ -317,7 +317,7 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     private void handleBackendResponse(RoutingContext context, AsyncResult<ProfHttpClient.ResponseWithStatusTuple> ar) {
-        if(ar.succeeded()) {
+        if (ar.succeeded()) {
             context.response().setStatusCode(ar.result().getStatusCode());
             context.response().end(ar.result().getResponse());
         } else {
@@ -331,48 +331,43 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     private <T> void setResponse(AsyncResult<T> result, RoutingContext routingContext, boolean gzipped) {
-        if(routingContext.response().ended()) {
+        if (routingContext.response().ended()) {
             return;
         }
-        if(result.failed()) {
+        if (result.failed()) {
             LOGGER.error(routingContext.request().uri(), result.cause());
 
-            if(result.cause() instanceof FileNotFoundException) {
+            if (result.cause() instanceof FileNotFoundException) {
                 endResponseWithError(routingContext.response(), result.cause(), 404);
-            }
-            else if(result.cause() instanceof IllegalArgumentException) {
+            } else if (result.cause() instanceof IllegalArgumentException) {
                 endResponseWithError(routingContext.response(), result.cause(), 400);
-            }
-            else {
+            } else {
                 endResponseWithError(routingContext.response(), result.cause(), 500);
             }
-        }
-        else {
+        } else {
             String encodedResponse = Json.encode(result.result());
             HttpServerResponse response = routingContext.response();
 
             response.putHeader("content-type", "application/json");
-            if(gzipped && safeContains(routingContext.request().getHeader("Accept-Encoding"), "gzip")) {
+            if (gzipped && safeContains(routingContext.request().getHeader("Accept-Encoding"), "gzip")) {
                 Buffer compressedBuf;
                 try {
                     compressedBuf = Buffer.buffer(StreamTransformer.compress(encodedResponse.getBytes(Charset.forName("utf-8"))));
-                }
-                catch(IOException e) {
+                } catch (IOException e) {
                     setResponse(Future.failedFuture(e), routingContext, false);
                     return;
                 }
 
                 response.putHeader("Content-Encoding", "gzip");
                 response.end(compressedBuf);
-            }
-            else {
+            } else {
                 response.end(encodedResponse);
             }
         }
     }
 
     private boolean safeContains(String str, String subStr) {
-        if(str == null || subStr == null) {
+        if (str == null || subStr == null) {
             return false;
         }
         return str.toLowerCase().contains(subStr.toLowerCase());
@@ -388,13 +383,17 @@ public class HttpVerticle extends AbstractVerticle {
                 .put("status", statusCode);
 
         switch (statusCode) {
-            case 400: error.put("error", "BAD_REQUEST");
+            case 400:
+                error.put("error", "BAD_REQUEST");
                 break;
-            case 404: error.put("error", "NOT_FOUND");
+            case 404:
+                error.put("error", "NOT_FOUND");
                 break;
-            case 500: error.put("error", "INTERNAL_SERVER_ERROR");
+            case 500:
+                error.put("error", "INTERNAL_SERVER_ERROR");
                 break;
-            default:  error.put("error", "SOMETHING_WENT_WRONG");
+            default:
+                error.put("error", "SOMETHING_WENT_WRONG");
         }
 
         if (msg != null) {
