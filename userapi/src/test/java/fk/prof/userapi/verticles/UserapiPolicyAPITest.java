@@ -9,16 +9,12 @@ import fk.prof.userapi.deployer.VerticleDeployer;
 import fk.prof.userapi.deployer.impl.UserapiHttpVerticleDeployer;
 import fk.prof.userapi.http.UserapiApiPathConstants;
 import fk.prof.userapi.http.UserapiHttpHelper;
-import fk.prof.userapi.model.json.ProtoSerializers;
 import fk.prof.userapi.util.ProtoUtil;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -27,14 +23,12 @@ import io.vertx.ext.web.handler.BodyHandler;
 import mock.MockPolicyData;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import proto.PolicyDTO;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 import static fk.prof.userapi.http.UserapiApiPathConstants.DELIMITER;
 
@@ -88,7 +82,7 @@ public class UserapiPolicyAPITest {
         final Async async = context.async();
         Router router = Router.router(vertx);
         UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
-                UserapiApiPathConstants.GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, req ->{
+                UserapiApiPathConstants.GET_POLICY_FOR_APP_CLUSTER_PROC, req ->{
                     try {
                         PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),0);
                         req.response().end(ProtoUtil.buildBufferFromProto(versionedPolicyDetails));
@@ -99,7 +93,7 @@ public class UserapiPolicyAPITest {
         backendServer.requestHandler(router::accept);
         backendServer.listen(backendPort, result -> {
             if(result.succeeded()){
-                String userapiPolicyPath = UserapiApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
+                String userapiPolicyPath = UserapiApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
                 client.getNow(userapiPort, "localhost", userapiPolicyPath, res -> {
                     res.bodyHandler(buffer -> {
                         try {
@@ -128,7 +122,7 @@ public class UserapiPolicyAPITest {
         }
         String finalJsonPayload = jsonPayload;
         UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.PUT,
-                UserapiApiPathConstants.PUT_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
+                UserapiApiPathConstants.PUT_POLICY_FOR_APP_CLUSTER_PROC,
                 BodyHandler.create().setBodyLimit(1024 * 10), req -> {
                     try {
                         PolicyDTO.VersionedPolicyDetails expected = MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),0);
@@ -142,7 +136,7 @@ public class UserapiPolicyAPITest {
         backendServer.requestHandler(router::accept);
         backendServer.listen(backendPort, result -> {
             if (result.succeeded()) {
-                String userapiPolicyPath = UserapiApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
+                String userapiPolicyPath = UserapiApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
 
                 client.put(userapiPort, "localhost", userapiPolicyPath, res -> {
                     res.bodyHandler(buffer -> {
@@ -172,7 +166,7 @@ public class UserapiPolicyAPITest {
         }
         String finalJsonPayload = jsonPayload;
         UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.POST,
-                UserapiApiPathConstants.POST_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
+                UserapiApiPathConstants.POST_POLICY_FOR_APP_CLUSTER_PROC,
                 BodyHandler.create().setBodyLimit(1024 * 10), req -> {
                     try {
                         PolicyDTO.VersionedPolicyDetails expected = MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),-1);
@@ -186,7 +180,7 @@ public class UserapiPolicyAPITest {
         backendServer.requestHandler(router::accept);
         backendServer.listen(backendPort, result -> {
             if (result.succeeded()) {
-                String userapiPolicyPath = UserapiApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
+                String userapiPolicyPath = UserapiApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
                 client.post(userapiPort, "localhost", userapiPolicyPath, res -> {
                     res.bodyHandler(buffer -> {
                         try {

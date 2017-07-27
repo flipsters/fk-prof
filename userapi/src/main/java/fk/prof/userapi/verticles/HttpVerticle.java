@@ -71,21 +71,21 @@ public class HttpVerticle extends AbstractVerticle {
         router.route().handler(LoggerHandler.create());
 
         router.get(UserapiApiPathConstants.APPS).handler(this::getAppIds);
-        router.get(UserapiApiPathConstants.CLUSTER_GIVEN_APPID).handler(this::getClusterIds);
-        router.get(UserapiApiPathConstants.PROC_GIVEN_APPID_CLUSTERID).handler(this::getProcName);
-        router.get(UserapiApiPathConstants.PROFILES_GIVEN_APPID_CLUSTERID_PROCNAME).handler(this::getProfiles);
-        router.get(UserapiApiPathConstants.PROFILE_GIVEN_APPID_CLUSTERID_PROCNAME_WORKTYPE_TRACENAME).handler(this::getCpuSamplingTraces);
-        router.get(UserapiApiPathConstants.HEALTHCHECK).handler(this::handleGetHealth);
+        router.get(UserapiApiPathConstants.CLUSTERS_FOR_APP).handler(this::getClusterIds);
+        router.get(UserapiApiPathConstants.PROCS_FOR_APP_CLUSTER).handler(this::getProcName);
+        router.get(UserapiApiPathConstants.PROFILES_FOR_APP_CLUSTER_PROC).handler(this::getProfiles);
+        router.get(UserapiApiPathConstants.PROFILE_FOR_APP_CLUSTER_PROC_WORK_TRACE).handler(this::getCpuSamplingTraces);
+        router.get(UserapiApiPathConstants.HEALTH_CHECK).handler(this::handleGetHealth);
 
-        UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET, UserapiApiPathConstants.GET_LIST_POLICY_APPIDS, this::proxyListAPIToBackend);
-        UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET, UserapiApiPathConstants.GET_LIST_POLICY_CLUSTERIDS_GIVEN_APPID, this::proxyListAPIToBackend);
-        UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET, UserapiApiPathConstants.GET_LIST_POLICY_PROCNAMES_GIVEN_APPID_CLUSTERID, this::proxyListAPIToBackend);
+        UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET, UserapiApiPathConstants.POLICY_APPS, this::proxyListAPIToBackend);
+        UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET, UserapiApiPathConstants.POLICY_CLUSTERS_FOR_APP, this::proxyListAPIToBackend);
+        UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET, UserapiApiPathConstants.POLICY_PROCS_FOR_APP_CLUSTER, this::proxyListAPIToBackend);
 
-        UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET, UserapiApiPathConstants.GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, this::getPolicyFromBackend);
-        UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.PUT, UserapiApiPathConstants.PUT_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
-                BodyHandler.create().setBodyLimit(1024 * 10), this::putPostPolicyToBackend);
-        UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.POST, UserapiApiPathConstants.POST_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
-                BodyHandler.create().setBodyLimit(1024 * 10), this::putPostPolicyToBackend);
+        UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET, UserapiApiPathConstants.GET_POLICY_FOR_APP_CLUSTER_PROC, this::proxyGetPolicyToBackend);
+        UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.PUT, UserapiApiPathConstants.PUT_POLICY_FOR_APP_CLUSTER_PROC,
+                BodyHandler.create().setBodyLimit(1024 * 10), this::proxyPutPostPolicyToBackend);
+        UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.POST, UserapiApiPathConstants.POST_POLICY_FOR_APP_CLUSTER_PROC,
+                BodyHandler.create().setBodyLimit(1024 * 10), this::proxyPutPostPolicyToBackend);
 
         return router;
     }
@@ -108,10 +108,7 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     private void getAppIds(RoutingContext routingContext) {
-        String prefix = routingContext.request().getParam("prefix");
-        if (prefix == null) {
-            prefix = "";
-        }
+        final String prefix = routingContext.request().getParam("prefix");
         Future<Set<String>> future = Future.future();
         profileStoreAPI.getAppIdsWithPrefix(future.setHandler(result -> setResponse(result, routingContext)),
             baseDir, prefix);
@@ -119,10 +116,7 @@ public class HttpVerticle extends AbstractVerticle {
 
     private void getClusterIds(RoutingContext routingContext) {
         final String appId = routingContext.request().getParam("appId");
-        String prefix = routingContext.request().getParam("prefix");
-        if (prefix == null) {
-            prefix = "";
-        }
+        final String prefix = routingContext.request().getParam("prefix");
         Future<Set<String>> future = Future.future();
         profileStoreAPI.getClusterIdsWithPrefix(future.setHandler(result -> setResponse(result, routingContext)),
             baseDir, appId, prefix);
@@ -131,10 +125,7 @@ public class HttpVerticle extends AbstractVerticle {
     private void getProcName(RoutingContext routingContext) {
         final String appId = routingContext.request().getParam("appId");
         final String clusterId = routingContext.request().getParam("clusterId");
-        String prefix = routingContext.request().getParam("prefix");
-        if (prefix == null) {
-            prefix = "";
-        }
+        final String prefix = routingContext.request().getParam("prefix");
         Future<Set<String>> future = Future.future();
         profileStoreAPI.getProcNamesWithPrefix(future.setHandler(result -> setResponse(result, routingContext)),
             baseDir, appId, clusterId, prefix);
@@ -251,7 +242,7 @@ public class HttpVerticle extends AbstractVerticle {
         routingContext.response().setStatusCode(200).end();
     }
 
-    private void putPostPolicyToBackend(RoutingContext routingContext) {
+    private void proxyPutPostPolicyToBackend(RoutingContext routingContext) {
         String payloadVersionedPolicyDetailsJsonString = routingContext.getBodyAsString("utf-8");
         try {
             PolicyDTO.VersionedPolicyDetails.Builder payloadVersionedPolicyDetails = PolicyDTO.VersionedPolicyDetails.newBuilder();
@@ -260,17 +251,17 @@ public class HttpVerticle extends AbstractVerticle {
             PolicyDTOProtoUtil.validatePolicyValues(versionedPolicyDetails);
             LOGGER.info("Making request for policy change: {} to backend", PolicyDTOProtoUtil.versionedPolicyDetailsCompactRepr(versionedPolicyDetails));
             makeRequestToBackend(routingContext.request().method(), routingContext.normalisedPath(), ProtoUtil.buildBufferFromProto(versionedPolicyDetails), false)
-                    .setHandler(ar -> handleBackendBufferedPolicyResponse(routingContext, ar));
+                    .setHandler(ar -> proxyBufferedPolicyResponseFromBackend(routingContext, ar));
         } catch (Exception ex) {
             UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(ex);
             UserapiHttpHelper.handleFailure(routingContext, httpFailure);
         }
     }
 
-    private void getPolicyFromBackend(RoutingContext routingContext) {
+    private void proxyGetPolicyToBackend(RoutingContext routingContext) {
         try {
             makeRequestToBackend(routingContext.request().method(), routingContext.normalisedPath(), null, false)
-                    .setHandler(ar -> handleBackendBufferedPolicyResponse(routingContext, ar));
+                    .setHandler(ar -> proxyBufferedPolicyResponseFromBackend(routingContext, ar));
         } catch (Exception ex) {
             UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(ex);
             UserapiHttpHelper.handleFailure(routingContext, httpFailure);
@@ -278,17 +269,13 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     private void proxyListAPIToBackend(RoutingContext routingContext) {
-        proxyToBackend(routingContext, routingContext.normalisedPath().substring(UserapiApiPathConstants.LIST_POLICY.length()) + "?" + routingContext.request().query());
-    }
-
-
-    private void proxyToBackend(RoutingContext context, String path) {
+        final String path = routingContext.normalisedPath().substring(UserapiApiPathConstants.LIST_POLICY_API_PREFIX.length()) + "?" + routingContext.request().query();
         try {
-            makeRequestToBackend(context.request().method(), path, context.getBody(), false)
-                    .setHandler(ar -> handleBackendResponse(context, ar));
+            makeRequestToBackend(routingContext.request().method(), path, routingContext.getBody(), false)
+                    .setHandler(ar -> proxyResponseFromBackend(routingContext, ar));
         } catch (Exception ex) {
             UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(ex);
-            UserapiHttpHelper.handleFailure(context, httpFailure);
+            UserapiHttpHelper.handleFailure(routingContext, httpFailure);
         }
     }
 
@@ -300,7 +287,7 @@ public class HttpVerticle extends AbstractVerticle {
         }
     }
 
-    private void handleBackendBufferedPolicyResponse(RoutingContext context, AsyncResult<ProfHttpClient.ResponseWithStatusTuple> ar) {
+    private void proxyBufferedPolicyResponseFromBackend(RoutingContext context, AsyncResult<ProfHttpClient.ResponseWithStatusTuple> ar) {
         if (ar.succeeded()) {
             context.response().setStatusCode(ar.result().getStatusCode());
             try {
@@ -316,7 +303,7 @@ public class HttpVerticle extends AbstractVerticle {
         }
     }
 
-    private void handleBackendResponse(RoutingContext context, AsyncResult<ProfHttpClient.ResponseWithStatusTuple> ar) {
+    private void proxyResponseFromBackend(RoutingContext context, AsyncResult<ProfHttpClient.ResponseWithStatusTuple> ar) {
         if (ar.succeeded()) {
             context.response().setStatusCode(ar.result().getStatusCode());
             context.response().end(ar.result().getResponse());

@@ -80,11 +80,11 @@ public class UserapPolicyiListingAPITest {
     @Test
     public void TestGetAppIdsRoute(TestContext context) throws Exception {
         final Async async = context.async();
-        String userapiGetAppIdsURI = UserapiApiPathConstants.GET_LIST_POLICY_APPIDS + "?prefix=" + APP_ID.substring(0, 1 + new Random().nextInt(APP_ID.length() - 1));
+        String userapiGetAppIdsURI = UserapiApiPathConstants.POLICY_APPS + "?prefix=" + APP_ID.substring(0, 1 + new Random().nextInt(APP_ID.length() - 1));
         Router router = Router.router(vertx);
         UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
-                UserapiApiPathConstants.GET_LIST_POLICY_APPIDS.substring(UserapiApiPathConstants.LIST_POLICY.length()), routingContext -> {
-                    context.assertEquals(userapiGetAppIdsURI.substring(UserapiApiPathConstants.LIST_POLICY.length()), routingContext.normalisedPath()+"?"+routingContext.request().query());
+                UserapiApiPathConstants.POLICY_APPS.substring(UserapiApiPathConstants.LIST_POLICY_API_PREFIX.length()), routingContext -> {
+                    context.assertEquals(userapiGetAppIdsURI.substring(UserapiApiPathConstants.LIST_POLICY_API_PREFIX.length()), routingContext.normalisedPath()+"?"+routingContext.request().query());
                     routingContext.response().end(Json.encode(Sets.newSet(APP_ID)));
                 });
         backendServer.requestHandler(router::accept);
@@ -107,11 +107,11 @@ public class UserapPolicyiListingAPITest {
     @Test
     public void TestGetClusterIdsRoute(TestContext context) throws Exception {
         final Async async = context.async();
-        String userapiGetClusterIdsURI = UserapiApiPathConstants.LIST_POLICY + "/clusterIds/" + APP_ID + "?prefix=" + CLUSTER_ID.substring(0, 1 + new Random().nextInt(CLUSTER_ID.length() - 1));
+        String userapiGetClusterIdsURI = UserapiApiPathConstants.LIST_POLICY_API_PREFIX + "/clusterIds/" + APP_ID + "?prefix=" + CLUSTER_ID.substring(0, 1 + new Random().nextInt(CLUSTER_ID.length() - 1));
         Router router = Router.router(vertx);
         UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
-                UserapiApiPathConstants.GET_LIST_POLICY_CLUSTERIDS_GIVEN_APPID.substring(UserapiApiPathConstants.LIST_POLICY.length()), routingContext -> {
-                    context.assertEquals(userapiGetClusterIdsURI.substring(UserapiApiPathConstants.LIST_POLICY.length()), routingContext.normalisedPath()+"?"+routingContext.request().query());
+                UserapiApiPathConstants.POLICY_CLUSTERS_FOR_APP.substring(UserapiApiPathConstants.LIST_POLICY_API_PREFIX.length()), routingContext -> {
+                    context.assertEquals(userapiGetClusterIdsURI.substring(UserapiApiPathConstants.LIST_POLICY_API_PREFIX.length()), routingContext.normalisedPath()+"?"+routingContext.request().query());
                     routingContext.response().end(Json.encode(Sets.newSet(CLUSTER_ID)));
                 });
         backendServer.requestHandler(router::accept);
@@ -135,10 +135,10 @@ public class UserapPolicyiListingAPITest {
     @Test
     public void TestGetProcNamesRoute(TestContext context) throws Exception {
         final Async async = context.async();
-        String userapiGetProcNamesURI = UserapiApiPathConstants.LIST_POLICY + "/procNames/" + APP_ID + DELIMITER + CLUSTER_ID + "?prefix=" + PROC.substring(0, 1 + new Random().nextInt(PROC.length() - 1));
+        String userapiGetProcNamesURI = UserapiApiPathConstants.LIST_POLICY_API_PREFIX + "/procNames/" + APP_ID + DELIMITER + CLUSTER_ID + "?prefix=" + PROC.substring(0, 1 + new Random().nextInt(PROC.length() - 1));
         Router router = Router.router(vertx);
         UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
-                UserapiApiPathConstants.GET_LIST_POLICY_PROCNAMES_GIVEN_APPID_CLUSTERID.substring(UserapiApiPathConstants.LIST_POLICY.length()), req -> req.response().end(Json.encode(Sets.newSet(PROC))));
+                UserapiApiPathConstants.POLICY_PROCS_FOR_APP_CLUSTER.substring(UserapiApiPathConstants.LIST_POLICY_API_PREFIX.length()), req -> req.response().end(Json.encode(Sets.newSet(PROC))));
         backendServer.requestHandler(router::accept);
         backendServer.listen(backendPort, result -> {
             if (result.succeeded()) {

@@ -125,10 +125,10 @@ public class UserapiManager {
             .setJmxEnabled(true)
             .setRegistryName(UserapiConfigManager.METRIC_REGISTRY)
             .addMonitoredHttpServerUri(new Match().setValue(UserapiApiPathConstants.APPS + ".*").setAlias(UserapiApiPathConstants.APPS).setType(MatchType.REGEX))
-            .addMonitoredHttpServerUri(new Match().setValue(UserapiApiPathConstants.CLUSTER_GIVEN_APPID + ".*").setAlias(UserapiApiPathConstants.CLUSTER_GIVEN_APPID).setType(MatchType.REGEX))
-            .addMonitoredHttpServerUri(new Match().setValue(UserapiApiPathConstants.PROC_GIVEN_APPID_CLUSTERID + ".*").setAlias(UserapiApiPathConstants.PROC_GIVEN_APPID_CLUSTERID).setType(MatchType.REGEX))
-            .addMonitoredHttpServerUri(new Match().setValue(UserapiApiPathConstants.PROFILES_GIVEN_APPID_CLUSTERID_PROCNAME).setAlias(UserapiApiPathConstants.PROFILE_GIVEN_APPID_CLUSTERID_PROCNAME_WORKTYPE_TRACENAME).setType(MatchType.REGEX))
-            .addMonitoredHttpServerUri(new Match().setValue(UserapiApiPathConstants.PROFILE_GIVEN_APPID_CLUSTERID_PROCNAME_WORKTYPE_TRACENAME).setAlias(UserapiApiPathConstants.PROFILE_GIVEN_APPID_CLUSTERID_PROCNAME_WORKTYPE_TRACENAME).setType(MatchType.REGEX));
+            .addMonitoredHttpServerUri(new Match().setValue(UserapiApiPathConstants.CLUSTERS_FOR_APP + ".*").setAlias(UserapiApiPathConstants.CLUSTERS_FOR_APP).setType(MatchType.REGEX))
+            .addMonitoredHttpServerUri(new Match().setValue(UserapiApiPathConstants.PROCS_FOR_APP_CLUSTER + ".*").setAlias(UserapiApiPathConstants.PROCS_FOR_APP_CLUSTER).setType(MatchType.REGEX))
+            .addMonitoredHttpServerUri(new Match().setValue(UserapiApiPathConstants.PROFILES_FOR_APP_CLUSTER_PROC).setAlias(UserapiApiPathConstants.PROFILE_FOR_APP_CLUSTER_PROC_WORK_TRACE).setType(MatchType.REGEX))
+            .addMonitoredHttpServerUri(new Match().setValue(UserapiApiPathConstants.PROFILE_FOR_APP_CLUSTER_PROC_WORK_TRACE).setAlias(UserapiApiPathConstants.PROFILE_FOR_APP_CLUSTER_PROC_WORK_TRACE).setType(MatchType.REGEX));
     }
 
     public static class AbortPolicy implements RejectedExecutionHandler {

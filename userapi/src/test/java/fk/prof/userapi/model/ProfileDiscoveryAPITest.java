@@ -101,6 +101,7 @@ public class ProfileDiscoveryAPITest {
             {
                 put("app", Sets.newSet("app1"));
                 put("", Sets.newSet("app1", "foo"));
+                put(null, Sets.newSet("app1", "foo"));
             }
         };
 
@@ -128,6 +129,7 @@ public class ProfileDiscoveryAPITest {
                 put(Arrays.asList("np", "np"), Sets.newSet());
                 put(Arrays.asList("app1", "b"), Sets.newSet());
                 put(Arrays.asList("", ""), Sets.newSet());
+                put(Arrays.asList("app1", null), Sets.newSet("cluster1"));
             }
         };
 
@@ -150,6 +152,7 @@ public class ProfileDiscoveryAPITest {
         Map<List<String>, Collection<?>> appIdTestPairs = new HashMap<List<String>, Collection<?>>() {
             {
                 put(Arrays.asList("app1", "cluster1", "pr"), Sets.newSet("process1"));
+                put(Arrays.asList("app1", "cluster1", null), Sets.newSet("process1"));
                 put(Arrays.asList("app1", "", ""), Sets.newSet());
                 put(Arrays.asList("foo", "bar", ""), Sets.newSet("main"));
                 put(Arrays.asList("", "", ""), Sets.newSet());
