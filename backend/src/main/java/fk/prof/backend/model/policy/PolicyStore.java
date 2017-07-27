@@ -18,7 +18,7 @@ public interface PolicyStore {
 
     /**
      * Returns appIds of the processGroups corresponding to policies in the policyStore;
-     * returns all appIds, if prefix is null, else filters based on prefix
+     * returns all appIds if prefix is null, else filters based on prefix
      * @param prefix string to filter the appIds
      * @return Set of appIds
      * @throws Exception
@@ -28,7 +28,7 @@ public interface PolicyStore {
     /**
      * /**
      * Returns clusterIds of the processGroups corresponding to policies in the policyStore;
-     * returns all clusterIds for the appId, if prefix is null, else filters based on prefix
+     * returns all clusterIds for the appId if prefix is null, else filters based on prefix
      * @param appId  for which the clusterIds are to be found
      * @param prefix string to filter the clusterIds
      * @return Set of clusterIds
@@ -38,7 +38,7 @@ public interface PolicyStore {
 
     /**
      * Returns procNames of the processGroups corresponding to policies in the policyStore;
-     * returns all procNames for the appId and clusterId, if prefix is null, else filters based on prefix
+     * returns all procNames for the appId and clusterId if prefix is null, else filters based on prefix
      * @param appId     for which the procNames are to be found
      * @param clusterId for which the procNames are to be found
      * @param prefix    string to filter the procNames
