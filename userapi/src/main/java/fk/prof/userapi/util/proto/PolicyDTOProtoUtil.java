@@ -19,11 +19,9 @@ public class PolicyDTOProtoUtil {
 
     private static String policyWorkListCompactRepr(List<PolicyDTO.Work> workList) {
         StringBuilder sb = new StringBuilder();
-        sb.append("[");
         for(PolicyDTO.Work work: workList){
             sb.append(policyWorkCompactRepr(work));
         }
-        sb.append("]");
         return sb.toString();
     }
 
