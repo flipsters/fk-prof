@@ -10,7 +10,6 @@ import fk.prof.backend.exception.HttpFailure;
 import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.policy.PolicyStore;
 import fk.prof.backend.proto.BackendDTO;
-import fk.prof.backend.proto.PolicyDTO;
 import fk.prof.backend.util.ProtoUtil;
 import fk.prof.backend.util.proto.PolicyDTOProtoUtil;
 import fk.prof.backend.util.proto.RecorderProtoUtil;
@@ -28,6 +27,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
+import proto.PolicyDTO;
 import recording.Recorder;
 
 import java.io.IOException;

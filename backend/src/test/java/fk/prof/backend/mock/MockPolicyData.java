@@ -1,6 +1,6 @@
 package fk.prof.backend.mock;
 
-import fk.prof.backend.proto.PolicyDTO;
+import proto.PolicyDTO;
 import recording.Recorder;
 
 import java.util.Arrays;

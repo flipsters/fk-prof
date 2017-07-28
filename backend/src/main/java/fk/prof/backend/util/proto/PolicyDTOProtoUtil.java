@@ -1,7 +1,7 @@
 package fk.prof.backend.util.proto;
 
 import fk.prof.backend.proto.BackendDTO;
-import fk.prof.backend.proto.PolicyDTO;
+import proto.PolicyDTO;
 
 import java.util.stream.Collectors;
 

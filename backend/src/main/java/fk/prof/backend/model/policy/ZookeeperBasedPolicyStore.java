@@ -1,7 +1,6 @@
 package fk.prof.backend.model.policy;
 
 import fk.prof.backend.exception.PolicyException;
-import fk.prof.backend.proto.PolicyDTO;
 import fk.prof.backend.util.PathNamingUtil;
 import fk.prof.backend.util.ZookeeperUtil;
 import fk.prof.backend.util.proto.PolicyDTOProtoUtil;
@@ -13,6 +12,7 @@ import io.vertx.core.logging.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
+import proto.PolicyDTO;
 import recording.Recorder;
 
 import java.util.Map;
