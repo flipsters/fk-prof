@@ -1,6 +1,5 @@
 package fk.prof.backend.http.policy;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import fk.prof.backend.ConfigManager;
 import fk.prof.backend.Configuration;
 import fk.prof.backend.deployer.VerticleDeployer;
@@ -79,7 +78,7 @@ public class LeaderPolicyAPITest {
         CompletableFuture<Void> f1 = new CompletableFuture<>();
         CompletableFuture<Void> f2 = new CompletableFuture<>();
 
-        client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER + ApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+        client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
             context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
             httpClientResponse.bodyHandler(buffer -> {
                 try {
@@ -91,7 +90,7 @@ public class LeaderPolicyAPITest {
             });
         });
 
-        client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER + ApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(1).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(1).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(1).getProcName(), httpClientResponse -> {
+        client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(1).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(1).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(1).getProcName(), httpClientResponse -> {
             context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.BAD_REQUEST.code());
             httpClientResponse.bodyHandler(buffer -> {
                 context.assertTrue(buffer.toString().contains("not found"));
@@ -121,7 +120,7 @@ public class LeaderPolicyAPITest {
         CompletableFuture<Void> f2 = new CompletableFuture<>();
         CompletableFuture<Void> f3 = new CompletableFuture<>();
 
-        client.post(leaderPort, "localhost", ApiPathConstants.LEADER + ApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+        client.post(leaderPort, "localhost", ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
             context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.CREATED.code());
             httpClientResponse.bodyHandler(buffer -> {
                 try {
@@ -133,14 +132,14 @@ public class LeaderPolicyAPITest {
             });
         }).end(ProtoUtil.buildBufferFromProto(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), -1)));
 
-        client.post(leaderPort, "localhost", ApiPathConstants.LEADER + ApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+        client.post(leaderPort, "localhost", ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
             context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.BAD_REQUEST.code());
             httpClientResponse.bodyHandler(buffer -> {
                 context.assertTrue(buffer.toString().contains("error"));
                 f2.complete(null);
             });
         }).end();
-        client.post(leaderPort, "localhost", ApiPathConstants.LEADER + ApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+        client.post(leaderPort, "localhost", ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
             context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.BAD_REQUEST.code());
             httpClientResponse.bodyHandler(buffer -> {
                 context.assertTrue(buffer.toString().contains("error"));
@@ -170,8 +169,8 @@ public class LeaderPolicyAPITest {
         CompletableFuture<Void> f2 = new CompletableFuture<>();
         CompletableFuture<Void> f3 = new CompletableFuture<>();
 
-        client.put(leaderPort, "localhost", ApiPathConstants.LEADER + ApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
-            context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.CREATED.code());
+        client.put(leaderPort, "localhost", ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+            context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
             httpClientResponse.bodyHandler(buffer -> {
                 try {
                     context.assertEquals(buffer, ProtoUtil.buildBufferFromProto(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0),1)));
@@ -182,14 +181,14 @@ public class LeaderPolicyAPITest {
             });
         }).end(ProtoUtil.buildBufferFromProto(MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0)));
 
-        client.put(leaderPort, "localhost", ApiPathConstants.LEADER + ApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+        client.put(leaderPort, "localhost", ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
             context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.BAD_REQUEST.code());
             httpClientResponse.bodyHandler(buffer -> {
                 context.assertTrue(buffer.toString().contains("error"));
                 f2.complete(null);
             });
         }).end();
-        client.put(leaderPort, "localhost", ApiPathConstants.LEADER + ApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
+        client.put(leaderPort, "localhost", ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName(), httpClientResponse -> {
             context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.BAD_REQUEST.code());
             httpClientResponse.bodyHandler(buffer -> {
                 context.assertTrue(buffer.toString().contains("error"));

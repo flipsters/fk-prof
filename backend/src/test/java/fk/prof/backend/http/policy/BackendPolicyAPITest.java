@@ -1,6 +1,5 @@
 package fk.prof.backend.http.policy;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import fk.prof.backend.ConfigManager;
 import fk.prof.backend.Configuration;
 import fk.prof.backend.deployer.VerticleDeployer;
@@ -13,6 +12,7 @@ import fk.prof.backend.model.assignment.AssociatedProcessGroups;
 import fk.prof.backend.model.assignment.impl.AssociatedProcessGroupsImpl;
 import fk.prof.backend.model.election.impl.InMemoryLeaderStore;
 import fk.prof.backend.proto.BackendDTO;
+import fk.prof.backend.proto.PolicyDTO;
 import fk.prof.backend.util.ProtoUtil;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Vertx;
@@ -30,12 +30,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import proto.PolicyDTO;
 
 import java.io.IOException;
 
 import static fk.prof.backend.util.ZookeeperUtil.DELIMITER;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
 public class BackendPolicyAPITest {
@@ -86,11 +86,11 @@ public class BackendPolicyAPITest {
     }
 
     @Test
-    public void TestGetPolicyProxiedToLeader(TestContext context) {
+    public void testGetPolicyProxiedToLeader(TestContext context) {
         final Async async = context.async();
         Router router = Router.router(vertx);
         HttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
-                ApiPathConstants.LEADER_GET_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME, req -> {
+                ApiPathConstants.LEADER_GET_POLICY_FOR_APP_CLUSTER_PROC, req -> {
                     PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(0), 0);
                     try {
                         req.response().end(ProtoUtil.buildBufferFromProto(versionedPolicyDetails));
@@ -102,7 +102,7 @@ public class BackendPolicyAPITest {
         leaderServer.listen(leaderPort, result -> {
             if (result.succeeded()) {
                 when(inMemoryLeaderStore.getLeader()).thenReturn(BackendDTO.LeaderDetail.newBuilder().setHost(LEADER_IP).setPort(leaderPort).build());
-                String backendPolicyPath = ApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
+                String backendPolicyPath = ApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
 
                 client.getNow(backendPort, "localhost", backendPolicyPath, res -> {
                     res.bodyHandler(buffer -> {
@@ -121,7 +121,7 @@ public class BackendPolicyAPITest {
     }
 
     @Test
-    public void TestPutPolicyProxiedToLeader(TestContext context) {
+    public void testPutPolicyProxiedToLeader(TestContext context) {
         final Async async = context.async();
         Router router = Router.router(vertx);
         Buffer payloadAsBuffer = null;
@@ -132,7 +132,7 @@ public class BackendPolicyAPITest {
         }
         Buffer finalPayloadAsBuffer = payloadAsBuffer;
         HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT,
-                ApiPathConstants.LEADER_PUT_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
+                ApiPathConstants.LEADER_GET_POLICY_FOR_APP_CLUSTER_PROC,
                 BodyHandler.create().setBodyLimit(1024 * 10), req -> {
                     try {
                         PolicyDTO.VersionedPolicyDetails expected = PolicyDTO.VersionedPolicyDetails.parseFrom(finalPayloadAsBuffer.getBytes());
@@ -147,7 +147,7 @@ public class BackendPolicyAPITest {
         leaderServer.listen(leaderPort, result -> {
             if (result.succeeded()) {
                 when(inMemoryLeaderStore.getLeader()).thenReturn(BackendDTO.LeaderDetail.newBuilder().setHost(LEADER_IP).setPort(leaderPort).build());
-                String backendPolicyPath = ApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
+                String backendPolicyPath = ApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
 
                 client.put(backendPort, "localhost", backendPolicyPath, res -> {
                     res.bodyHandler(buffer -> {
@@ -166,7 +166,7 @@ public class BackendPolicyAPITest {
     }
 
     @Test
-    public void TestPostPolicyProxiedToLeader(TestContext context) {
+    public void testPostPolicyProxiedToLeader(TestContext context) {
         final Async async = context.async();
         Router router = Router.router(vertx);
         Buffer payloadAsBuffer = null;
@@ -177,7 +177,7 @@ public class BackendPolicyAPITest {
         }
         Buffer finalPayloadAsBuffer = payloadAsBuffer;
         HttpHelper.attachHandlersToRoute(router, HttpMethod.POST,
-                ApiPathConstants.LEADER_POST_POLICY_GIVEN_APPID_CLUSTERID_PROCNAME,
+                ApiPathConstants.LEADER_GET_POLICY_FOR_APP_CLUSTER_PROC,
                 BodyHandler.create().setBodyLimit(1024 * 10), req -> {
                     try {
                         PolicyDTO.VersionedPolicyDetails expected = PolicyDTO.VersionedPolicyDetails.parseFrom(finalPayloadAsBuffer.getBytes());
@@ -192,7 +192,7 @@ public class BackendPolicyAPITest {
         leaderServer.listen(leaderPort, result -> {
             if (result.succeeded()) {
                 when(inMemoryLeaderStore.getLeader()).thenReturn(BackendDTO.LeaderDetail.newBuilder().setHost(LEADER_IP).setPort(leaderPort).build());
-                String backendPolicyPath = ApiPathConstants.POLICY + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
+                String backendPolicyPath = ApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(0).getProcName();
 
                 client.post(backendPort, "localhost", backendPolicyPath, res -> {
                     res.bodyHandler(buffer -> {

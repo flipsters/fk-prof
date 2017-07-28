@@ -88,13 +88,13 @@ public class ZookeeperBasedPolicyStoreTest {
     @Test(timeout = 2000)
     public void testCreatePolicy(TestContext context) throws Exception {
         final Async async = context.async();
-        Recorder.ProcessGroup pG = MockPolicyData.mockProcessGroups.get(0);
-        policyStoreAPI.createVersionedPolicy(pG, MockPolicyData.mockVersionedPolicyDetails.get(0)).setHandler(ar -> {
+        Recorder.ProcessGroup pg = MockPolicyData.mockProcessGroups.get(0);
+        policyStoreAPI.createVersionedPolicy(pg, MockPolicyData.mockVersionedPolicyDetails.get(0)).setHandler(ar -> {
             //SUCCESS ON CREATION OF A NEW POLICY
             context.assertEquals(ar.result().getPolicyDetails(), MockPolicyData.mockVersionedPolicyDetails.get(0).getPolicyDetails());
             context.assertEquals(ar.result().getVersion(), MockPolicyData.mockVersionedPolicyDetails.get(0).getVersion() + 1);
 
-            String procNamePath = DELIMITER + POLICY_BASEDIR + DELIMITER + POLICY_VERSION + DELIMITER + encode32(pG.getAppId()) + DELIMITER + encode32(pG.getCluster()) + DELIMITER + encode32(pG.getProcName());
+            String procNamePath = DELIMITER + POLICY_BASEDIR + DELIMITER + POLICY_VERSION + DELIMITER + encode32(pg.getAppId()) + DELIMITER + encode32(pg.getCluster()) + DELIMITER + encode32(pg.getProcName());
             try {
                 //DATA IS ACTUALLY WRITTEN TO ZK
                 context.assertEquals(PolicyDTO.PolicyDetails.parseFrom(ZookeeperUtil.readLatestSeqZNodeChild(curatorClient, procNamePath).getValue()), MockPolicyData.mockVersionedPolicyDetails.get(0).getPolicyDetails());
@@ -349,13 +349,13 @@ public class ZookeeperBasedPolicyStoreTest {
     public void testGetAppIds(TestContext context) {
         final Async async = context.async();
         List<Future> futures = new ArrayList<>();
-        for (Recorder.ProcessGroup pG : MockPolicyData.mockProcessGroups) {
-            futures.add(policyStoreAPI.createVersionedPolicy(pG, MockPolicyData.mockVersionedPolicyDetails.get(0)));
+        for (Recorder.ProcessGroup pg : MockPolicyData.mockProcessGroups) {
+            futures.add(policyStoreAPI.createVersionedPolicy(pg, MockPolicyData.mockVersionedPolicyDetails.get(0)));
         }
         Map<String, Set<String>> testPairs = new HashMap<String, Set<String>>() {{
             put("a", new HashSet<>(Arrays.asList("a1", "a2")));
             put("", new HashSet<>(Arrays.asList("a1", "a2", "b1")));
-            put(null, null);
+            put(null, new HashSet<>(Arrays.asList("a1", "a2", "b1")));
         }};
         CompositeFuture.all(futures).setHandler(event -> {
             if (event.succeeded()) {
@@ -363,11 +363,6 @@ public class ZookeeperBasedPolicyStoreTest {
                     try {
                         Set<String> got = policyStoreAPI.getAppIds(pre);
                         context.assertEquals(got, testPairs.get(pre));
-                    } catch (NullPointerException ex) {
-                        //Expected exception
-                        if (testPairs.get(pre) != null) {
-                            context.fail("Unexpected NPE");
-                        }
                     } catch (Exception ex) {
                         context.fail("Unexpected exception thrown");
                     }
@@ -386,14 +381,14 @@ public class ZookeeperBasedPolicyStoreTest {
     public void testGetClusterIds(TestContext context) {
         final Async async = context.async();
         List<Future> futures = new ArrayList<>();
-        for (Recorder.ProcessGroup pG : MockPolicyData.mockProcessGroups) {
-            futures.add(policyStoreAPI.createVersionedPolicy(pG, MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(2), -1)));
+        for (Recorder.ProcessGroup pg : MockPolicyData.mockProcessGroups) {
+            futures.add(policyStoreAPI.createVersionedPolicy(pg, MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(2), -1)));
         }
         Map<List<String>, Set<String>> testPairs = new HashMap<List<String>, Set<String>>() {{
             put(Arrays.asList("a1", "c1"), new HashSet<>(Arrays.asList("c1")));
             put(Arrays.asList("a1", ""), new HashSet<>(Arrays.asList("c1", "c2")));
             put(Arrays.asList("", ""), null);
-            put(Arrays.asList("a2", null), null);
+            put(Arrays.asList("a2", null), new HashSet<>(Arrays.asList("c1")));
             put(Arrays.asList(null, "c1"), null);
         }};
         CompositeFuture.all(futures).setHandler(event -> {
@@ -423,12 +418,13 @@ public class ZookeeperBasedPolicyStoreTest {
     public void testGetProcNames(TestContext context) {
         final Async async = context.async();
         List<Future> futures = new ArrayList<>();
-        for (Recorder.ProcessGroup pG : MockPolicyData.mockProcessGroups) {
-            futures.add(policyStoreAPI.createVersionedPolicy(pG, MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(2), -1)));
+        for (Recorder.ProcessGroup pg : MockPolicyData.mockProcessGroups) {
+            futures.add(policyStoreAPI.createVersionedPolicy(pg, MockPolicyData.getMockVersionedPolicyDetails(MockPolicyData.mockPolicyDetails.get(2), -1)));
         }
         Map<List<String>, Set<String>> testPairs = new HashMap<List<String>, Set<String>>() {{
             put(Arrays.asList("a1", "c1", "p1"), new HashSet<>(Arrays.asList("p1")));
             put(Arrays.asList("a1", "c1", ""), new HashSet<>(Arrays.asList("p1", "p2")));
+            put(Arrays.asList("a1", "c1", null), new HashSet<>(Arrays.asList("p1", "p2")));
             put(Arrays.asList("", "c1", ""), null);
             put(Arrays.asList("", "c1", null), null);
             put(Arrays.asList(null, "c1", "p1"), null);

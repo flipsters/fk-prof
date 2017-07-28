@@ -110,15 +110,18 @@ public class ZookeeperBasedPolicyStore implements PolicyStore {
     }
 
     public Set<String> getAppIds(String prefix) throws Exception {
-        return processGroupHierarchy.keySet().stream().filter(appIds -> appIds.startsWith(prefix)).collect(Collectors.toSet());
+        String filterPrefix = (prefix == null) ? "" : prefix;
+        return processGroupHierarchy.keySet().stream().filter(appIds -> appIds.startsWith(filterPrefix)).collect(Collectors.toSet());
     }
 
     public Set<String> getClusterIds(String appId, String prefix) throws Exception {
-        return processGroupHierarchy.get(appId).keySet().stream().filter(clusterIds -> clusterIds.startsWith(prefix)).collect(Collectors.toSet());
+        String filterPrefix = (prefix == null) ? "" : prefix;
+        return processGroupHierarchy.get(appId).keySet().stream().filter(clusterIds -> clusterIds.startsWith(filterPrefix)).collect(Collectors.toSet());
     }
 
     public Set<String> getProcNames(String appId, String clusterId, String prefix) throws Exception {
-        return processGroupHierarchy.get(appId).get(clusterId).stream().filter(procNames -> procNames.startsWith(prefix)).collect(Collectors.toSet());
+        String filterPrefix = (prefix == null) ? "" : prefix;
+        return processGroupHierarchy.get(appId).get(clusterId).stream().filter(procNames -> procNames.startsWith(filterPrefix)).collect(Collectors.toSet());
     }
 
     @Override

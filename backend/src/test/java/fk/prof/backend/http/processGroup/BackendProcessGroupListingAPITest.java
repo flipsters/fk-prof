@@ -32,7 +32,8 @@ import org.mockito.internal.util.collections.Sets;
 
 import java.util.Random;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for ProcessGroupListingAPIs in LeaderHttpVerticle which
@@ -93,17 +94,17 @@ public class BackendProcessGroupListingAPITest {
     }
 
     @Test
-    public void TestGetAppIdsRoute(TestContext context) throws Exception {
+    public void testGetAppIdsRoute(TestContext context) throws Exception {
         final Async async = context.async();
 
         Router router = Router.router(vertx);
         HttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
-                ApiPathConstants.LEADER_GET_APPIDS, req -> req.response().end(Json.encode(Sets.newSet(APP_ID))));
+                ApiPathConstants.LEADER_GET_APPS, req -> req.response().end(Json.encode(Sets.newSet(APP_ID))));
         leaderServer.requestHandler(router::accept);
         leaderServer.listen(leaderPort, result -> {
             if (result.succeeded()) {
                 when(inMemoryLeaderStore.getLeader()).thenReturn(BackendDTO.LeaderDetail.newBuilder().setHost(LEADER_IP).setPort(leaderPort).build());
-                client.getNow(backendPort, "localhost", ApiPathConstants.BACKEND_GET_APPIDS + "?prefix=" + APP_ID.substring(0, 1 + new Random().nextInt(APP_ID.length() - 1)), httpClientResponse -> {
+                client.getNow(backendPort, "localhost", ApiPathConstants.BACKEND_GET_APPS + "?prefix=" + APP_ID.substring(0, 1 + new Random().nextInt(APP_ID.length() - 1)), httpClientResponse -> {
                     context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
                     httpClientResponse.bodyHandler(buffer -> {
                         context.assertEquals(buffer.toJsonArray().size(), 1);
@@ -118,12 +119,12 @@ public class BackendProcessGroupListingAPITest {
     }
 
     @Test
-    public void TestGetClusterIdsRoute(TestContext context) throws Exception {
+    public void testGetClusterIdsRoute(TestContext context) throws Exception {
         final Async async = context.async();
 
         Router router = Router.router(vertx);
         HttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
-                ApiPathConstants.LEADER_GET_CLUSTERIDS_GIVEN_APPID, req -> req.response().end(Json.encode(Sets.newSet(CLUSTER_ID))));
+                ApiPathConstants.LEADER_GET_CLUSTERS_FOR_APP, req -> req.response().end(Json.encode(Sets.newSet(CLUSTER_ID))));
         leaderServer.requestHandler(router::accept);
         leaderServer.listen(leaderPort, result -> {
             if (result.succeeded()) {
@@ -144,12 +145,12 @@ public class BackendProcessGroupListingAPITest {
 
 
     @Test
-    public void TestGetProcNamesRoute(TestContext context) throws Exception {
+    public void testGetProcNamesRoute(TestContext context) throws Exception {
         final Async async = context.async();
 
         Router router = Router.router(vertx);
         HttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
-                ApiPathConstants.LEADER_GET_PROCNAMES_GIVEN_APPID_CLUSTERID, req -> req.response().end(Json.encode(Sets.newSet(PROC))));
+                ApiPathConstants.LEADER_GET_PROCS_FOR_APP_CLUSTER, req -> req.response().end(Json.encode(Sets.newSet(PROC))));
         leaderServer.requestHandler(router::accept);
         leaderServer.listen(leaderPort, result -> {
             if (result.succeeded()) {

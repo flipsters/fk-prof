@@ -118,7 +118,7 @@ public class BackendManager {
 
           BackendAssociationStore backendAssociationStore = createBackendAssociationStore(vertx, curatorClient);
 
-          PolicyStore policyStore = createPolicyStoreAPI(vertx, curatorClient);
+          PolicyStore policyStore = createPolicyStore(vertx, curatorClient);
           VerticleDeployer leaderHttpVerticleDeployer = new LeaderHttpVerticleDeployer(vertx, config, backendAssociationStore, policyStore);
           Runnable leaderElectedTask = createLeaderElectedTask(vertx, leaderHttpVerticleDeployer, backendDeployments, backendAssociationStore, policyStore);
 
@@ -200,7 +200,7 @@ public class BackendManager {
         loadReportIntervalInSeconds, loadMissTolerance, new ProcessGroupCountBasedBackendComparator());
   }
 
-  private PolicyStore createPolicyStoreAPI(Vertx vertx, CuratorFramework curatorClient) {
+  private PolicyStore createPolicyStore(Vertx vertx, CuratorFramework curatorClient) {
     return new ZookeeperBasedPolicyStore(vertx, curatorClient, config.getPolicyBaseDir(), config.getPolicyVersion());
   }
 
@@ -220,9 +220,18 @@ public class BackendManager {
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.AGGREGATOR_POST_PROFILE).setType(MatchType.EQUALS))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_POST_POLL).setType(MatchType.EQUALS))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_POST_ASSOCIATION).setType(MatchType.EQUALS))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_GET_APPS + ".*").setAlias("backendAppIds").setType(MatchType.REGEX))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_GET_CLUSTERS_FOR_APP + ".*").setAlias("backendClusterIds").setType(MatchType.REGEX))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_GET_PROCS_FOR_APP_CLUSTER + ".*").setAlias("backendProcNames").setType(MatchType.REGEX))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_GET_POLICY_FOR_APP_CLUSTER_PROC + ".*").setAlias("backendPolicy").setType(MatchType.REGEX))
+
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_POST_ASSOCIATION).setType(MatchType.EQUALS))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_POST_LOAD).setType(MatchType.EQUALS))
-        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_GET_WORK + ".*").setAlias(ApiPathConstants.LEADER_GET_WORK).setType(MatchType.REGEX));
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_GET_WORK + ".*").setAlias(ApiPathConstants.LEADER_GET_WORK).setType(MatchType.REGEX))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_GET_APPS + ".*").setAlias("leaderAppIds").setType(MatchType.REGEX))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_GET_CLUSTERS_FOR_APP + ".*").setAlias("leaderClusterIds").setType(MatchType.REGEX))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_GET_PROCS_FOR_APP_CLUSTER + ".*").setAlias("leaderProcNames").setType(MatchType.REGEX))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_GET_POLICY_FOR_APP_CLUSTER_PROC + ".*").setAlias("leaderPolicy").setType(MatchType.REGEX));
     return metricsOptions;
   }
 
