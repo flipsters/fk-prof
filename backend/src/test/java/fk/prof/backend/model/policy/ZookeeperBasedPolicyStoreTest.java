@@ -20,6 +20,8 @@ import org.junit.runner.RunWith;
 import proto.PolicyDTO;
 import recording.Recorder;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -70,6 +72,8 @@ public class ZookeeperBasedPolicyStoreTest {
     @Test(timeout = 2000)
     public void testGetPolicy(TestContext context) throws Exception {
         final Async async = context.async();
+        String curTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+
         //PRE
         policyStoreAPI.createVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), MockPolicyData.mockVersionedPolicyDetails.get(0)).setHandler(ar -> {
             if (ar.succeeded()) {
@@ -77,7 +81,7 @@ public class ZookeeperBasedPolicyStoreTest {
                 PolicyDTO.VersionedPolicyDetails got = policyStoreAPI.getVersionedPolicy(MockPolicyData.mockProcessGroups.get(0));
                 //GET GIVES THE JUST CREATED POLICY WITH VERSION BUMP
                 context.assertEquals(got.getVersion(), MockPolicyData.mockVersionedPolicyDetails.get(0).getVersion() + 1);
-                context.assertEquals(got.getPolicyDetails(), MockPolicyData.mockVersionedPolicyDetails.get(0).getPolicyDetails());
+                context.assertEquals(got.getPolicyDetails().toBuilder().setCreatedAt(curTime).setModifiedAt(curTime).build(), MockPolicyData.mockVersionedPolicyDetails.get(0).getPolicyDetails().toBuilder().setCreatedAt(curTime).setModifiedAt(curTime).build());
             } else {
                 context.fail(ar.cause());
             }
@@ -89,9 +93,10 @@ public class ZookeeperBasedPolicyStoreTest {
     public void testCreatePolicy(TestContext context) throws Exception {
         final Async async = context.async();
         Recorder.ProcessGroup pg = MockPolicyData.mockProcessGroups.get(0);
+        String curTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         policyStoreAPI.createVersionedPolicy(pg, MockPolicyData.mockVersionedPolicyDetails.get(0)).setHandler(ar -> {
             //SUCCESS ON CREATION OF A NEW POLICY
-            context.assertEquals(ar.result().getPolicyDetails(), MockPolicyData.mockVersionedPolicyDetails.get(0).getPolicyDetails());
+            context.assertEquals(ar.result().getPolicyDetails().toBuilder().setCreatedAt(curTime).setModifiedAt(curTime).build(), MockPolicyData.mockVersionedPolicyDetails.get(0).getPolicyDetails().toBuilder().setCreatedAt(curTime).setModifiedAt(curTime).build());
             context.assertEquals(ar.result().getVersion(), MockPolicyData.mockVersionedPolicyDetails.get(0).getVersion() + 1);
 
             String procNamePath = DELIMITER + POLICY_BASEDIR + DELIMITER + POLICY_VERSION + DELIMITER + encode32(pg.getAppId()) + DELIMITER + encode32(pg.getCluster()) + DELIMITER + encode32(pg.getProcName());
@@ -104,7 +109,7 @@ public class ZookeeperBasedPolicyStoreTest {
 
                 //GET GIVES THE CREATED VERSIONED POLICY
                 PolicyDTO.VersionedPolicyDetails got = policyStoreAPI.getVersionedPolicy(MockPolicyData.mockProcessGroups.get(0));
-                context.assertEquals(got.getPolicyDetails(), MockPolicyData.mockVersionedPolicyDetails.get(0).getPolicyDetails());
+                context.assertEquals(got.getPolicyDetails().toBuilder().setCreatedAt(curTime).setModifiedAt(curTime).build(), MockPolicyData.mockVersionedPolicyDetails.get(0).getPolicyDetails().toBuilder().setCreatedAt(curTime).setModifiedAt(curTime).build());
                 context.assertEquals(got.getVersion(), MockPolicyData.mockVersionedPolicyDetails.get(0).getVersion() + 1);
 
                 policyStoreAPI.createVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), MockPolicyData.mockVersionedPolicyDetails.get(1)).setHandler(ar2 -> {
@@ -112,7 +117,7 @@ public class ZookeeperBasedPolicyStoreTest {
                     context.assertTrue(ar2.failed());
                     PolicyDTO.VersionedPolicyDetails got2 = policyStoreAPI.getVersionedPolicy(MockPolicyData.mockProcessGroups.get(0));
                     //POLICY IS SAME AS ORIGINAL
-                    context.assertEquals(got2.getPolicyDetails(), MockPolicyData.mockVersionedPolicyDetails.get(0).getPolicyDetails());
+                    context.assertEquals(got2.getPolicyDetails().toBuilder().setCreatedAt(curTime).setModifiedAt(curTime).build(), MockPolicyData.mockVersionedPolicyDetails.get(0).getPolicyDetails().toBuilder().setCreatedAt(curTime).setModifiedAt(curTime).build());
                     context.assertEquals(got2.getVersion(), MockPolicyData.mockVersionedPolicyDetails.get(0).getVersion() + 1);
                 });
             } catch (Exception e) {
@@ -217,7 +222,7 @@ public class ZookeeperBasedPolicyStoreTest {
         final Async async = context.async();
         Future<Void> future1 = Future.future();
         Future<Void> future2 = Future.future();
-
+        String curTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         //USING PG1
         policyStoreAPI.createVersionedPolicy(MockPolicyData.mockProcessGroups.get(0), MockPolicyData.mockVersionedPolicyDetails.get(0)).setHandler(ar -> {
             if (ar.succeeded()) {
@@ -226,13 +231,13 @@ public class ZookeeperBasedPolicyStoreTest {
                     context.assertTrue(ar2.succeeded());
                     //POLICY IS THE NEW ONE
                     context.assertEquals(ar2.result().getVersion(), MockPolicyData.mockVersionedPolicyDetails.get(1).getVersion() + 1);
-                    context.assertEquals(ar2.result().getPolicyDetails(), MockPolicyData.mockVersionedPolicyDetails.get(1).getPolicyDetails());
+                    context.assertEquals(ar2.result().getPolicyDetails().toBuilder().setCreatedAt(curTime).setModifiedAt(curTime).build(), MockPolicyData.mockVersionedPolicyDetails.get(1).getPolicyDetails().toBuilder().setCreatedAt(curTime).setModifiedAt(curTime).build());
 
 
                     PolicyDTO.VersionedPolicyDetails got2 = policyStoreAPI.getVersionedPolicy(MockPolicyData.mockProcessGroups.get(0));
                     //GET GIVES THE NEW POLICY
                     context.assertEquals(got2.getVersion(), MockPolicyData.mockVersionedPolicyDetails.get(1).getVersion() + 1);
-                    context.assertEquals(got2.getPolicyDetails(), MockPolicyData.mockVersionedPolicyDetails.get(1).getPolicyDetails());
+                    context.assertEquals(got2.getPolicyDetails().toBuilder().setCreatedAt(curTime).setModifiedAt(curTime).build(), MockPolicyData.mockVersionedPolicyDetails.get(1).getPolicyDetails().toBuilder().setCreatedAt(curTime).setModifiedAt(curTime).build());
                     future1.complete();
                 });
             } else {

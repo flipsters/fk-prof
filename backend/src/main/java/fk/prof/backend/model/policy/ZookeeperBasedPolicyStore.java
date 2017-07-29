@@ -16,6 +16,7 @@ import proto.PolicyDTO;
 import recording.Recorder;
 
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -174,7 +175,7 @@ public class ZookeeperBasedPolicyStore implements PolicyStore {
                         Integer newVersion = Integer.parseInt(policyNodeName);      //Policy Node names are incrementing numbers (the versions)
                         PolicyDTO.VersionedPolicyDetails.Builder versionedPolicyDetailsBuilder = requestedVersionedPolicyDetails.toBuilder();
                         versionedPolicyDetailsBuilder.setVersion(newVersion);
-                        String currentTime = ZonedDateTime.now().toString();
+                        String currentTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
                         PolicyDTO.PolicyDetails.Builder policyDetailsBuilder = versionedPolicyDetailsBuilder.getPolicyDetails().toBuilder().setModifiedAt(currentTime);
                         if(create){
                             policyDetailsBuilder.setCreatedAt(currentTime);
