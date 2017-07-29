@@ -36,7 +36,7 @@ const common = {
         test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
         loaders: ['url?limit=10000&mimetype=application/font-woff'],
       },
-      { test: /\.(ttf|eot)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+      { test: /\.(ttf|eot|svg)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
         loaders: ['file'],
       },
       {
@@ -52,14 +52,6 @@ const common = {
         loader: 'style!css!postcss',
         include: [/node_modules/, /assets\/styles/],
       },
-      {
-        test: /\.(gif|png|jpe?g|svg)$/i,
-        loaders: [
-          'file-loader?hash=sha512&digest=hex&name=[hash].[ext]',
-          'image-webpack-loader?{optimizationLevel: 7, interlaced: false, pngquant:{quality: "65-90", speed: 4}, mozjpeg: {quality: 65}}'
-        ],
-        include: [/assets/]
-      }
     ],
   },
   resolve: {
