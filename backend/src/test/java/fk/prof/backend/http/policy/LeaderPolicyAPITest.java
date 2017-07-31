@@ -91,7 +91,7 @@ public class LeaderPolicyAPITest {
         });
 
         client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(1).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(1).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(1).getProcName(), httpClientResponse -> {
-            context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.BAD_REQUEST.code());
+            context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.NOT_FOUND.code());
             httpClientResponse.bodyHandler(buffer -> {
                 context.assertTrue(buffer.toString().contains("not found"));
                 f2.complete(null);
