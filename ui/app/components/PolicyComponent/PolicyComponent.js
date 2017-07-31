@@ -287,8 +287,7 @@ export default class PolicyComponent extends React.Component {
           {this.getDescription()}
           {this.getWork()}
           {this.getSubmit()}
-          <div id="policy-submit" className="mdl-js-snackbar mdl-snackbar"
-               style={{background: 'rgb(101, 101, 97)'}}>
+          <div id="policy-submit" className="mdl-js-snackbar mdl-snackbar">
             <div className="mdl-snackbar__text"/>
             <button className="mdl-snackbar__action" type="button"/>
           </div>
@@ -388,7 +387,7 @@ export default class PolicyComponent extends React.Component {
     return (
       <div className="mdl-grid mdl-cell--12-col">
         <button className="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect"
-                style={{background: 'rgb(137, 137, 132)', color: 'white', margin: 'auto'}}
+                style={{ margin: 'auto'}}
                 onClick={this.handleSubmitClick}>
           {buttonText}
         </button>

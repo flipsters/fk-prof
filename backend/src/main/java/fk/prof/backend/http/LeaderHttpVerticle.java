@@ -226,9 +226,9 @@ public class LeaderHttpVerticle extends AbstractVerticle {
       Recorder.ProcessGroup pg = parseProcessGroup(context);
       PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = policyStore.getVersionedPolicy(pg);
       if (versionedPolicyDetails == null) {
-        context.response().setStatusCode(400).end("Policy not found for process group " + RecorderProtoUtil.processGroupCompactRepr(pg));
+        context.response().setStatusCode(404).end("Policy not found for process group " + RecorderProtoUtil.processGroupCompactRepr(pg));
       } else {
-        context.response().end(ProtoUtil.buildBufferFromProto(versionedPolicyDetails));
+        context.response().setStatusCode(200).end(ProtoUtil.buildBufferFromProto(versionedPolicyDetails));
       }
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
@@ -240,6 +240,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     try {
       Recorder.ProcessGroup pg = parseProcessGroup(context);
       PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = ProtoUtil.buildProtoFromBuffer(PolicyDTO.VersionedPolicyDetails.parser(), context.getBody());
+      PolicyDTOProtoUtil.validatePolicyValues(versionedPolicyDetails);
       policyStore.createVersionedPolicy(pg, versionedPolicyDetails).setHandler(ar -> setResponse(ar, context, 201));
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
@@ -251,6 +252,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     try {
       Recorder.ProcessGroup pg = parseProcessGroup(context);
       PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = ProtoUtil.buildProtoFromBuffer(PolicyDTO.VersionedPolicyDetails.parser(), context.getBody());
+      PolicyDTOProtoUtil.validatePolicyValues(versionedPolicyDetails);
       policyStore.updateVersionedPolicy(pg, versionedPolicyDetails).setHandler(ar -> setResponse(ar, context, 200));
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);

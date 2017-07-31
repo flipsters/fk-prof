@@ -21,8 +21,7 @@ export default class Header extends React.Component {
     const policyLinkClassName = "mdl-navigation__link mdl-typography--text-uppercase " + (this.props.isPolicyPage ? styles.isActiveLink : "");
     return (
       <div className="mdl-layout mdl-js-layout mdl-layout--fixed-header">
-        <header className="mdl-layout__header"
-                style={{backgroundColor: this.props.isPolicyPage ? '#898984' : 'rgb(63,81,181)'}}>
+        <header className="mdl-layout__header">
           <div className="mdl-layout__header-row">
             <img src={fk_logo} className="mdl-shadow--4dp" style={{height: '70%', margin: '5px', borderRadius: '2px'}}/>
             <span className="mdl-layout-title">Flipkart Profiler</span>

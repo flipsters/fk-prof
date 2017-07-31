@@ -248,7 +248,6 @@ public class HttpVerticle extends AbstractVerticle {
             PolicyDTO.VersionedPolicyDetails.Builder payloadVersionedPolicyDetails = PolicyDTO.VersionedPolicyDetails.newBuilder();
             JsonFormat.parser().merge(payloadVersionedPolicyDetailsJsonString, payloadVersionedPolicyDetails);
             PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = payloadVersionedPolicyDetails.build();
-            PolicyDTOProtoUtil.validatePolicyValues(versionedPolicyDetails);
             LOGGER.info("Making request for policy change: {} to backend", PolicyDTOProtoUtil.versionedPolicyDetailsCompactRepr(versionedPolicyDetails));
             makeRequestToBackend(routingContext.request().method(), routingContext.normalisedPath(), ProtoUtil.buildBufferFromProto(versionedPolicyDetails), false)
                     .setHandler(ar -> proxyBufferedPolicyResponseFromBackend(routingContext, ar));
@@ -290,12 +289,16 @@ public class HttpVerticle extends AbstractVerticle {
     private void proxyBufferedPolicyResponseFromBackend(RoutingContext context, AsyncResult<ProfHttpClient.ResponseWithStatusTuple> ar) {
         if (ar.succeeded()) {
             context.response().setStatusCode(ar.result().getStatusCode());
-            try {
-                PolicyDTO.VersionedPolicyDetails responseVersionedPolicyDetails = ProtoUtil.buildProtoFromBuffer(PolicyDTO.VersionedPolicyDetails.parser(), ar.result().getResponse());//ar.result().getResponse();//PolicyDTO.VersionedPolicyDetails.parseFrom(ar.result().getResponse().getBytes());
-                context.response().end(JsonFormat.printer().print(responseVersionedPolicyDetails));
-            } catch (InvalidProtocolBufferException e) {
-                UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(e);
-                UserapiHttpHelper.handleFailure(context, httpFailure);
+            if (ar.result().getStatusCode() == 200) {
+                try {
+                    PolicyDTO.VersionedPolicyDetails responseVersionedPolicyDetails = ProtoUtil.buildProtoFromBuffer(PolicyDTO.VersionedPolicyDetails.parser(), ar.result().getResponse());//ar.result().getResponse();//PolicyDTO.VersionedPolicyDetails.parseFrom(ar.result().getResponse().getBytes());
+                    context.response().end(JsonFormat.printer().print(responseVersionedPolicyDetails));
+                } catch (InvalidProtocolBufferException e) {
+                    UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(e);
+                    UserapiHttpHelper.handleFailure(context, httpFailure);
+                }
+            } else {
+                context.response().end(ar.result().getResponse());
             }
         } else {
             UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(ar.cause());
