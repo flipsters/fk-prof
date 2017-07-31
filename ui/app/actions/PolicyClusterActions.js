@@ -19,12 +19,14 @@ export function getPolicyClustersFailureAction ({ error, req }) {
 
 export default function fetchPolicyClustersAction ({ policyApp, query }) {
   return (dispatch) => {
-    dispatch(getPolicyClustersRequestAction({ req: { policyApp } }));
-    const queryParams = objectToQueryParams(query);
-    const baseUrl = `/api/list/policy/clusterIds/${policyApp}`;
-    const url = queryParams ? `${baseUrl}?${queryParams}` : baseUrl;
-    return http.get(url)
-      .then(res => dispatch(getPolicyClustersSuccessAction({ res, req: { policyApp } })))
-      .catch(err => dispatch(getPolicyClustersFailureAction({ err, req: { policyApp } })));
+    if(policyApp) {
+      dispatch(getPolicyClustersRequestAction({req: {policyApp}}));
+      const queryParams = objectToQueryParams(query);
+      const baseUrl = `/api/list/policy/clusterIds/${policyApp}`;
+      const url = queryParams ? `${baseUrl}?${queryParams}` : baseUrl;
+      return http.get(url)
+        .then(res => dispatch(getPolicyClustersSuccessAction({res, req: {policyApp}})))
+        .catch(err => dispatch(getPolicyClustersFailureAction({err, req: {policyApp}})));
+    }
   };
 }
