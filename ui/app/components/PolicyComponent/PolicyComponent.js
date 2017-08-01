@@ -4,7 +4,6 @@ import Loader from '../LoaderComponent/LoaderComponent';
 import http from 'utils/http';
 
 export default class PolicyComponent extends React.Component {
-  url = '../api/policy/' + this.props.app + '/' + this.props.cluster + '/' + this.props.proc;
 
   constructor(props) {
     super(props);
@@ -27,11 +26,12 @@ export default class PolicyComponent extends React.Component {
 
   componentDidMount() {
     this.getPolicy();
-    window['counter'] = 0;
   }
 
-  componentDidUpdate() {
-    console.log("Component Did Update");
+  componentDidUpdate(prevProps) {
+    if (prevProps.proc !== this.props.proc) {
+      this.getPolicy();
+    }
     componentHandler.upgradeDom(); // eslint-disable-line
   }
 
@@ -42,7 +42,8 @@ export default class PolicyComponent extends React.Component {
         state: "PENDING"
       }
     });
-    http.get(this.url).then(json => {
+    const url = '../api/policy/' + this.props.app + '/' + this.props.cluster + '/' + this.props.proc;
+    http.get(url).then(json => {
       this.setState({
         msg: "Policy found",
         query: {
@@ -64,9 +65,9 @@ export default class PolicyComponent extends React.Component {
           json: {
             version: -1,
             policyDetails: {
-              createdAt: "Not yet created",
-              modifiedAt: "Not yet created",
-              modifiedBy: "Not yet created",
+              createdAt: "",
+              modifiedAt: "",
+              modifiedBy: "Anonymous",
               policy: {
                 description: "",
                 schedule: {
@@ -104,7 +105,8 @@ export default class PolicyComponent extends React.Component {
         state: "PENDING"
       }
     });
-    http.put(this.url, this.state.json).then(json => {
+    const url = '../api/policy/' + this.props.app + '/' + this.props.cluster + '/' + this.props.proc;
+    http.put(url, this.state.json).then(json => {
       this.setState({
         query: {
           type: "PUT",
@@ -127,38 +129,33 @@ export default class PolicyComponent extends React.Component {
   }
 
   postPolicy() {
+    this.setState({
+      query: {
+        type: "POST",
+        state: "PENDING"
+      }
+    });
+    const url = '../api/policy/' + this.props.app + '/' + this.props.cluster + '/' + this.props.proc;
+    http.post(this.url, this.state.json).then(json => {
       this.setState({
         query: {
           type: "POST",
-          state: "PENDING"
-        }
-      });
-      http.post(this.url, this.state.json).then(json => {
-        this.setState({
-          query: {
-            type: "POST",
-            state: "SUCCESS"
-          },
-          json,
-          err: {},
-          msg: "Policy has been created"
-        })
-      }).catch(err => {
-        this.setState({
-          query: {
-            type: "POST",
-            state: "FAILURE"
-          },
-          err,
-          msg: "There was a problem creating your policy, try again later"
-        })
-      });
-  }
-
-  componentWillReceiveProps(newProps) {
-    if (newProps.proc !== this.props.proc) {
-      this.getPolicy();
-    }
+          state: "SUCCESS"
+        },
+        json,
+        err: {},
+        msg: "Policy has been created"
+      })
+    }).catch(err => {
+      this.setState({
+        query: {
+          type: "POST",
+          state: "FAILURE"
+        },
+        err,
+        msg: "There was a problem creating your policy, try again later"
+      })
+    });
   }
 
   handleScheduleChange(e) {
@@ -249,11 +246,11 @@ export default class PolicyComponent extends React.Component {
       this.setState({
         msg: "Please wait, your previous policy change is still pending"
       });
-    }else{
+    } else {
       let data = {};
-      if(document.querySelectorAll(":invalid").length !== 0){
-        data =  {message: "Please provide appropriate values to the fields marked in red"};
-      }else {
+      if (document.querySelectorAll(":invalid").length !== 0) {
+        data = {message: "Please provide appropriate values to the fields marked in red"};
+      } else {
         if ((this.state.err.status === 404 && this.state.query.type === 'GET') || (this.state.query.type === 'POST' && this.state.query.state === 'FAILURE')) {
           this.postPolicy();
           data = {message: 'Creating policy'};
@@ -272,7 +269,7 @@ export default class PolicyComponent extends React.Component {
       return (
         <div>
           <h3 style={{textAlign: 'center'}}>Please wait, coming right up!</h3>
-          <Loader />
+          <Loader/>
         </div>
       );
     }
@@ -301,38 +298,71 @@ export default class PolicyComponent extends React.Component {
     );
   }
 
+
+  isCreateView() {
+    return (this.state.err.status === 404 && this.state.query.type === 'GET') || (this.state.query.type === 'POST' && (this.state.query.state === 'FAILURE' || this.state.query.state === 'PENDING'));
+  }
+
   getDisplayDetails() {
-    return (<div className="mdl-grid mdl-cell--12-col" style={{borderBottom: '1px solid rgba(0,0,0,.13)'}}>
-      <div className="mdl-cell--2-col">Version: {this.state.json.version}</div>
-      <div className="mdl-layout-spacer"/>
-      <div className="mdl-cell--3-col">Created at: {this.state.json.policyDetails.createdAt}</div>
-      <div className="mdl-layout-spacer"/>
-      <div className="mdl-cell--3-col">Modified at: {this.state.json.policyDetails.modifiedAt}</div>
-      <div className="mdl-layout-spacer"/>
-    </div>);
+    if (this.isCreateView()) {
+      return (<div className="mdl-grid mdl-cell--12-col" style={{borderBottom: '1px solid rgba(0,0,0,.13)'}}/>);
+    }else{
+      const createdDate = new Date(this.state.json.policyDetails.createdAt);
+      const modifiedDate = new Date(this.state.json.policyDetails.modifiedAt);
+      const createdString = createdDate.toDateString() + ' ' + createdDate.toLocaleTimeString();
+      const modifiedString = modifiedDate.toDateString() + ' ' + modifiedDate.toLocaleTimeString();
+      return (<div className="mdl-grid mdl-cell--12-col" style={{borderBottom: '1px solid rgba(0,0,0,.13)'}}>
+        <div className="mdl-cell--2-col"><span
+          className="mdl-color-text--primary mdl-typography--caption">Version:  </span>{this.state.json.version}</div>
+        <div className="mdl-layout-spacer"/>
+        <div className="mdl-cell--4-col mdl-cell--8-col-tablet"><span
+          className="mdl-color-text--primary mdl-typography--caption">Created at:  </span>{createdString}</div>
+        <div className="mdl-layout-spacer"/>
+        <div className="mdl-cell--4-col mdl-cell--8-col-tablet"><span
+          className="mdl-color-text--primary mdl-typography--caption">Modified at:  </span>{modifiedString}</div>
+        <div className="mdl-layout-spacer"/>
+      </div>);
+    }
   }
 
   getMessage() {
     return (<div className="mdl-grid mdl-cell--12-col">
-      <div className="mdl-typography--headline  mdl-typography--font-thin mdl-cell--12-col">{this.state.msg}</div>
+      <div
+        className="mdl-typography--headline mdl-typography--font-thin mdl-color-text--primary mdl-cell--12-col">{this.state.msg}</div>
     </div>);
   }
 
   getSchedule() {
     return (<div className="mdl-grid mdl-cell--12-col" style={{borderBottom: '1px solid rgba(0,0,0,.13)'}}>
       <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Schedule</div>
+      <div className="mdl-typography--caption mdl-color-text--grey">
+        Every 20 mins, <span
+        className="mdl-typography--font-bold">{this.state.json.policyDetails.policy.schedule.pgCovPct}%</span> host of
+        all hosts (with recorder attached) will be profiled.
+        On each host being profiled, profiling will run for <span
+        className="mdl-typography--font-bold">{this.state.json.policyDetails.policy.schedule.duration} seconds</span>
+        exactly once in 20 mins.
+      </div>
       <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
         <input className="mdl-textfield__input" type="number" min="60" max="960" id="duration"
-               onChange={this.handleScheduleChange} value={this.state.json.policyDetails.policy.schedule.duration} required/>
-        <label className="mdl-textfield__label" htmlFor="duration">Duration...</label>
-        <span className="mdl-textfield__error">Duration must be between 60-960</span>
+               onChange={this.handleScheduleChange} value={this.state.json.policyDetails.policy.schedule.duration}
+               required/>
+        <label className="mdl-textfield__label" htmlFor="duration">Duration in secs...</label>
+        <span className="mdl-textfield__error">Duration must be between 60-960 secs</span>
+        <div className="mdl-tooltip mdl-tooltip--large" htmlFor="duration">Duration (in secs) one covered host will be
+          profiled in every 20 mins
+        </div>
       </div>
       <div className="mdl-layout-spacer"/>
       <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
         <input className="mdl-textfield__input" type="number" min="0" max="100" id="pgCovPct"
-               onChange={this.handleScheduleChange} value={this.state.json.policyDetails.policy.schedule.pgCovPct} required/>
+               onChange={this.handleScheduleChange} value={this.state.json.policyDetails.policy.schedule.pgCovPct}
+               required/>
         <label className="mdl-textfield__label" htmlFor="pgCovPct">Coverage Percentage...</label>
         <span className="mdl-textfield__error">Coverage % must be between 0-100</span>
+        <div className="mdl-tooltip  mdl-tooltip--large" htmlFor="pgCovPct">Percentage of hosts to be covered for
+          profiling every 20 mins
+        </div>
       </div>
       <div className="mdl-layout-spacer"/>
     </div>);
@@ -340,10 +370,15 @@ export default class PolicyComponent extends React.Component {
 
   getDescription() {
     return (<div className="mdl-grid mdl-cell--12-col" style={{borderBottom: '1px solid rgba(0,0,0,.13)'}}>
-      <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Description</div>
+      <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Description
+        <div className="mdl-typography--caption mdl-color-text--grey">
+          Please add some description about the policy to help identifying it later.
+        </div>
+      </div>
       <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield">
         <textarea className="mdl-textfield__input" type="text" id="description" rows="2"
-                  onChange={this.handleDescriptionChange} value={this.state.json.policyDetails.policy.description} required/>
+                  onChange={this.handleDescriptionChange} value={this.state.json.policyDetails.policy.description}
+                  required/>
       </div>
     </div>);
   }
@@ -352,25 +387,39 @@ export default class PolicyComponent extends React.Component {
     const workArray = this.state.json.policyDetails.policy.work;
     const cpu_sample_work = workArray.some((w) => w.wType === "cpu_sample_work") ? workArray.filter((w) => w.wType === "cpu_sample_work")[0].cpuSample : " ";
     return (<div className="mdl-grid mdl-cell--12-col" style={{borderBottom: '1px solid rgba(0,0,0,.13)'}}>
-      <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Work</div>
+      <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Enabled Profiling Types</div>
       <div className="mdl-grid mdl-cell--12-col">
-        <div className="mdl-typography--body-1 mdl-typography--font-thin mdl-cell--3-col mdl-cell--middle">
+        <div
+          className="mdl-typography--body-1 mdl-typography--font-thin mdl-color-text--primary mdl-cell--4-col mdl-cell--middle">
           CPU Sampling
+          <div className="mdl-typography--caption mdl-color-text--grey">
+            Profiles details of methods running on CPU
+          </div>
         </div>
-        <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+        <div className="mdl-layout-spacer"/>
+        <div
+          className="mdl-cell--4-col mdl-cell--7-col-tablet mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
           <input name="cpu_sample_work" className="mdl-textfield__input" type="number" min="50" max="100"
                  id={"cpuSample_frequency"}
                  onChange={this.handleWorkChange} value={cpu_sample_work.frequency} required/>
-          <label className="mdl-textfield__label" htmlFor={"cpuSample_frequency"}>Frequency...</label>
+          <label className="mdl-textfield__label" htmlFor="cpuSample_frequency">Frequency...</label>
           <span className="mdl-textfield__error">Frequency must be between 50-100</span>
+          <div className="mdl-tooltip mdl-tooltip--large" htmlFor="cpuSample_frequency">How frequently should profiles
+            be sampled? More value implies finer details but more overhead
+          </div>
         </div>
         <div className="mdl-layout-spacer"/>
-        <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+        <div
+          className="mdl-cell--4-col mdl-cell--7-col-tablet mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
           <input name="cpu_sample_work" className="mdl-textfield__input" type="number" min="1" max="999"
                  id={"cpuSample_maxFrames"}
                  onChange={this.handleWorkChange} value={cpu_sample_work.maxFrames} required/>
-          <label className="mdl-textfield__label" htmlFor={"cpuSample_maxFrames"}>Max Frames...</label>
+          <label className="mdl-textfield__label" htmlFor="cpuSample_maxFrames">Max Frames...</label>
           <span className="mdl-textfield__error">Max Frames should be between 1-999</span>
+          <div className="mdl-tooltip mdl-tooltip--large" htmlFor="cpuSample_maxFrames">Depth of stacktraces to be used
+            for presenting. Large values implies more verbosity
+          </div>
+
         </div>
         <div className="mdl-layout-spacer"/>
       </div>
@@ -379,15 +428,15 @@ export default class PolicyComponent extends React.Component {
 
   getSubmit() {
     let buttonText = '';
-    if((this.state.err.status === 404 && this.state.query.type === 'GET') || (this.state.query.type === 'POST' && (this.state.query.state === 'FAILURE' || this.state.query.state === 'PENDING'))){
+    if (this.isCreateView()) {
       buttonText = 'CREATE';
-    }else{
+    } else {
       buttonText = 'UPDATE';
     }
     return (
       <div className="mdl-grid mdl-cell--12-col">
         <button className="mdl-button mdl-js-button mdl-button--colored mdl-button--raised mdl-js-ripple-effect"
-                style={{ margin: 'auto'}}
+                style={{margin: 'auto'}}
                 onClick={this.handleSubmitClick}>
           {buttonText}
         </button>

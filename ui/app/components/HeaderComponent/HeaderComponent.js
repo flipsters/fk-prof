@@ -17,38 +17,38 @@ export default class Header extends React.Component {
 
   render() {
 
-    const profileLinkClassName = "mdl-navigation__link mdl-typography--text-uppercase " + (this.props.isPolicyPage ? "" : styles.isActiveLink);
-    const policyLinkClassName = "mdl-navigation__link mdl-typography--text-uppercase " + (this.props.isPolicyPage ? styles.isActiveLink : "");
+    const profileLinkClassName = "mdl-navigation__link mdl-typography--font-thin " + (this.props.isPolicyPage ? "" : styles.isActiveLink);
+    const policyLinkClassName = "mdl-navigation__link mdl-typography--font-thin " + (this.props.isPolicyPage ? styles.isActiveLink : "");
     return (
       <div className="mdl-layout mdl-js-layout mdl-layout--fixed-header">
         <header className="mdl-layout__header">
           <div className="mdl-layout__header-row">
             <img src={fk_logo} className="mdl-shadow--4dp" style={{height: '70%', margin: '5px', borderRadius: '2px'}}/>
-            <span className="mdl-layout-title">Flipkart Profiler</span>
-            <div className="mdl-layout-spacer"/>
+            <span className="mdl-layout-title mdl-layout--middle" style={{ marginLeft: '10px', marginRight: '20px'}}>FK Profiler</span>
             <nav className="mdl-navigation mdl-layout--large-screen-only">
               <Link className={profileLinkClassName}
                     to={loc => ({pathname: '/profiler/', query: ''})}
-                    style={{color: "white", textDecoration: "none"}}>
+                    style={{color: "lightgray", textDecoration: "none"}}>
                 Profiles
               </Link>
               <Link className={policyLinkClassName}
                     to={loc => ({pathname: '/profiler/policy', query: ''} )}
-                    style={{color: "white", textDecoration: "none"}}>
-                Policy
+                    style={{color: "lightgray", textDecoration: "none"}}>
+                Policies
               </Link>
             </nav>
           </div>
         </header>
+        <div className="mdl-layout-spacer"/>
         <div className="mdl-layout__drawer">
           <span className="mdl-layout-title"><img src={fk_logo} className="mdl-shadow--4dp" style={{width: '18%', borderRadius: '2px'}}/> FK Profiler</span>
           <nav className="mdl-navigation">
             <Link className={profileLinkClassName}
-                  to={loc => ({pathname: '/profiler/', query: ''} )} onClick={this.hideNavDrawer}>
+                  to={loc => ({pathname: '/profiler/', query: ''} )} style={{color: "black", textDecoration: "none"}} onClick={this.hideNavDrawer}>
               Profiles
             </Link>
             <Link className={policyLinkClassName}
-                  to={loc => ({pathname: '/profiler/policy', query: ''} )} onClick={this.hideNavDrawer}>
+                  to={loc => ({pathname: '/profiler/policy', query: ''} )} style={{color: "black", textDecoration: "none"}} onClick={this.hideNavDrawer}>
               Policy
             </Link>
           </nav>
