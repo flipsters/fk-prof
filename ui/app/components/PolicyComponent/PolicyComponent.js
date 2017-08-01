@@ -340,7 +340,7 @@ export default class PolicyComponent extends React.Component {
         className="mdl-typography--font-bold">{this.state.json.policyDetails.policy.schedule.pgCovPct}%</span> host of
         all hosts (with recorder attached) will be profiled.
         On each host being profiled, profiling will run for <span
-        className="mdl-typography--font-bold">{this.state.json.policyDetails.policy.schedule.duration} seconds</span>
+        className="mdl-typography--font-bold">{this.state.json.policyDetails.policy.schedule.duration} seconds </span>
         exactly once in 20 mins.
       </div>
       <div className="mdl-cell--4-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
