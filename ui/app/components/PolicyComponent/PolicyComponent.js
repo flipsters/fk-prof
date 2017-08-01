@@ -361,7 +361,7 @@ export default class PolicyComponent extends React.Component {
         <label className="mdl-textfield__label" htmlFor="pgCovPct">Coverage Percentage...</label>
         <span className="mdl-textfield__error">Coverage % must be between 0-100</span>
         <div className="mdl-tooltip  mdl-tooltip--large" htmlFor="pgCovPct">Percentage of hosts to be covered for
-          profiling every 20 mins
+          profiling, every 20 mins
         </div>
       </div>
       <div className="mdl-layout-spacer"/>
