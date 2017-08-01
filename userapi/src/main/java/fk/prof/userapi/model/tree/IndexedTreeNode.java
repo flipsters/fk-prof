@@ -20,7 +20,7 @@ public class IndexedTreeNode<T> {
 
     private final T data;
 
-    private final List<IndexedTreeNode<T>> children;
+    private List<IndexedTreeNode<T>> children;
 
     public int getIdx() {
         return idx;
@@ -34,8 +34,9 @@ public class IndexedTreeNode<T> {
         return children;
     }
 
-    public IndexedTreeNode<T> withChildren(List<IndexedTreeNode<T>> children) {
-        return new IndexedTreeNode<>(idx, data, children);
+    public IndexedTreeNode<T> setChildren(List<IndexedTreeNode<T>> children) {
+        this.children = children;
+        return this;
     }
 
     @Override

@@ -71,6 +71,10 @@ public class Configuration {
     @JsonProperty("aggregatedProfiles.baseDir")
     private String profilesBaseDir;
 
+    @NotNull
+    @JsonProperty("maxDepthExpansion")
+    private Integer maxDepthExpansion = 24;
+
     public String getIpAddress() {
         return ipAddress;
     }
@@ -117,6 +121,10 @@ public class Configuration {
 
     public VertxWorkerPoolConfig getIoWorkerPool() {
         return ioWorkerPool;
+    }
+
+    public Integer getMaxDepthExpansion() {
+        return maxDepthExpansion;
     }
 
     private void setIoWorkerPool(VertxWorkerPoolConfig ioWorkerPool) {

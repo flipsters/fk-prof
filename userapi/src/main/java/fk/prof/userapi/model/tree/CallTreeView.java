@@ -17,9 +17,9 @@ public class CallTreeView implements Cacheable {
         this.tree = tree;
     }
 
-    public IndexedTreeNode getRootNode() {
+    public List<IndexedTreeNode<FrameNode>> getRootNodes() {
         // TODO: fix it. assuming 0 is the root index.
-        return new IndexedTreeNode<>(0, tree.get(0));
+        return Collections.singletonList(new IndexedTreeNode<>(0, tree.get(0)));
     }
 
     public List<IndexedTreeNode<FrameNode>> getSubTree(List<Integer> ids, int depth, boolean autoExpand) {

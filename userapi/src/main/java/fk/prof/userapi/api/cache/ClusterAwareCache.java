@@ -2,32 +2,25 @@ package fk.prof.userapi.api.cache;
 
 import com.google.common.cache.RemovalCause;
 import com.google.common.cache.RemovalNotification;
-import com.google.common.io.BaseEncoding;
-import com.google.protobuf.AbstractMessage;
-import com.google.protobuf.Parser;
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
+import fk.prof.userapi.Cacheable;
 import fk.prof.userapi.Configuration;
 import fk.prof.userapi.Pair;
 import fk.prof.userapi.api.AggregatedProfileLoader;
 import fk.prof.userapi.model.AggregatedProfileInfo;
 import fk.prof.userapi.model.AggregatedSamplesPerTraceCtx;
-import fk.prof.userapi.Cacheable;
 import fk.prof.userapi.model.tree.CallTreeView;
 import fk.prof.userapi.model.tree.CalleesTreeView;
-import fk.prof.userapi.proto.LoadInfoEntities.NodeLoadInfo;
 import fk.prof.userapi.proto.LoadInfoEntities.ProfileResidencyInfo;
 import io.vertx.core.Future;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.api.transaction.CuratorTransactionFinal;
-import org.apache.curator.framework.recipes.locks.InterProcessSemaphoreMutex;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
 
-import java.nio.charset.Charset;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
@@ -37,7 +30,6 @@ import java.util.function.Function;
 public class ClusterAwareCache {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterAwareCache.class);
-    private static final String distributedLockPath = "/cacheMutex";
 
     private final LocalProfileCache cache;
     private final Map<String, ArrayList<String>> loadedViews;
@@ -49,44 +41,23 @@ public class ClusterAwareCache {
         |___/nodesInfo/{ip:port} -> NodeLoadInfo                                (ephemeral)
         |___/profilesLoadStatus/{profileName} -> ProfileResidencyInfo           (ephemeral)
      */
-    private final CuratorFramework zookeeper;
+    private ZookeeperLoadInfoStore zkStore;
     private final String myIp;
     private final int port;
-
-    private final String zkNodesInfoPath;
-    private final InterProcessSemaphoreMutex sharedMutex;
 
     public ClusterAwareCache(CuratorFramework zookeeper, WorkerExecutor workerExecutor, LocalProfileCache cache, Configuration config) {
         this.myIp = config.getIpAddress();
         this.port = config.getHttpConfig().getHttpPort();
-        this.zookeeper = zookeeper;
+        this.zkStore = new ZookeeperLoadInfoStore(zookeeper, workerExecutor, myIp, port);
         this.workerExecutor = workerExecutor;
-
-        this.zkNodesInfoPath = "/nodesInfo/" + myIp + ":" + port;
 
         this.cache = cache;
         this.cache.setRemovalListener(this::doCleanUpOnEviction);
         this.loadedViews = new ConcurrentHashMap<>();
-
-        this.sharedMutex = new InterProcessSemaphoreMutex(zookeeper, distributedLockPath);
     }
 
     public Future<Object> onClusterJoin() {
-        Future<Object> future = Future.future();
-        workerExecutor.executeBlocking(f -> {
-            try {
-                zookeeper.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(zkNodesInfoPath, buildNodeLoadInfo(0).toByteArray());
-                if(zookeeper.checkExists().forPath("/profilesLoadStatus") == null) {
-                    zookeeper.create().withMode(CreateMode.PERSISTENT).forPath("/profilesLoadStatus");
-                }
-                f.complete();
-            }
-            catch (Exception e) {
-                logger.error("Error in onClusterJoin", e);
-                f.fail(e);
-            }
-        }, future.completer());
-        return future;
+        return doAsync(f -> f.complete(zkStore.ensureBasePathExists()));
     }
 
     /*
@@ -99,76 +70,63 @@ public class ClusterAwareCache {
 
         Future<AggregatedProfileInfo> cachedProfileInfo = cache.get(profileKey);
         if (cachedProfileInfo != null) {
-            logger.debug("found the cached profile");
             completeFuture(profileName, cachedProfileInfo, profileFuture);
         }
         else {
-            logger.debug("checking zookeeper for residency");
             // check zookeeper if it is loaded somewhere else
-            workerExecutor.executeBlocking(f -> {
-                String pathForProfile = zkPathForProfile(profileName);
-                try {
-                    try (CloseableSharedLock csl = new CloseableSharedLock()) {
-                        // check again
-                        Future<AggregatedProfileInfo> _cachedProfileInfo = cache.get(profileKey);
-                        if (_cachedProfileInfo != null) {
-                            logger.debug("found cached future after getting shared lock");
-                            completeFuture(profileName, _cachedProfileInfo, f);
-                            return;
-                        }
-
-                        boolean staleNodeExists = false;
-                        try {
-                            //  still no cached profile. read zookeeper for remotely cached profile
-                            ProfileResidencyInfo residencyInfo = readFrom(pathForProfile, ProfileResidencyInfo.parser());
-
-                            // stale node exists. will update instead of create
-                            if(residencyInfo.getIp().equals(myIp) && residencyInfo.getPort() == port) {
-                                staleNodeExists = true;
-                            }
-                            else {
-                                f.fail(new CachedProfileNotFoundException(residencyInfo.getIp(), residencyInfo.getPort()));
-                                return;
-                            }
-                        }
-                        catch (KeeperException.NoNodeException nne) {
-                            // ignore
-                        }
-
-                        // profile not cached anywhere
-                        // start the loading process
-                        Future<AggregatedProfileInfo> loadProfileFuture = Future.future();
-                        workerExecutor.executeBlocking(f2 -> profileLoader.load(f2, profileName), loadProfileFuture.completer());
-
-                        // update LOADING status in zookeeper
-                        updateProfileStatusToLoading(profileName, loadProfileFuture, staleNodeExists);
-
-                        loadProfileFuture.setHandler(ar -> {
-                            logger.info("Profile load complete. file: {}", profileName);
-                            try {
-                                // profile loading completed, update zookeeper with LOADED status
-                                try (CloseableSharedLock csl2 = new CloseableSharedLock(true)) {
-                                    updateProfileStatusToLoaded(profileName, loadProfileFuture);
-                                }
-                            }
-                            catch (Exception e) {
-                                logger.error("Error while updating zookeeper after load completes. file: {}", profileName, e);
-                                // remove the entry from cache so that we dont leak memory
-                                cache.invalidateProfile(profileKey);
-                            }
-                        });
-
-                        logger.debug("started the profile loading. returning profileloadException");
-                        f.fail(new ProfileLoadInProgressException(profileName));
+            doAsync((Future<AggregatedProfileInfo> f) -> {
+                try (ZookeeperLoadInfoStore.CloseableSharedLock lock = zkStore.getLock()) {
+                    Future<AggregatedProfileInfo> _cachedProfileInfo = cache.get(profileKey);
+                    if (_cachedProfileInfo != null) {
+                        completeFuture(profileName, _cachedProfileInfo, f);
+                        return;
                     }
-                }
-                catch (Exception e) {
-                    logger.error("Error while checking zookeeper for remotely cached profile. file: {}", profileName, e);
-                    f.fail(e);
-                }
-            }, profileFuture.completer());
-        }
 
+                    //  still no cached profile. read zookeeper for remotely cached profile
+                    ProfileResidencyInfo residencyInfo = zkStore.readProfileResidencyInfo(profileName);
+                    // stale node exists. will update instead of create
+                    boolean staleNodeExists = false;
+                    if(residencyInfo != null) {
+                        if(residencyInfo.getIp().equals(myIp) && residencyInfo.getPort() == port) {
+                            staleNodeExists = true;
+                        }
+                        else {
+                            f.fail(new CachedProfileNotFoundException(residencyInfo.getIp(), residencyInfo.getPort()));
+                        }
+                    }
+
+                    // profile not cached anywhere
+                    // start the loading process
+                    Future<AggregatedProfileInfo> loadProfileFuture = Future.future();
+                    workerExecutor.executeBlocking(f2 -> profileLoader.load(f2, profileName), loadProfileFuture.completer());
+
+                    // update LOADING status in zookeeper
+                    zkStore.updateProfileStatusToLoading(profileName, staleNodeExists);
+                    cache.put(profileKey, loadProfileFuture);
+
+                    loadProfileFuture.setHandler(ar -> {
+                        logger.info("Profile load complete. file: {}", profileName);
+                        try {
+                            // profile loading completed, update zookeeper with LOADED status
+                            try (AutoCloseable lock2 = zkStore.getLock(true)) {
+                                zkStore.updateProfileStatusToLoaded(profileName);
+                                cache.put(profileKey, loadProfileFuture);
+                            }
+                        }
+                        catch (Exception e) {
+                            logger.error("Error while updating zookeeper after load completes. file: {}", profileName, e);
+                            // remove the entry from cache so that we dont leak memory
+                            cache.invalidateProfile(profileKey);
+                        }
+                    });
+
+                    if(loadProfileFuture.isComplete()) {
+                        f.complete(loadProfileFuture.result());
+                    }
+                    f.fail(new ProfileLoadInProgressException(profileName));
+                }
+            }, "Error while interacting with zookeeper for file: {}", profileName).setHandler(profileFuture.completer());
+        }
         return profileFuture;
     }
 
@@ -183,8 +141,10 @@ public class ClusterAwareCache {
     private void doCleanUpOnEviction(RemovalNotification<String, Future<AggregatedProfileInfo>> onRemoval) {
         if(!RemovalCause.REPLACED.equals(onRemoval.getCause())) {
             // remove any dependent values from other cache objects
-            workerExecutor.executeBlocking(f -> {
-                AggregatedProfileNamingStrategy profileName = AggregatedProfileNamingStrategy.fromFileName(onRemoval.getKey());
+
+            AggregatedProfileNamingStrategy profileName = AggregatedProfileNamingStrategy.fromFileName(onRemoval.getKey());
+
+            doAsync(f -> {
                 synchronized (this) {
                     List<String> dependentKeys = loadedViews.remove(toKey(profileName));
                     if (dependentKeys != null) {
@@ -192,53 +152,18 @@ public class ClusterAwareCache {
                     }
                 }
 
-                try {
-                    try (CloseableSharedLock csl = new CloseableSharedLock()) {
-                        // double check whether the same profile has started loaded again by the time we got the lock
-                        Future<AggregatedProfileInfo> _cachedProfileInfo = cache.get(toKey(profileName));
-                        if (_cachedProfileInfo != null) {
-                            f.complete();
-                            return;
-                        }
-                        else {
-                            cleanupProfileStatus(profileName, onRemoval.getValue());
-                        }
+                try(AutoCloseable lock = zkStore.getLock()) {
+                    ProfileResidencyInfo residencyInfo = zkStore.readProfileResidencyInfo(profileName);
+                    boolean deleteProfileNode = false;
+                    if(residencyInfo != null && (myIp.equals(residencyInfo.getIp()) && port == residencyInfo.getPort())) {
+                        deleteProfileNode = true;
                     }
+                    zkStore.removeProfile(profileName, deleteProfileNode);
                 }
-                catch (Exception e) {
-                    logger.error("Error while doing zookeeper cleanup for file: {}", profileName, e);
-                    f.fail(e);
-                }
+
                 f.complete();
-            }, ar -> {});
+            }, "Error while cleaning for file: {}", profileName.toString());
         }
-    }
-
-    private void updateProfileStatusToLoaded(AggregatedProfileNamingStrategy profileName, Future<AggregatedProfileInfo> profileLoadFuture) throws Exception {
-        // profile not cached anywhere
-        zookeeper.setData().forPath(zkPathForProfile(profileName), buildResidencyInfo(ProfileResidencyInfo.LoadStatus.Loaded).toByteArray());
-        cache.put(toKey(profileName), profileLoadFuture);
-    }
-
-    private void updateProfileStatusToLoading(AggregatedProfileNamingStrategy profileName, Future<AggregatedProfileInfo> profileLoadFuture, boolean nodeExists) throws Exception {
-        NodeLoadInfo nodeLoadInfo = readFrom(zkNodesInfoPath, NodeLoadInfo.parser());
-        CuratorTransactionFinal transaction = zookeeper.inTransaction().setData().forPath(zkNodesInfoPath, buildNodeLoadInfo(nodeLoadInfo.getProfilesLoaded() + 1).toByteArray()).and();
-        if(nodeExists) {
-            transaction = transaction.setData().forPath(zkPathForProfile(profileName), buildResidencyInfo(ProfileResidencyInfo.LoadStatus.Loading).toByteArray()).and();
-        }
-        else {
-            transaction = transaction.create().withMode(CreateMode.EPHEMERAL).forPath(zkPathForProfile(profileName), buildResidencyInfo(ProfileResidencyInfo.LoadStatus.Loading).toByteArray()).and();
-        }
-        transaction.commit();
-        cache.put(toKey(profileName), profileLoadFuture);
-    }
-
-    private void cleanupProfileStatus(AggregatedProfileNamingStrategy profileName, Future<AggregatedProfileInfo> profileLoadFuture) throws Exception {
-        int weight = profileLoadFuture.succeeded() ? profileLoadFuture.result().getUtilizationWeight() : 1;
-        NodeLoadInfo nodeLoadInfo = readFrom(zkNodesInfoPath, NodeLoadInfo.parser());
-        zookeeper.inTransaction().setData().forPath(zkNodesInfoPath, buildNodeLoadInfo(nodeLoadInfo.getProfilesLoaded() - weight).toByteArray())
-            .and().delete().forPath(zkPathForProfile(profileName))
-            .and().commit();
     }
 
     private void completeFuture(AggregatedProfileNamingStrategy profileName, Future<AggregatedProfileInfo> cachedProfileInfo, Future<AggregatedProfileInfo> profileFuture) {
@@ -265,16 +190,10 @@ public class ClusterAwareCache {
         }
         else {
             // else check into zookeeper if this is cached in another node
-            workerExecutor.executeBlocking(f -> {
-                ProfileResidencyInfo residencyInfo = null;
-                try {
-                    try(CloseableSharedLock csl = new CloseableSharedLock()) {
-                        residencyInfo = readFrom(zkPathForProfile(profileName), ProfileResidencyInfo.parser());
-                    }
-                }
-                catch (Exception e) {
-                    logger.error("Error while reading profile residency info. file: {}", profileName, e);
-                    f.fail(e);
+            doAsync((Future<Pair<AggregatedSamplesPerTraceCtx, ViewType>> f) -> {
+                ProfileResidencyInfo residencyInfo;
+                try(AutoCloseable lock = zkStore.getLock()) {
+                    residencyInfo = zkStore.readProfileResidencyInfo(profileName);
                 }
 
                 if(residencyInfo != null) {
@@ -290,7 +209,7 @@ public class ClusterAwareCache {
                 else {
                     f.fail(new CachedProfileNotFoundException());
                 }
-            }, viewFuture.completer());
+            }).setHandler(viewFuture.completer());
         }
 
         return viewFuture;
@@ -348,14 +267,6 @@ public class ClusterAwareCache {
         });
     }
 
-    private NodeLoadInfo buildNodeLoadInfo(int profileCount) {
-        return NodeLoadInfo.newBuilder().setProfilesLoaded(profileCount).build();
-    }
-
-    private ProfileResidencyInfo buildResidencyInfo(ProfileResidencyInfo.LoadStatus loadStatus) {
-        return ProfileResidencyInfo.newBuilder().setIp(myIp).setPort(port).setStatus(loadStatus).build();
-    }
-
     private String toKey(AggregatedProfileNamingStrategy profileName) {
         return profileName.toString();
     }
@@ -369,45 +280,27 @@ public class ClusterAwareCache {
         }
     }
 
-    protected String zkPathForProfile(AggregatedProfileNamingStrategy profileName) {
-        return "/profilesLoadStatus/" +  BaseEncoding.base32().encode(profileName.toString().getBytes(Charset.forName("utf-8")));
+    interface BlockingTask<T> {
+        void getResult(Future<T> future) throws Exception;
     }
 
-    private <T extends AbstractMessage> T readFrom(String profileName, Parser<T> parser) throws Exception {
-        byte[] bytes = zookeeper.getData().forPath(profileName);
-        return parser.parseFrom(bytes);
+    private <T> Future<T> doAsync(BlockingTask<T> s) {
+        return doAsync(s, "");
     }
 
-    private class CloseableSharedLock implements AutoCloseable {
-
-        boolean lockAlreadyAcquired = false;
-
-        CloseableSharedLock() throws Exception {
-            this(false);
-        }
-
-        CloseableSharedLock(boolean canExpectAlreadyAcquired) throws Exception {
-            if (!canExpectAlreadyAcquired && sharedMutex.isAcquiredInThisProcess()) {
-                throw new RuntimeException("Lock already acquired");
-            }
-            if (sharedMutex.isAcquiredInThisProcess()) {
-                lockAlreadyAcquired = true;
-            }
-            else {
-                sharedMutex.acquire();
-            }
-        }
-
-        @Override
-        public void close() throws Exception {
+    private <T> Future<T> doAsync(BlockingTask<T> s, String failMsg, Object... objects) {
+        Future<T> result = Future.future();
+        workerExecutor.executeBlocking(f -> {
             try {
-                if (!lockAlreadyAcquired) {
-                    sharedMutex.release();
-                }
+                s.getResult(f);
             }
             catch (Exception e) {
-                logger.error("Unable to release lock", e);
+                logger.error(failMsg, e, objects);
+                if(!f.isComplete()) {
+                    f.fail(e);
+                }
             }
-        }
+        }, result.completer());
+        return result;
     }
 }

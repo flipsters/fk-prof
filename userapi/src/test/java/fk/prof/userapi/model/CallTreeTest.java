@@ -12,7 +12,6 @@ import fk.prof.userapi.model.tree.*;
 import fk.prof.userapi.model.tree.CalleesTreeView.HotMethodNode;
 import io.vertx.core.Future;
 
-import org.hamcrest.Matcher;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -22,8 +21,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static org.hamcrest.CoreMatchers.*;
 
 /**
  * Created by gaurav.ashok on 06/06/17.
@@ -91,32 +88,32 @@ public class CallTreeTest {
         expectedHotMethodsTree =
             Arrays.asList(
                 hmnode(4, mId("G()"), 1,
-                    hmnode(3, mId("D()"), 1,
-                        hmnode(2, mId("A()"), 1,
-                            hmnode(0, 0, 1)))),
+                    hmnode(3, mId("D()"), 6,
+                        hmnode(2, mId("A()"), 0,
+                            hmnode(0, 0, 0)))),
                 hmnode(3, mId("D()"), 6,
-                    hmnode(2, mId("A()"), 6,
-                        hmnode(0, 0, 6))),
+                    hmnode(2, mId("A()"), 0,
+                        hmnode(0, 0, 0))),
                 hmnode(6, mId("C()"), 2,
-                    hmnode(5, mId("B()"), 2,
-                        hmnode(2, mId("A()"), 2,
-                            hmnode(0, 0, 2)))),
+                    hmnode(5, mId("B()"), 5,
+                        hmnode(2, mId("A()"), 0,
+                            hmnode(0, 0, 0)))),
                 hmnode(5, mId("B()"), 5,
-                    hmnode(2, mId("A()"), 5,
-                        hmnode(0, 0, 5))),
+                    hmnode(2, mId("A()"), 0,
+                        hmnode(0, 0, 0))),
                 hmnode(10, mId("C()"), 3,
-                    hmnode(9, mId("B()"), 3,
-                        hmnode(8, mId("F()"), 3,
-                            hmnode(7, mId("E()"), 3,
-                                hmnode(0, 0, 3))))),
+                    hmnode(9, mId("B()"), 2,
+                        hmnode(8, mId("F()"), 0,
+                            hmnode(7, mId("E()"), 0,
+                                hmnode(0, 0, 0))))),
                 hmnode(9, mId("B()"), 2,
-                    hmnode(8, mId("F()"), 2,
-                        hmnode(7, mId("E()"), 2,
-                            hmnode(0, 0, 2)))),
+                    hmnode(8, mId("F()"), 0,
+                        hmnode(7, mId("E()"), 0,
+                            hmnode(0, 0, 0)))),
                 hmnode(11, mId("D()"), 4,
-                    hmnode(8, mId("F()"), 4,
-                        hmnode(7, mId("E()"), 4,
-                            hmnode(0, 0, 4)))));
+                    hmnode(8, mId("F()"), 0,
+                        hmnode(7, mId("E()"), 0,
+                            hmnode(0, 0, 0)))));
     }
 
     @Test
@@ -127,25 +124,23 @@ public class CallTreeTest {
     @Test
     public void testCallTreeView() {
         CallTreeView ctv = new CallTreeView(calltree);
-        /* children of root node */
-        Matcher m = hasItems(toArray(expectedTree.getChildren()));
-        Assert.assertThat(ctv.getSubTree(ctv.getRootNode().getIdx(), 1), m);
-
+        /* root node */
+        testTreeEquality(ctv.getSubTree(toList(ctv.getRootNodes().get(0).getIdx()), 1, false), toList(expectedTree));
         /* E -> F -> B
                   -> D
          */
-        List<IndexedTreeNode<FrameNode>> e_subtree = ctv.getSubTree(7, 2);
-        testTreeEquality(e_subtree, expectedTree.getChildren().get(2).getChildren());
+        List<IndexedTreeNode<FrameNode>> e_subtree = ctv.getSubTree(toList(7), 2, false);
+        testTreeEquality(e_subtree, toList(expectedTree.getChildren().get(2)));
 
         /* A -> B -> C
              -> D -> G
          */
-        List<IndexedTreeNode<FrameNode>> a_subtree = ctv.getSubTree(2, 10);
-        testTreeEquality(a_subtree, expectedTree.getChildren().get(1).getChildren());
+        List<IndexedTreeNode<FrameNode>> a_subtree = ctv.getSubTree(toList(2), 10, false);
+        testTreeEquality(a_subtree, toList(expectedTree.getChildren().get(1)));
 
         /* full tree */
-        List<IndexedTreeNode<FrameNode>> fulltree = ctv.getSubTree(0, 10);
-        testTreeEquality(fulltree, expectedTree.getChildren());
+        List<IndexedTreeNode<FrameNode>> fulltree = ctv.getSubTree(toList(0), 10, false);
+        testTreeEquality(fulltree, toList(expectedTree));
     }
 
     @Test
@@ -157,23 +152,22 @@ public class CallTreeTest {
         FilteredTree<FrameNode> mt = new FilteredTree<>(calltree, (i, fn) -> fn.getMethodId() == b_id);
         CallTreeView ctv = new CallTreeView(mt);
 
-        /* children of root node */
-        Matcher m = hasItems(toArray(filterTree(expectedTree.getChildren(), hiddenNodes)));
-        Assert.assertThat(ctv.getSubTree(ctv.getRootNode().getIdx(), 1), m);
+        /* root node */
+        testTreeEquality(ctv.getSubTree(toList(ctv.getRootNodes().get(0).getIdx()), 1, false), filterTree(toList(expectedTree), hiddenNodes));
 
         /* E -> F -> B
            Branch with D() [id:11] will not be visible
          */
-        List<IndexedTreeNode<FrameNode>> e_subtree = ctv.getSubTree(7, 2);
+        List<IndexedTreeNode<FrameNode>> e_subtree = ctv.getSubTree(toList(7), 2, false);
         testTreeEquality(e_subtree,
-            filterTree(expectedTree.getChildren().get(2).getChildren(), hiddenNodes));
+            filterTree(toList(expectedTree.getChildren().get(2)), hiddenNodes));
 
         /* full tree
            Branch under nodes 1, 3, 11 will not be visible
          */
-        List<IndexedTreeNode<FrameNode>> fulltree = ctv.getSubTree(0, 10);
+        List<IndexedTreeNode<FrameNode>> fulltree = ctv.getSubTree(toList(0), 10, false);
         testTreeEquality(fulltree,
-            filterTree(expectedTree.getChildren(), hiddenNodes));
+            filterTree(toList(expectedTree), hiddenNodes));
     }
 
     @Test
@@ -181,25 +175,22 @@ public class CallTreeTest {
         CalleesTreeView hmtv = new CalleesTreeView(calltree);
 
         // all hotmethods
-        List<IndexedTreeNode<HotMethodNode>> hm = hmtv.getHotMethods();
+        List<IndexedTreeNode<HotMethodNode>> hm = hmtv.getRootNodes();
         testTreeEquality(hm, expectedHotMethodsTree);
 
         // get callers of C() [sampleCount:3]
-        IndexedTreeNode<HotMethodNode> C3_hotMethod = hm.stream().filter(e -> e.getIdx() == 10).findFirst().get();
-        List<IndexedTreeNode<HotMethodNode>> C3_callers_2deep = hmtv.getCallers(Arrays.asList(C3_hotMethod), 2);
-        testTreeEquality(C3_callers_2deep, expectedHotMethodsTree.get(4).getChildren());
+        List<IndexedTreeNode<HotMethodNode>> C3_callers_2deep = hmtv.getSubTree(toList(10), 2, false);
+        testTreeEquality(C3_callers_2deep, toList(expectedHotMethodsTree.get(4)));
 
         // get callers of D() [sampleCount:6]
-        IndexedTreeNode<HotMethodNode> D6_hotMethod = hm.stream().filter(e -> e.getIdx() == 3).findFirst().get();
-        List<IndexedTreeNode<HotMethodNode>> D6_callers_1deep = hmtv.getCallers(Arrays.asList(D6_hotMethod), 1);
-        testTreeEquality(D6_callers_1deep, expectedHotMethodsTree.get(1).getChildren());
+        List<IndexedTreeNode<HotMethodNode>> D6_callers_1deep = hmtv.getSubTree(toList(3), 1, false);
+        testTreeEquality(D6_callers_1deep, toList(expectedHotMethodsTree.get(1)));
     }
 
     @Test
     public void testSearchFilteredHotMethodView() {
         // subtree that contains D() in its branches.
         int d_id = mId("D()");
-        List<Integer> hiddenNodes = Arrays.asList(1, 5, 9);
 
         FilteredTree<FrameNode> mt = new FilteredTree<>(calltree, (i, fn) -> fn.getMethodId() == d_id);
         CalleesTreeView hmtv = new CalleesTreeView(mt);
@@ -207,14 +198,13 @@ public class CallTreeTest {
         /* all hotmethods
            only those branches will be visible which has D in it, i.e. 0, 1, 6th element from expectedHotMethodTree
          */
-        List<IndexedTreeNode<HotMethodNode>> hm = hmtv.getHotMethods();
+        List<IndexedTreeNode<HotMethodNode>> hm = hmtv.getRootNodes();
         testTreeEquality(hm,
             Arrays.asList(expectedHotMethodsTree.get(0), expectedHotMethodsTree.get(1), expectedHotMethodsTree.get(6)));
 
         // get callers of G() [sampleCount:1]
-        IndexedTreeNode<HotMethodNode> G1_hotMethod = hm.stream().filter(e -> e.getIdx() == 4).findFirst().get();
-        List<IndexedTreeNode<HotMethodNode>> G1_callers_5deep = hmtv.getCallers(Arrays.asList(G1_hotMethod), 5);
-        testTreeEquality(G1_callers_5deep, expectedHotMethodsTree.get(0).getChildren());
+        List<IndexedTreeNode<HotMethodNode>> G1_callers_5deep = hmtv.getSubTree(toList(4), 5, false);
+        testTreeEquality(G1_callers_5deep, toList(expectedHotMethodsTree.get(0)));
     }
 
     private void testTreeEquality(IndexedTreeNode<FrameNode> node, CallTree callTree) {
@@ -268,7 +258,7 @@ public class CallTreeTest {
         return methodIdLookup.indexOf(methodName);
     }
 
-    private <T> T[] toArray(List<T> list) {
-        return (T[]) list.toArray();
+    private <T> List<T> toList(T... elements) {
+        return Arrays.asList(elements);
     }
 }

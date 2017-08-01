@@ -1,6 +1,7 @@
 package fk.prof.userapi.api.cache;
 
 import com.google.common.base.Ticker;
+import com.google.common.io.BaseEncoding;
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
 import fk.prof.aggregation.proto.AggregatedProfileModel;
 import fk.prof.userapi.Configuration;
@@ -32,6 +33,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -68,7 +70,7 @@ public class CacheTest {
     public static void beforeClass() throws Exception {
         config = UserapiConfigManager.loadConfig(ProfileStoreAPIImpl.class.getClassLoader().getResource("userapi-conf.json").getFile());
 
-        zookeeper = new TestingServer(2191, true);
+        zookeeper = new TestingServer(zkPort, true);
 
         Configuration.CuratorConfig curatorConfig = config.getCuratorConfig();
         curator = CuratorFrameworkFactory.builder()
@@ -99,6 +101,7 @@ public class CacheTest {
             context.assertTrue(ar.succeeded());
             async.complete();
         });
+        async.awaitSuccess(500);
     }
 
     private void setUpCache(TestContext context, LocalProfileCache localCache) {
@@ -109,6 +112,7 @@ public class CacheTest {
             context.assertTrue(ar.succeeded());
             async.complete();
         });
+        async.awaitSuccess(500);
     }
 
     @Test(timeout = 1000)
@@ -334,7 +338,7 @@ public class CacheTest {
     }
 
     private void createProfileNode(AggregatedProfileNamingStrategy profileName, String ip, int port, LoadStatus status) throws Exception {
-        curator.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(cache.zkPathForProfile(profileName),
+        curator.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(zkPathForProfile(profileName),
             LoadInfoEntities.ProfileResidencyInfo.newBuilder().setIp(ip).setPort(port).setStatus(status).build().toByteArray());
     }
 
@@ -391,5 +395,9 @@ public class CacheTest {
         public long read() {
             return currTime.get();
         }
+    }
+
+    private String zkPathForProfile(AggregatedProfileNamingStrategy profileName) {
+        return "/profilesLoadStatus/" +  BaseEncoding.base32().encode(profileName.toString().getBytes(Charset.forName("utf-8")));
     }
 }
