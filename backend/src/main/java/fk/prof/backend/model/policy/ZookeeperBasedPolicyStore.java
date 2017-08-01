@@ -188,6 +188,11 @@ public class ZookeeperBasedPolicyStore implements PolicyStore {
                         throw new PolicyException("Exception thrown by ZK while writing policy for ProcessGroup = " + RecorderProtoUtil.processGroupCompactRepr(processGroup), e, true);
                     }
                 });
+                if(create)
+                    LOGGER.info("Policy : {} created for process group: {}", PolicyDTOProtoUtil.versionedPolicyDetailsCompactRepr(newVersionedPolicy), RecorderProtoUtil.processGroupCompactRepr(processGroup));
+                else
+                    LOGGER.info("Policy : {} updated for process group: {}", PolicyDTOProtoUtil.versionedPolicyDetailsCompactRepr(newVersionedPolicy), RecorderProtoUtil.processGroupCompactRepr(processGroup));
+
                 fut.complete(newVersionedPolicy);
             } catch (Exception e) {
                 fut.fail(e);

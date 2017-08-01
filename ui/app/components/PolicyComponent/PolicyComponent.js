@@ -386,7 +386,7 @@ export default class PolicyComponent extends React.Component {
     }
     return (
       <div className="mdl-grid mdl-cell--12-col">
-        <button className="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect"
+        <button className="mdl-button mdl-js-button mdl-button--colored mdl-button--raised mdl-js-ripple-effect"
                 style={{ margin: 'auto'}}
                 onClick={this.handleSubmitClick}>
           {buttonText}
