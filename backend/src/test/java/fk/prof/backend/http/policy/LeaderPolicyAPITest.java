@@ -9,7 +9,6 @@ import fk.prof.backend.http.ApiPathConstants;
 import fk.prof.backend.mock.MockPolicyData;
 import fk.prof.backend.model.association.BackendAssociationStore;
 import fk.prof.backend.model.policy.PolicyStore;
-import fk.prof.backend.proto.PolicyDTO;
 import fk.prof.backend.util.ProtoUtil;
 import fk.prof.backend.util.proto.RecorderProtoUtil;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -25,6 +24,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import proto.PolicyDTO;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -91,7 +91,7 @@ public class LeaderPolicyAPITest {
         });
 
         client.getNow(leaderPort, "localhost", ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX + DELIMITER + MockPolicyData.mockProcessGroups.get(1).getAppId() + DELIMITER + MockPolicyData.mockProcessGroups.get(1).getCluster() + DELIMITER + MockPolicyData.mockProcessGroups.get(1).getProcName(), httpClientResponse -> {
-            context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.BAD_REQUEST.code());
+            context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.NOT_FOUND.code());
             httpClientResponse.bodyHandler(buffer -> {
                 context.assertTrue(buffer.toString().contains("not found"));
                 f2.complete(null);

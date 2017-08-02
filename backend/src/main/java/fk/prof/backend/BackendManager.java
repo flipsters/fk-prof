@@ -184,6 +184,10 @@ public class BackendManager {
   private void ensureRequiredZkNodesPresent() throws  Exception {
     try {
       curatorClient.create().forPath(config.getAssociationsConfig().getAssociationPath());
+    } catch (KeeperException.NodeExistsException ex) {
+      logger.warn(ex);
+    }
+    try {
       curatorClient.create().creatingParentsIfNeeded().forPath(DELIMITER + config.getPolicyBaseDir() + DELIMITER + config.getPolicyVersion());
     } catch (KeeperException.NodeExistsException ex) {
       logger.warn(ex);

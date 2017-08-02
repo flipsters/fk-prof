@@ -66,4 +66,41 @@ public class PolicyDTOProtoUtil {
         }
         return outputWorkBuilder.build();
     }
+
+    public static void validatePolicyValues(PolicyDTO.VersionedPolicyDetails versionedPolicyDetails) throws Exception {
+        PolicyDTO.Policy policy = versionedPolicyDetails.getPolicyDetails().getPolicy();
+        validateField("duration", policy.getSchedule().getDuration(), 60, 960);
+        validateField("pgCovPct", policy.getSchedule().getPgCovPct(), 0, 100);
+        for (PolicyDTO.Work work : policy.getWorkList()) {
+            int workDetailsCount = 0;
+            if(work.hasCpuSample()){
+                validateField("cpuSample: frequency", work.getCpuSample().getFrequency(), 50, 100);
+                validateField("cpuSample: maxFrames", work.getCpuSample().getMaxFrames(), 1, 999);
+                workDetailsCount++;
+            }
+            if(work.hasThdSample()){
+                validateField("threadSample: frequency", work.getThdSample().getFrequency(), 50, 100);
+                validateField("threadSample: maxFrames", work.getThdSample().getMaxFrames(), 1, 999);
+                workDetailsCount++;
+            }
+            if(work.hasMonitorBlock()){
+                validateField("monitorBlock: maxMonitors", work.getMonitorBlock().getMaxMonitors(), 50, 100);
+                validateField("monitorBlock: maxFrames", work.getMonitorBlock().getMaxFrames(), 1, 999);
+                workDetailsCount++;
+            }
+            if(work.hasMonitorWait()){
+                validateField("monitorWait: maxMonitors", work.getMonitorWait().getMaxMonitors(), 50, 100);
+                validateField("monitorWait: maxFrames", work.getMonitorWait().getMaxFrames(), 1, 999);
+                workDetailsCount++;
+            }
+            if(workDetailsCount != 1)
+                throw new IllegalArgumentException("Only one work details per work supported, given: " + workDetailsCount);
+        }
+    }
+
+    private static <T extends Comparable<T>> void validateField(String name, T value, T min, T max) throws Exception {
+        if (value.compareTo(min) < 0 || value.compareTo(max) > 0) {
+            throw new IllegalArgumentException("Value of " + name + " should be between [" + min + "," + max + "], given: " + value );
+        }
+    }
 }

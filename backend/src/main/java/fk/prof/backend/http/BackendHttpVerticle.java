@@ -279,9 +279,10 @@ public class BackendHttpVerticle extends AbstractVerticle {
 
   private void proxyToLeader(RoutingContext context) {
     BackendDTO.LeaderDetail leaderDetail = verifyLeaderAvailabilityOrFail(context.response());
+    final String path = context.normalisedPath() + ((context.request().query() != null)? "?" + context.request().query(): "");
     if (leaderDetail != null) {
       try {
-        makeRequestToLeader(leaderDetail, context.request().method(),  context.normalisedPath(), context.getBody(), false)
+        makeRequestToLeader(leaderDetail, context.request().method(),  path, context.getBody(), false)
                 .setHandler(ar -> proxyResponseFromLeader(context, ar));
       } catch (Exception ex) {
         HttpFailure httpFailure = HttpFailure.failure(ex);
