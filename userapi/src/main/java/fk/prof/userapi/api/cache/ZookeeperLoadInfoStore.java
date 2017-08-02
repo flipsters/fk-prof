@@ -6,7 +6,6 @@ import com.google.protobuf.Parser;
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
 import fk.prof.userapi.proto.LoadInfoEntities;
 import fk.prof.userapi.proto.LoadInfoEntities.ProfileResidencyInfo;
-import io.vertx.core.WorkerExecutor;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
@@ -36,10 +35,9 @@ public class ZookeeperLoadInfoStore {
     private final AtomicLong lastZkLostTimestamp;
     private final AtomicBoolean recentlyZkConnectionLost;
 
-    private String myIp;
-    private int port;
+    private final byte[] myResidencyInfo;
 
-    public ZookeeperLoadInfoStore(CuratorFramework zookeeper, WorkerExecutor executor, String myIp, int port) {
+    public ZookeeperLoadInfoStore(CuratorFramework zookeeper, String myIp, int port) {
         this.zookeeper = zookeeper;
 
         this.zkNodesInfoPath = "/nodesInfo/" + myIp + ":" + port;
@@ -48,13 +46,12 @@ public class ZookeeperLoadInfoStore {
         this.lastZkLostTimestamp = new AtomicLong(0);
         this.recentlyZkConnectionLost = new AtomicBoolean(false);
 
-        this.myIp = myIp;
-        this.port = port;
+        this.myResidencyInfo = ProfileResidencyInfo.newBuilder().setIp(myIp).setPort(port).build().toByteArray();
 
         this.zookeeper.getConnectionStateListenable().addListener(this::zkStateChangeListener);
     }
 
-    public Boolean ensureBasePathExists() throws Exception {
+    public boolean ensureBasePathExists() throws Exception {
         zookeeper.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(zkNodesInfoPath, buildNodeLoadInfo(0).toByteArray());
         if(zookeeper.checkExists().forPath("/profilesLoadStatus") == null) {
             zookeeper.create().withMode(CreateMode.PERSISTENT).forPath("/profilesLoadStatus");
@@ -63,11 +60,11 @@ public class ZookeeperLoadInfoStore {
         return false;
     }
 
-    public Boolean profileInfoExists(AggregatedProfileNamingStrategy profileName) throws Exception {
+    public boolean profileInfoExists(AggregatedProfileNamingStrategy profileName) throws Exception {
         return zookeeper.checkExists().forPath(zkPathForProfile(profileName)) != null;
     }
 
-    public Boolean NodeInfoExists() throws Exception {
+    public boolean NodeInfoExists() throws Exception {
         return zookeeper.checkExists().forPath(zkNodesInfoPath) != null;
     }
 
@@ -79,23 +76,16 @@ public class ZookeeperLoadInfoStore {
         }
     }
 
-    public void updateProfileStatusToLoaded(AggregatedProfileNamingStrategy profileName) throws Exception {
-        // profile not cached anywhere
-        zookeeper.setData().forPath(zkPathForProfile(profileName), buildResidencyInfo(ProfileResidencyInfo.LoadStatus.Loaded).toByteArray());
-//        cache.put(toKey(profileName), profileLoadFuture);
-    }
-
     public void updateProfileStatusToLoading(AggregatedProfileNamingStrategy profileName, boolean profileNodeExists) throws Exception {
         LoadInfoEntities.NodeLoadInfo nodeLoadInfo = readFrom(zkNodesInfoPath, LoadInfoEntities.NodeLoadInfo.parser());
         CuratorTransactionFinal transaction = zookeeper.inTransaction().setData().forPath(zkNodesInfoPath, buildNodeLoadInfo(nodeLoadInfo.getProfilesLoaded() + 1).toByteArray()).and();
         if(profileNodeExists) {
-            transaction = transaction.setData().forPath(zkPathForProfile(profileName), buildResidencyInfo(ProfileResidencyInfo.LoadStatus.Loading).toByteArray()).and();
+            transaction = transaction.setData().forPath(zkPathForProfile(profileName), myResidencyInfo).and();
         }
         else {
-            transaction = transaction.create().withMode(CreateMode.EPHEMERAL).forPath(zkPathForProfile(profileName), buildResidencyInfo(ProfileResidencyInfo.LoadStatus.Loading).toByteArray()).and();
+            transaction = transaction.create().withMode(CreateMode.EPHEMERAL).forPath(zkPathForProfile(profileName), myResidencyInfo).and();
         }
         transaction.commit();
-//        cache.put(toKey(profileName), profileLoadFuture);
     }
 
     public void removeProfile(AggregatedProfileNamingStrategy profileName, boolean deleteProfileNode) throws Exception {
@@ -111,11 +101,11 @@ public class ZookeeperLoadInfoStore {
         }
     }
 
-    public CloseableSharedLock getLock() throws Exception {
+    public AutoCloseable getLock() throws Exception {
         return getLock(false);
     }
 
-    public CloseableSharedLock getLock(Boolean canExpectAlreadyAcquired) throws Exception {
+    public AutoCloseable getLock(Boolean canExpectAlreadyAcquired) throws Exception {
         return new CloseableSharedLock(canExpectAlreadyAcquired);
     }
 
@@ -124,13 +114,9 @@ public class ZookeeperLoadInfoStore {
         Normal
     }
 
-    public class CloseableSharedLock implements AutoCloseable {
+    protected class CloseableSharedLock implements AutoCloseable {
 
         boolean lockAlreadyAcquired = false;
-
-        CloseableSharedLock() throws Exception {
-            this(false);
-        }
 
         CloseableSharedLock(boolean canExpectAlreadyAcquired) throws Exception {
             if (!canExpectAlreadyAcquired && sharedMutex.isAcquiredInThisProcess()) {
@@ -161,10 +147,6 @@ public class ZookeeperLoadInfoStore {
         return LoadInfoEntities.NodeLoadInfo.newBuilder().setProfilesLoaded(profileCount).build();
     }
 
-    private ProfileResidencyInfo buildResidencyInfo(ProfileResidencyInfo.LoadStatus loadStatus) {
-        return ProfileResidencyInfo.newBuilder().setIp(myIp).setPort(port).setStatus(loadStatus).build();
-    }
-
     private <T extends AbstractMessage> T readFrom(String path, Parser<T> parser) throws Exception {
         byte[] bytes = zookeeper.getData().forPath(path);
         return parser.parseFrom(bytes);
@@ -175,10 +157,19 @@ public class ZookeeperLoadInfoStore {
         return "/profilesLoadStatus/" +  BaseEncoding.base32().encode(profileName.toString().getBytes(Charset.forName("utf-8")));
     }
 
+    // TODO check for concurrency issue
     private void zkStateChangeListener(CuratorFramework client, ConnectionState newState) {
         if(ConnectionState.RECONNECTED.equals(newState)) {
             if(recentlyZkConnectionLost.get()) {
-//                zookeeper.inTransaction().check().
+                /*
+                reinit:
+                    take a zk lock
+                    get all loaded profiles.
+                    get stat for each file in batch
+                    for each non present node, create them
+                    update the nodeInfo with proper load info
+                 */
+                // mode <- normal
             }
             /*
             If previously lost:

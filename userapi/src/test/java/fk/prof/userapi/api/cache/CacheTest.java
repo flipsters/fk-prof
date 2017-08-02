@@ -14,7 +14,6 @@ import fk.prof.userapi.model.AggregatedSamplesPerTraceCtx;
 import fk.prof.userapi.model.tree.CallTreeView;
 import fk.prof.userapi.model.tree.CalleesTreeView;
 import fk.prof.userapi.proto.LoadInfoEntities;
-import fk.prof.userapi.proto.LoadInfoEntities.ProfileResidencyInfo.LoadStatus;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.WorkerExecutor;
@@ -220,7 +219,7 @@ public class CacheTest {
         setUpDefaultCache(context);
         AggregatedProfileNamingStrategy profileName = profileName("proc1", dt(0));
         // update zookeeper that tells that profile is loaded somewhere else
-        createProfileNode(profileName, "127.0.0.1", 3456, LoadStatus.Loaded);
+        createProfileNode(profileName, "127.0.0.1", 3456);
 
         Future<AggregatedProfileInfo> profile1 = cache.getAggregatedProfile(profileName, mockedProfileLoader());
 
@@ -337,9 +336,9 @@ public class CacheTest {
         return beginning.plusSeconds(offsetInSec);
     }
 
-    private void createProfileNode(AggregatedProfileNamingStrategy profileName, String ip, int port, LoadStatus status) throws Exception {
+    private void createProfileNode(AggregatedProfileNamingStrategy profileName, String ip, int port) throws Exception {
         curator.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(zkPathForProfile(profileName),
-            LoadInfoEntities.ProfileResidencyInfo.newBuilder().setIp(ip).setPort(port).setStatus(status).build().toByteArray());
+            LoadInfoEntities.ProfileResidencyInfo.newBuilder().setIp(ip).setPort(port).build().toByteArray());
     }
 
     private static class NameProfilePair {

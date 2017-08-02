@@ -48,7 +48,7 @@ public class ClusterAwareCache {
     public ClusterAwareCache(CuratorFramework zookeeper, WorkerExecutor workerExecutor, LocalProfileCache cache, Configuration config) {
         this.myIp = config.getIpAddress();
         this.port = config.getHttpConfig().getHttpPort();
-        this.zkStore = new ZookeeperLoadInfoStore(zookeeper, workerExecutor, myIp, port);
+        this.zkStore = new ZookeeperLoadInfoStore(zookeeper, myIp, port);
         this.workerExecutor = workerExecutor;
 
         this.cache = cache;
@@ -75,14 +75,14 @@ public class ClusterAwareCache {
         else {
             // check zookeeper if it is loaded somewhere else
             doAsync((Future<AggregatedProfileInfo> f) -> {
-                try (ZookeeperLoadInfoStore.CloseableSharedLock lock = zkStore.getLock()) {
+                try (AutoCloseable lock = zkStore.getLock()) {
                     Future<AggregatedProfileInfo> _cachedProfileInfo = cache.get(profileKey);
                     if (_cachedProfileInfo != null) {
                         completeFuture(profileName, _cachedProfileInfo, f);
                         return;
                     }
 
-                    //  still no cached profile. read zookeeper for remotely cached profile
+                    // still no cached profile. read zookeeper for remotely cached profile
                     ProfileResidencyInfo residencyInfo = zkStore.readProfileResidencyInfo(profileName);
                     // stale node exists. will update instead of create
                     boolean staleNodeExists = false;
@@ -92,6 +92,7 @@ public class ClusterAwareCache {
                         }
                         else {
                             f.fail(new CachedProfileNotFoundException(residencyInfo.getIp(), residencyInfo.getPort()));
+                            return;
                         }
                     }
 
@@ -106,18 +107,8 @@ public class ClusterAwareCache {
 
                     loadProfileFuture.setHandler(ar -> {
                         logger.info("Profile load complete. file: {}", profileName);
-                        try {
-                            // profile loading completed, update zookeeper with LOADED status
-                            try (AutoCloseable lock2 = zkStore.getLock(true)) {
-                                zkStore.updateProfileStatusToLoaded(profileName);
-                                cache.put(profileKey, loadProfileFuture);
-                            }
-                        }
-                        catch (Exception e) {
-                            logger.error("Error while updating zookeeper after load completes. file: {}", profileName, e);
-                            // remove the entry from cache so that we dont leak memory
-                            cache.invalidateProfile(profileKey);
-                        }
+                        // load_profile might fail, regardless reinsert to take the new utilization into account.
+                        cache.put(profileKey, loadProfileFuture);
                     });
 
                     if(loadProfileFuture.isComplete()) {

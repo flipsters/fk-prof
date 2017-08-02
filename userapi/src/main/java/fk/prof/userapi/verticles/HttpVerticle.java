@@ -2,9 +2,7 @@ package fk.prof.userapi.verticles;
 
 import com.amazonaws.util.StringUtils;
 import com.google.common.base.MoreObjects;
-import com.sun.org.apache.xpath.internal.operations.Bool;
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
-import fk.prof.aggregation.proto.AggregatedProfileModel;
 import fk.prof.aggregation.proto.AggregatedProfileModel.FrameNode;
 import fk.prof.aggregation.proto.AggregatedProfileModel.WorkType;
 import fk.prof.storage.StreamTransformer;
@@ -40,7 +38,6 @@ import io.vertx.ext.web.handler.TimeoutHandler;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.ref.Reference;
 import java.nio.charset.Charset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;

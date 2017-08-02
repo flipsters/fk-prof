@@ -7,11 +7,6 @@ message NodeLoadInfo {
 }
 
 message ProfileResidencyInfo {
-    enum LoadStatus {
-    	Loaded = 0;
-    	Loading = 1;
-    }
     required string ip = 1;
     required uint32 port = 2;
-    required LoadStatus status = 3;
 }
