@@ -13,9 +13,9 @@ const BaseComponent = Komponent => class extends Component {
 };
 
 const RootComponent = props => (
-  <div>
-    <Header isPolicyPage={props.location.pathname.includes('policy')}/>
-    <main style={{ paddingTop: 64, position: 'relative', zIndex: 1 }}>
+  <div className="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+    <Header queryParams={props.location.query} isPolicyPage={props.location.pathname.includes('policy')}/>
+    <main className="mdl-layout__content" >
       <div className="page-content">
         { props.children }
       </div>

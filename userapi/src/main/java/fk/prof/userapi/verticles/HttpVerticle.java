@@ -289,10 +289,11 @@ public class HttpVerticle extends AbstractVerticle {
     private void proxyBufferedPolicyResponseFromBackend(RoutingContext context, AsyncResult<ProfHttpClient.ResponseWithStatusTuple> ar) {
         if (ar.succeeded()) {
             context.response().setStatusCode(ar.result().getStatusCode());
-            if (ar.result().getStatusCode() == 200) {
+            if (ar.result().getStatusCode() == 200 || ar.result().getStatusCode() == 201) {
                 try {
-                    PolicyDTO.VersionedPolicyDetails responseVersionedPolicyDetails = ProtoUtil.buildProtoFromBuffer(PolicyDTO.VersionedPolicyDetails.parser(), ar.result().getResponse());//ar.result().getResponse();//PolicyDTO.VersionedPolicyDetails.parseFrom(ar.result().getResponse().getBytes());
-                    context.response().end(JsonFormat.printer().print(responseVersionedPolicyDetails));
+                    PolicyDTO.VersionedPolicyDetails responseVersionedPolicyDetails = ProtoUtil.buildProtoFromBuffer(PolicyDTO.VersionedPolicyDetails.parser(), ar.result().getResponse());
+                    String jsonS = JsonFormat.printer().print(responseVersionedPolicyDetails);
+                    context.response().end(jsonS);
                 } catch (InvalidProtocolBufferException e) {
                     UserapiHttpFailure httpFailure = UserapiHttpFailure.failure(e);
                     UserapiHttpHelper.handleFailure(context, httpFailure);

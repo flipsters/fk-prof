@@ -10,7 +10,7 @@ import java.util.List;
  */
 public class PolicyDTOProtoUtil {
     private static String policyDetailsCompactRepr(PolicyDTO.PolicyDetails policyDetails) {
-        return String.format("modAt=%s,creatAt=%s,creatBy=%s,policy=%s", policyDetails.getModifiedAt(), policyDetails.getModifiedBy(), policyDetails.getCreatedAt(), policyCompactRepr(policyDetails.getPolicy()));
+        return String.format("modAt=%s,creatAt=%s,creatBy=%s,policy=%s", policyDetails.getModifiedAt(), policyDetails.getCreatedAt(), policyDetails.getModifiedBy(), policyCompactRepr(policyDetails.getPolicy()));
     }
 
     private static String policyCompactRepr(PolicyDTO.Policy policy) {

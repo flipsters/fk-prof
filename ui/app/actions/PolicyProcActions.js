@@ -13,14 +13,14 @@ export function getPolicyProcsSuccessAction (data) {
   return { type: GET_POLICY_PROCS_SUCCESS, ...data };
 }
 
-export function getPolicyProcsFailureAction (error, req) {
+export function getPolicyProcsFailureAction ({error, req}) {
   return { type: GET_POLICY_PROCS_FAILURE, error, req };
 }
 
 export default function fetchPolicyProcsAction ({ policyApp, policyCluster, query }) {
   return (dispatch) => {
     if(policyApp && policyCluster) {
-      dispatch(getPolicyProcsRequestAction({req: {policyCluster}}));
+      dispatch(getPolicyProcsRequestAction({req: {policyApp, policyCluster}}));
       const queryParams = objectToQueryParams(query);
       const baseUrl = `/api/list/policy/procNames/${policyApp}/${policyCluster}`;
       const url = queryParams ? `${baseUrl}?${queryParams}` : baseUrl;

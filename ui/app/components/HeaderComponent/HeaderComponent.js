@@ -1,59 +1,49 @@
 import React from "react";
 import {Link} from "react-router";
 import fk_logo from "../../assets/fk-prof-logo.svg";
-import styles from "./HeaderComponent.css"
 
 export default class Header extends React.Component {
   constructor(props) {
     super(props);
-    this.hideNavDrawer = this.hideNavDrawer.bind(this);
-  }
-
-  hideNavDrawer() {
-    const mdlLayout = document.querySelector(".mdl-layout");
-    console.log(mdlLayout);
-    mdlLayout.MaterialLayout.toggleDrawer();
   }
 
   render() {
-
-    const profileLinkClassName = "mdl-navigation__link mdl-typography--font-thin " + (this.props.isPolicyPage ? "" : styles.isActiveLink);
-    const policyLinkClassName = "mdl-navigation__link mdl-typography--font-thin " + (this.props.isPolicyPage ? styles.isActiveLink : "");
+    let profileActive = "";
+    let policyActive = "";
+    if (this.props.isPolicyPage) {
+      policyActive = " is-active";
+    } else {
+      profileActive = " is-active";
+    }
+    const reqKeys = ['app', 'cluster', 'proc'];
+    const queryObject = Object.assign({}, this.props.queryParams);
+    console.log(queryObject);
+    Object.keys(queryObject).filter(k => !reqKeys.includes(k)).forEach(k => delete queryObject[k]);
     return (
-      <div className="mdl-layout mdl-js-layout mdl-layout--fixed-header">
-        <header className="mdl-layout__header">
-          <div className="mdl-layout__header-row">
-            <img src={fk_logo} className="mdl-shadow--4dp" style={{height: '70%', margin: '5px', borderRadius: '2px'}}/>
-            <span className="mdl-layout-title mdl-layout--middle" style={{ marginLeft: '10px', marginRight: '20px'}}>FK Profiler</span>
-            <nav className="mdl-navigation mdl-layout--large-screen-only">
-              <Link className={profileLinkClassName}
-                    to={loc => ({pathname: '/profiler/', query: ''})}
-                    style={{color: "lightgray", textDecoration: "none"}}>
-                Profiles
-              </Link>
-              <Link className={policyLinkClassName}
-                    to={loc => ({pathname: '/profiler/policy', query: ''} )}
-                    style={{color: "lightgray", textDecoration: "none"}}>
-                Policies
-              </Link>
-            </nav>
+      <div className="mdl-layout__header mdl-layout__header--transparent">
+
+        <div className="mdl-layout__tab-bar mdl-js-ripple-effect">
+          <div className="mdl-layout--large-screen-only" style={{height: '50%'}}>
+
+            <Link to={loc => ({pathname: '/profiler/', query: ''})}
+                  style={{textDecoration: "none"}}>
+              <img src={fk_logo} className="mdl-shadow--4dp "
+                   style={{marginTop: '5px', height: '80%', borderRadius: '2px'}}/>
+              <span style={{verticalAlign: '-3px', margin: 'auto 20px auto 5px', color: 'white'}}>FK Profiler</span>
+            </Link>
           </div>
-        </header>
-        <div className="mdl-layout-spacer"/>
-        <div className="mdl-layout__drawer">
-          <span className="mdl-layout-title"><img src={fk_logo} className="mdl-shadow--4dp" style={{width: '18%', borderRadius: '2px'}}/> FK Profiler</span>
-          <nav className="mdl-navigation">
-            <Link className={profileLinkClassName}
-                  to={loc => ({pathname: '/profiler/', query: ''} )} style={{color: "black", textDecoration: "none"}} onClick={this.hideNavDrawer}>
-              Profiles
-            </Link>
-            <Link className={policyLinkClassName}
-                  to={loc => ({pathname: '/profiler/policy', query: ''} )} style={{color: "black", textDecoration: "none"}} onClick={this.hideNavDrawer}>
-              Policy
-            </Link>
-          </nav>
+          <Link className={"mdl-layout__tab" + profileActive}
+                to={loc => ({pathname: '/profiler/', query: queryObject})}
+                style={{color: "lightgray", textDecoration: "none"}}>
+            Profiles
+          </Link>
+          <Link className={"mdl-layout__tab" + policyActive}
+                to={loc => ({pathname: '/profiler/policy', query: queryObject})}
+                style={{color: "lightgray", textDecoration: "none"}}>
+            Policies
+          </Link>
         </div>
       </div>
     );
   }
-};
+}
