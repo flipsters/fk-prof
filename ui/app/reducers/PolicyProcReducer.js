@@ -16,7 +16,7 @@ export default function (state = {}, action) {
         ...state,
         [action.req.policyCluster]: {
           asyncStatus: 'SUCCESS',
-          data: action.res,
+          data: [...new Set([...state[action.req.policyCluster].data, ...action.res])],
         },
       };
 

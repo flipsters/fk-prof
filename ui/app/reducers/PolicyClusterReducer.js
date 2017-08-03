@@ -20,7 +20,7 @@ export default function (state = {}, action) {
         ...state,
         [action.req.policyApp]: {
           asyncStatus: 'SUCCESS',
-          data: action.res,
+          data: [...new Set([...state[action.req.policyApp].data, ...action.res])],
         },
       };
 

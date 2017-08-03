@@ -1,11 +1,7 @@
 /**
  * Created by rohit.patiyal on 12/07/17.
  */
-import {
-  GET_POLICY_APPS_REQUEST,
-  GET_POLICY_APPS_SUCCESS,
-  GET_POLICY_APPS_FAILURE,
-} from 'actions/PolicyAppActions';
+import {GET_POLICY_APPS_FAILURE, GET_POLICY_APPS_REQUEST, GET_POLICY_APPS_SUCCESS,} from 'actions/PolicyAppActions';
 
 const INITIAL_STATE = {
   data: [],
@@ -18,7 +14,7 @@ export default function (state = INITIAL_STATE, action) {
       return { ...state, asyncStatus: 'PENDING' };
 
     case GET_POLICY_APPS_SUCCESS:
-      return { data: action.data, asyncStatus: 'SUCCESS' };
+      return { data: [...new Set([...state.data, ...action.data])], asyncStatus: 'SUCCESS' };
 
     case GET_POLICY_APPS_FAILURE:
       return { ...state, asyncStatus: 'ERROR' };

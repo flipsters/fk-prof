@@ -1,8 +1,4 @@
-import {
-  GET_PROCS_REQUEST,
-  GET_PROCS_SUCCESS,
-  GET_PROCS_FAILURE,
-} from 'actions/ProcActions';
+import {GET_PROCS_FAILURE, GET_PROCS_REQUEST, GET_PROCS_SUCCESS,} from 'actions/ProcActions';
 
 export default function (state = {}, action) {
   switch (action.type) {
@@ -20,7 +16,7 @@ export default function (state = {}, action) {
         ...state,
         [action.req.cluster]: {
           asyncStatus: 'SUCCESS',
-          data: action.res,
+          data: [...new Set([...state[action.req.cluster].data, ...action.res])],
         },
       };
 

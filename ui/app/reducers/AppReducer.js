@@ -1,8 +1,4 @@
-import {
-  GET_APPS_REQUEST,
-  GET_APPS_SUCCESS,
-  GET_APPS_FAILURE,
-} from 'actions/AppActions';
+import {GET_APPS_FAILURE, GET_APPS_REQUEST, GET_APPS_SUCCESS,} from 'actions/AppActions';
 
 const INITIAL_STATE = {
   data: [],
@@ -15,7 +11,7 @@ export default function (state = INITIAL_STATE, action) {
       return { ...state, asyncStatus: 'PENDING' };
 
     case GET_APPS_SUCCESS:
-      return { data: action.data, asyncStatus: 'SUCCESS' };
+      return { data: [...new Set([...state.data, ...action.data])], asyncStatus: 'SUCCESS' };
 
     case GET_APPS_FAILURE:
       return { ...state, asyncStatus: 'ERROR' };

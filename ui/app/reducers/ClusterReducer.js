@@ -1,8 +1,4 @@
-import {
-  GET_CLUSTERS_REQUEST,
-  GET_CLUSTERS_SUCCESS,
-  GET_CLUSTERS_FAILURE,
-} from 'actions/ClusterActions';
+import {GET_CLUSTERS_FAILURE, GET_CLUSTERS_REQUEST, GET_CLUSTERS_SUCCESS,} from 'actions/ClusterActions';
 
 export default function (state = {}, action) {
   switch (action.type) {
@@ -20,7 +16,7 @@ export default function (state = {}, action) {
         ...state,
         [action.req.app]: {
           asyncStatus: 'SUCCESS',
-          data: action.res,
+          data: [...new Set([...state[action.req.app].data, ...action.res])],
         },
       };
 
