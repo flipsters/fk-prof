@@ -15,13 +15,13 @@ class ClusterSelectComponent extends Component {
   componentDidMount() {
     const {app} = this.props;
     if (app) {
-      this.props.isPolicyPage ? this.props.getPolicyClusters({policyApp: app}) : this.props.getClusters({app});
+      this.props.isPolicyPage ? this.props.getPolicyClusters(app)() : this.props.getClusters(app)();
     }
   }
 
   componentWillReceiveProps(nextProps) {
     if (nextProps.app !== this.props.app) {
-      this.props.isPolicyPage ? this.props.getPolicyClusters({policyApp: nextProps.app}) : this.props.getClusters({app: nextProps.app});
+      this.props.isPolicyPage ? this.props.getPolicyClusters(nextProps.app)() : this.props.getClusters(nextProps.app)();
     }
   }
 
@@ -44,7 +44,7 @@ class ClusterSelectComponent extends Component {
           onChange={onChange || noop}
           labelKey="name"
           valueKey="name"
-          onInputChange={debounce(this.props.getPolicyClusters, 500)}
+          onInputChange={debounce(this.props.getPolicyClusters(this.props.app), 500)}
           isLoading={finalClusters.asyncStatus === 'PENDING'}
           value={valueOption}
           noResultsText={finalClusters.asyncStatus !== 'PENDING' ? 'No results found!' : 'Searching...'}
@@ -59,7 +59,7 @@ class ClusterSelectComponent extends Component {
           onChange={onChange || noop}
           labelKey="name"
           valueKey="name"
-          onInputChange={debounce(this.props.getClusters, 500)}
+          onInputChange={debounce(this.props.getClusters(this.props.app), 500)}
           isLoading={finalClusters.asyncStatus === 'PENDING'}
           value={valueOption}
           noResultsText={finalClusters.asyncStatus !== 'PENDING' ? 'No results found!' : 'Searching...'}
@@ -77,8 +77,8 @@ const mapStateToProps = (state, ownProps) => ({
 });
 
 const mapDispatchToProps = dispatch => ({
-  getClusters: params => dispatch(fetchClustersAction(params)),
-  getPolicyClusters: params => dispatch(fetchPolicyClustersAction(params)),
+  getClusters: app => event => {dispatch(fetchClustersAction(app, event));},
+  getPolicyClusters: app => event => dispatch(fetchPolicyClustersAction(app, event)),
 });
 
 ClusterSelectComponent.propTypes = {

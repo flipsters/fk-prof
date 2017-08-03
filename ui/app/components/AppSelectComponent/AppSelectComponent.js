@@ -12,12 +12,12 @@ const noop = () => {
 
 class AppSelectComponent extends React.Component {
   componentDidMount() {
-    this.props.isPolicyPage ? this.props.getPolicyApps('') : this.props.getApps('');
+    this.props.isPolicyPage ? this.props.getPolicyApps() : this.props.getApps();
   }
 
   componentWillReceiveProps(nextProps) {
     if (nextProps.isPolicyPage !== this.props.isPolicyPage) {
-      nextProps.isPolicyPage ? this.props.getPolicyApps('') : this.props.getApps('');
+      nextProps.isPolicyPage ? this.props.getPolicyApps() : this.props.getApps();
     }
   }
 

@@ -17,7 +17,6 @@ export default class Header extends React.Component {
     }
     const reqKeys = ['app', 'cluster', 'proc'];
     const queryObject = Object.assign({}, this.props.queryParams);
-    console.log(queryObject);
     Object.keys(queryObject).filter(k => !reqKeys.includes(k)).forEach(k => delete queryObject[k]);
     return (
       <div className="mdl-layout__header mdl-layout__header--transparent">

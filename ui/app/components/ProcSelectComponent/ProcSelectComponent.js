@@ -1,6 +1,6 @@
 import React, {Component, PropTypes} from "react";
 import {connect} from "react-redux";
-import Select, { Creatable } from "react-select";
+import Select, {Creatable} from "react-select";
 
 import fetchProcsAction from "actions/ProcActions";
 import fetchPolicyProcsAction from "actions/PolicyProcActions";
@@ -15,10 +15,7 @@ class ProcSelectComponent extends Component {
   componentDidMount() {
     const {cluster, app} = this.props;
     if (cluster && app) {
-      this.props.isPolicyPage ? this.props.getPolicyProcs({
-        policyCluster: cluster,
-        policyApp: app
-      }) : this.props.getProcs({cluster, app});
+      this.props.isPolicyPage ? this.props.getPolicyProcs(app)(cluster)() : this.props.getProcs(app)(cluster)();
     }
   }
 
@@ -27,15 +24,9 @@ class ProcSelectComponent extends Component {
     const didClusterChange = nextProps.cluster !== this.props.cluster;
     if (didAppChange || didClusterChange) {
       if (this.props.isPolicyPage) {
-        this.props.getPolicyProcs({
-          policyApp: nextProps.app,
-          policyCluster: nextProps.cluster,
-        });
+        this.props.getPolicyProcs(nextProps.app)(nextProps.cluster)();
       } else {
-        this.props.getProcs({
-          app: nextProps.app,
-          cluster: nextProps.cluster,
-        });
+        this.props.getProcs(nextProps.app)(nextProps.cluster)();
       }
     }
   }
@@ -57,7 +48,7 @@ class ProcSelectComponent extends Component {
           onChange={onChange || noop}
           labelKey="name"
           valueKey="name"
-          onInputChange={debounce(this.props.getPolicyProcs, 500)}
+          onInputChange={debounce(this.props.getPolicyProcs(this.props.app)(this.props.cluster), 500)}
           isLoading={finalProcs.asyncStatus === 'PENDING'}
           value={valueOption}
           noResultsText={finalProcs.asyncStatus !== 'PENDING' ? 'No results found!' : 'Searching...'}
@@ -72,7 +63,7 @@ class ProcSelectComponent extends Component {
           onChange={onChange || noop}
           labelKey="name"
           valueKey="name"
-          onInputChange={debounce(this.props.getProcs, 500)}
+          onInputChange={debounce(this.props.getProcs(this.props.app)(this.props.cluster), 500)}
           isLoading={finalProcs.asyncStatus === 'PENDING'}
           value={valueOption}
           noResultsText={finalProcs.asyncStatus !== 'PENDING' ? 'No results found!' : 'Searching...'}
@@ -89,8 +80,8 @@ const mapStateToProps = (state, ownProps) => ({
 });
 
 const mapDispatchToProps = dispatch => ({
-  getProcs: params => dispatch(fetchProcsAction(params)),
-  getPolicyProcs: params => dispatch(fetchPolicyProcsAction(params)),
+  getProcs: app => cluster => event => dispatch(fetchProcsAction(app, cluster, event)),
+  getPolicyProcs: app => cluster => event => dispatch(fetchPolicyProcsAction(app, cluster, event)),
 });
 
 ProcSelectComponent.propTypes = {

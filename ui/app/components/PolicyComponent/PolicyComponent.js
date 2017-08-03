@@ -27,12 +27,13 @@ export default class PolicyComponent extends React.Component {
   componentDidMount() {
     this.getPolicy();
   }
-
-  componentDidUpdate(prevProps) {
-    if (prevProps.proc !== this.props.proc) {
+  componentWillReceiveProps(nextProps) {
+    if (nextProps.proc !== this.props.proc) {
       this.getPolicy();
     }
-    componentHandler.upgradeDom(); // eslint-disable-line
+  }
+  componentDidUpdate() {
+     componentHandler.upgradeDom(); // eslint-disable-line
   }
 
   getPolicy() {
