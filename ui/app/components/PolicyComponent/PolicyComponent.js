@@ -399,7 +399,7 @@ export default class PolicyComponent extends React.Component {
         <div className="mdl-cell--12-col mdl-color-text--primary mdl-typography--caption"
              style={{marginBottom: '-16px'}}>Description
         </div>
-        <div className="mdl-cell--6-col mdl-textfield mdl-js-textfield" style={{marginTop: '-8px'}}>
+        <div className="mdl-cell--12-col mdl-textfield mdl-js-textfield" style={{marginTop: '-8px'}}>
         <textarea className="mdl-textfield__input" type="text" id="description" rows="1"
                   onChange={this.handleDescriptionChange} value={this.state.json.policyDetails.policy.description}
                   required/>
@@ -480,7 +480,7 @@ export default class PolicyComponent extends React.Component {
       <div className="mdl-grid mdl-cell--12-col">
         <div className="mdl-grid mdl-cell--12-col">
           <div
-            className={"mdl-typography--headline mdl-typography--font-thin mdl-cell--6-col mdl-cell--6-col-tablet mdl-cell--2-col-phone mdl-cell--middle" + notifColor}
+            className={"mdl-typography--headline mdl-typography--font-thin mdl-cell--10-col mdl-cell--6-col-tablet mdl-cell--2-col-phone mdl-cell--middle" + notifColor}
           >{this.state.msg}</div>
           <div className="mdl-layout-spacer"/>
           <div className="mdl-cell mdl-cell--2-col mdl-cell--2-col-tablet mdl-cell--middle"
