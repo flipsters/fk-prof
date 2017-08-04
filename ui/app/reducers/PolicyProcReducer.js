@@ -3,13 +3,17 @@ import {GET_POLICY_PROCS_FAILURE, GET_POLICY_PROCS_REQUEST, GET_POLICY_PROCS_SUC
 export default function (state = {}, action) {
   switch (action.type) {
     case GET_POLICY_PROCS_REQUEST:
-      return {
-        ...state,
-        [action.req.policyCluster]: {
-          asyncStatus: 'PENDING',
-          data: [],
-        },
-      };
+      if (!state[action.req.policyCluster]) {
+        return {
+          ...state,
+          [action.req.policyCluster]: {
+            asyncStatus: 'PENDING',
+            data: [],
+          },
+        };
+      } else {
+        return state;
+      }
 
     case GET_POLICY_PROCS_SUCCESS:
       return {
@@ -28,6 +32,7 @@ export default function (state = {}, action) {
         },
       };
 
-    default: return state;
+    default:
+      return state;
   }
 }

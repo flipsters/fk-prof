@@ -3,14 +3,17 @@ import {GET_CLUSTERS_FAILURE, GET_CLUSTERS_REQUEST, GET_CLUSTERS_SUCCESS,} from 
 export default function (state = {}, action) {
   switch (action.type) {
     case GET_CLUSTERS_REQUEST:
-      return {
-        ...state,
-        [action.req.app]: {
-          asyncStatus: 'PENDING',
-          data: [],
-        },
-      };
-
+      if (!state[action.req.app]) {
+        return {
+          ...state,
+          [action.req.app]: {
+            asyncStatus: 'PENDING',
+            data: []
+          },
+        };
+      } else {
+        return state;
+      }
     case GET_CLUSTERS_SUCCESS:
       return {
         ...state,
@@ -28,6 +31,7 @@ export default function (state = {}, action) {
         },
       };
 
-    default: return state;
+    default:
+      return state;
   }
 }

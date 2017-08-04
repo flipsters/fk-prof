@@ -7,14 +7,17 @@ import {
 export default function (state = {}, action) {
   switch (action.type) {
     case GET_POLICY_CLUSTERS_REQUEST:
-      return {
-        ...state,
-        [action.req.policyApp] : {
-          asyncStatus: 'PENDING',
-          data: [],
-        },
-      };
-
+      if (!state[action.req.policyApp]) {
+        return {
+          ...state,
+          [action.req.policyApp]: {
+            asyncStatus: 'PENDING',
+            data: [],
+          },
+        };
+      } else {
+        return state;
+      }
     case GET_POLICY_CLUSTERS_SUCCESS:
       return {
         ...state,
@@ -32,6 +35,7 @@ export default function (state = {}, action) {
         },
       };
 
-    default: return state;
+    default:
+      return state;
   }
 }
