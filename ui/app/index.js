@@ -5,8 +5,8 @@ import {Provider} from "react-redux";
 
 import "react-select/dist/react-select.css";
 import "react-datetime/css/react-datetime.css";
-import "material-design-lite/material.min";
-import "material-design-lite/material.css";
+import "./assets/styles/mdl/material.min.css";
+import "./assets/styles/mdl/material.min";
 
 import store from "./store";
 

@@ -22,8 +22,7 @@ export default class Header extends React.Component {
       <div className="mdl-layout__header mdl-layout__header--transparent">
 
         <div className="mdl-layout__tab-bar mdl-js-ripple-effect">
-          <div className="mdl-layout--large-screen-only" style={{height: '50%'}}>
-
+          <div className="mdl-layout--large-screen-only" style={{ height: '50%'}}>
             <Link to={loc => ({pathname: '/profiler/', query: ''})}
                   style={{textDecoration: "none"}}>
               <img src={fk_logo} className="mdl-shadow--4dp "
@@ -33,12 +32,12 @@ export default class Header extends React.Component {
           </div>
           <Link className={"mdl-layout__tab" + profileActive}
                 to={loc => ({pathname: '/profiler/', query: queryObject})}
-                style={{color: "lightgray", textDecoration: "none"}}>
+                style={{textDecoration: "none", textTransform: 'capitalize'}}>
             Profiles
           </Link>
           <Link className={"mdl-layout__tab" + policyActive}
                 to={loc => ({pathname: '/profiler/policy', query: queryObject})}
-                style={{color: "lightgray", textDecoration: "none"}}>
+                style={{textDecoration: "none", textTransform: 'capitalize'}}>
             Policies
           </Link>
         </div>

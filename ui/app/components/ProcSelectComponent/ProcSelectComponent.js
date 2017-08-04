@@ -22,8 +22,8 @@ class ProcSelectComponent extends Component {
   componentWillReceiveProps(nextProps) {
     const didAppChange = nextProps.app !== this.props.app;
     const didClusterChange = nextProps.cluster !== this.props.cluster;
-    if (didAppChange || didClusterChange) {
-      if (this.props.isPolicyPage) {
+    if (didAppChange || didClusterChange || nextProps.isPolicyPage !== this.props.isPolicyPage) {
+      if (nextProps.isPolicyPage) {
         this.props.getPolicyProcs(nextProps.app)(nextProps.cluster)();
       } else {
         this.props.getProcs(nextProps.app)(nextProps.cluster)();

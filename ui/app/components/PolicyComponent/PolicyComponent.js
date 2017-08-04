@@ -32,8 +32,29 @@ export default class PolicyComponent extends React.Component {
       this.getPolicy();
     }
   }
-  componentDidUpdate() {
-     componentHandler.upgradeDom(); // eslint-disable-line
+  componentDidUpdate(prevProps, prevState) {
+    componentHandler.upgradeDom(); // eslint-disable-line
+    if (prevState.query.state === 'PENDING' && this.state.query.state !== 'PENDING' && prevState.query.type === this.state.query.type) {
+      let data = {};
+      if (this.state.query.state === 'FAILURE' && this.state.query.type === 'GET') {
+        data = {message: 'Failed to fetch data'}
+      } else {
+        switch (this.state.query.type) {
+          case 'POST':
+            data = (this.state.query.state === 'SUCCESS') ? {message: 'Policy created successfully'} : {message: 'Policy create failed, try again later'};
+            break;
+          case 'PUT':
+            data = (this.state.query.state === 'SUCCESS') ? {message: 'Policy updated successfully'} : {message: 'Policy update failed, try again later'};
+            break;
+          case 'GET':
+            data = (this.state.err.status === 404) ? {message: 'Policy not found, create one'} : {message: 'Policy found'};
+            break;
+          default:
+            data = {message: 'Invalid request type'};
+        }
+      }
+      document.querySelector('#policy-submit').MaterialSnackbar.showSnackbar(data);
+    }
   }
 
   getPolicy() {
@@ -46,7 +67,7 @@ export default class PolicyComponent extends React.Component {
     const url = '../api/policy/' + this.props.app + '/' + this.props.cluster + '/' + this.props.proc;
     http.get(url).then(json => {
       this.setState({
-        msg: "Policy found, update to make changes.",
+        msg: "Update policy",
         query: {
           type: "GET",
           state: "SUCCESS"
@@ -57,7 +78,7 @@ export default class PolicyComponent extends React.Component {
     }).catch(err => {
       if (err.status === 404) {
         this.setState({
-          msg: "No policy found, create a new one.",
+          msg: "Create policy",
           query: {
             type: "GET",
             state: "SUCCESS"
@@ -115,7 +136,7 @@ export default class PolicyComponent extends React.Component {
         },
         json,
         err: {},
-        msg: "Policy has been updated."
+        msg: "Update policy"
       })
     }).catch(err => {
       this.setState({
@@ -145,7 +166,7 @@ export default class PolicyComponent extends React.Component {
         },
         json,
         err: {},
-        msg: "Policy has been created."
+        msg: "Update policy"
       })
     }).catch(err => {
       this.setState({
@@ -254,13 +275,10 @@ export default class PolicyComponent extends React.Component {
       } else {
         if ((this.state.err.status === 404 && this.state.query.type === 'GET') || (this.state.query.type === 'POST' && this.state.query.state === 'FAILURE')) {
           this.postPolicy();
-          data = {message: 'Creating policy'};
         } else {
           this.putPolicy();
-          data = {message: 'Updating policy'};
         }
       }
-      document.querySelector('#policy-submit').MaterialSnackbar.showSnackbar(data);
     }
   }
 
@@ -294,7 +312,11 @@ export default class PolicyComponent extends React.Component {
       <div className="mdl-grid mdl-grid--no-spacing mdl-cell--11-col mdl-shadow--3dp">
         <div className="mdl-grid mdl-cell--12-col">
           <div
-            className="mdl-typography--headline mdl-typography--font-thin mdl-color-text--primary mdl-cell--12-col">{this.state.msg}</div>
+            className="mdl-typography--headline mdl-typography--font-thin mdl-color-text--accent mdl-cell--12-col">{this.state.msg}</div>
+        </div>
+        <div id="policy-submit" className="mdl-js-snackbar mdl-snackbar">
+          <div className="mdl-snackbar__text"/>
+          <button className="mdl-snackbar__action" type="button"/>
         </div>
       </div>
     );
@@ -337,7 +359,8 @@ export default class PolicyComponent extends React.Component {
         <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Scheduling strategy
           <a href="http://fcp.fkinternal.com/#/docs/fkprof/latest/policy.md" target="_blank"
              rel="noopener noreferrer">
-            <i className="material-icons" style={{fontSize: "16px", verticalAlign: 'top'}} onMouseOut={(e)=>e.target.innerText='help_outline'} onMouseOver={(e)=>e.target.innerText='help'}>help_outline</i>
+            <i className="material-icons" style={{fontSize: "16px", verticalAlign: 'top'}}
+               onMouseOut={(e) => e.target.innerText = 'help_outline'} onMouseOver={(e) => e.target.innerText = 'help'}>help_outline</i>
           </a>
         </div>
       </div>
@@ -399,7 +422,8 @@ export default class PolicyComponent extends React.Component {
         <div className="mdl-typography--headline mdl-typography--font-thin mdl-cell--12-col">Profiling Types
           <a href="http://fcp.fkinternal.com/#/docs/fkprof/latest/policy.md" target="_blank"
              rel="noopener noreferrer">
-            <i className="material-icons" style={{fontSize: "16px", verticalAlign: 'top'}} onMouseOut={(e)=>e.target.innerText='help_outline'} onMouseOver={(e)=>e.target.innerText='help'}>help_outline</i>
+            <i className="material-icons" style={{fontSize: "16px", verticalAlign: 'top'}}
+               onMouseOut={(e) => e.target.innerText = 'help_outline'} onMouseOver={(e) => e.target.innerText = 'help'}>help_outline</i>
           </a>
         </div>
       </div>
@@ -449,13 +473,19 @@ export default class PolicyComponent extends React.Component {
     } else {
       buttonText = 'UPDATE';
     }
+    let notifColor = ' mdl-color-text--primary';
+    if (this.state.query.state === 'FAILURE') {
+      notifColor = ' mdl-color-text--accent';
+    }
     return (
       <div className="mdl-grid mdl-cell--12-col">
         <div className="mdl-grid mdl-cell--12-col">
           <div
-            className="mdl-typography--headline mdl-typography--font-thin mdl-color-text--primary mdl-cell--6-col mdl-cell--6-col-tablet mdl-cell--2-col-phone mdl-cell--middle">{this.state.msg}</div>
+            className={"mdl-typography--headline mdl-typography--font-thin mdl-cell--6-col mdl-cell--6-col-tablet mdl-cell--2-col-phone mdl-cell--middle" + notifColor}
+          >{this.state.msg}</div>
           <div className="mdl-layout-spacer"/>
-          <div className="mdl-cell mdl-cell--2-col mdl-cell--2-col-tablet mdl-cell--middle" style={{textAlign: 'right'}}>
+          <div className="mdl-cell mdl-cell--2-col mdl-cell--2-col-tablet mdl-cell--middle"
+               style={{textAlign: 'right'}}>
             <button className="mdl-button mdl-js-button mdl-button--colored mdl-button--raised mdl-js-ripple-effect"
                     style={{margin: '0 auto'}}
                     onClick={this.handleSubmitClick}>

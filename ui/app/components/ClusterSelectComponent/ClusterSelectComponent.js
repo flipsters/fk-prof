@@ -20,8 +20,8 @@ class ClusterSelectComponent extends Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    if (nextProps.app !== this.props.app) {
-      this.props.isPolicyPage ? this.props.getPolicyClusters(nextProps.app)() : this.props.getClusters(nextProps.app)();
+    if (nextProps.app !== this.props.app || nextProps.isPolicyPage !== this.props.isPolicyPage) {
+      nextProps.isPolicyPage ? this.props.getPolicyClusters(nextProps.app)() : this.props.getClusters(nextProps.app)();
     }
   }
 
