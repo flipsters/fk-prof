@@ -27,12 +27,11 @@ export default class PolicyComponent extends React.Component {
   componentDidMount() {
     this.getPolicy();
   }
-  componentWillReceiveProps(nextProps) {
-    if (nextProps.proc !== this.props.proc) {
+
+  componentDidUpdate(prevProps, prevState) {
+    if (prevProps.proc !== this.props.proc) {
       this.getPolicy();
     }
-  }
-  componentDidUpdate(prevProps, prevState) {
     componentHandler.upgradeDom(); // eslint-disable-line
     if (prevState.query.state === 'PENDING' && this.state.query.state !== 'PENDING' && prevState.query.type === this.state.query.type) {
       let data = {};
