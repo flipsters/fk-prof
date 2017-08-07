@@ -1,5 +1,9 @@
 package fk.prof.userapi.model.tree;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import java.util.List;
 
 /**
@@ -34,6 +38,7 @@ public class IndexedTreeNode<T> {
         return children;
     }
 
+    @JsonSerialize()
     public IndexedTreeNode<T> setChildren(List<IndexedTreeNode<T>> children) {
         this.children = children;
         return this;

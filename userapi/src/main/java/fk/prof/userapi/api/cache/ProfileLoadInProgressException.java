@@ -1,7 +1,6 @@
 package fk.prof.userapi.api.cache;
 
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
-import fk.prof.userapi.ServiceUnavailableException;
 
 /**
  * Created by gaurav.ashok on 26/06/17.

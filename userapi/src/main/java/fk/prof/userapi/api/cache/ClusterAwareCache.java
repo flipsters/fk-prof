@@ -18,21 +18,16 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
+// TODO: take factory param in constructor to create different types of instances
 /**
  * Created by gaurav.ashok on 21/06/17.
  */
 public class ClusterAwareCache {
-
     private static final Logger logger = LoggerFactory.getLogger(ClusterAwareCache.class);
 
     private final LocalProfileCache cache;
-    private final Map<String, ArrayList<String>> loadedViews;
 
     private final WorkerExecutor workerExecutor;
     /*
@@ -41,19 +36,20 @@ public class ClusterAwareCache {
         |___/nodesInfo/{ip:port} -> NodeLoadInfo                                (ephemeral)
         |___/profilesLoadStatus/{profileName} -> ProfileResidencyInfo           (ephemeral)
      */
-    private ZookeeperLoadInfoStore zkStore;
+    private ZkLoadInfoStore zkStore;
     private final String myIp;
     private final int port;
 
     public ClusterAwareCache(CuratorFramework zookeeper, WorkerExecutor workerExecutor, LocalProfileCache cache, Configuration config) {
         this.myIp = config.getIpAddress();
         this.port = config.getHttpConfig().getHttpPort();
-        this.zkStore = new ZookeeperLoadInfoStore(zookeeper, myIp, port);
-        this.workerExecutor = workerExecutor;
 
         this.cache = cache;
         this.cache.setRemovalListener(this::doCleanUpOnEviction);
-        this.loadedViews = new ConcurrentHashMap<>();
+
+        this.zkStore = new ZkLoadInfoStore(zookeeper, myIp, port, this.cache::cachedProfiles);
+
+        this.workerExecutor = workerExecutor;
     }
 
     public Future<Object> onClusterJoin() {
@@ -66,9 +62,8 @@ public class ClusterAwareCache {
      */
     public Future<AggregatedProfileInfo> getAggregatedProfile(AggregatedProfileNamingStrategy profileName, AggregatedProfileLoader profileLoader) {
         Future<AggregatedProfileInfo> profileFuture = Future.future();
-        String profileKey = toKey(profileName);
 
-        Future<AggregatedProfileInfo> cachedProfileInfo = cache.get(profileKey);
+        Future<AggregatedProfileInfo> cachedProfileInfo = cache.get(profileName);
         if (cachedProfileInfo != null) {
             completeFuture(profileName, cachedProfileInfo, profileFuture);
         }
@@ -76,7 +71,7 @@ public class ClusterAwareCache {
             // check zookeeper if it is loaded somewhere else
             doAsync((Future<AggregatedProfileInfo> f) -> {
                 try (AutoCloseable lock = zkStore.getLock()) {
-                    Future<AggregatedProfileInfo> _cachedProfileInfo = cache.get(profileKey);
+                    Future<AggregatedProfileInfo> _cachedProfileInfo = cache.get(profileName);
                     if (_cachedProfileInfo != null) {
                         completeFuture(profileName, _cachedProfileInfo, f);
                         return;
@@ -103,12 +98,12 @@ public class ClusterAwareCache {
 
                     // update LOADING status in zookeeper
                     zkStore.updateProfileStatusToLoading(profileName, staleNodeExists);
-                    cache.put(profileKey, loadProfileFuture);
+                    cache.put(profileName, loadProfileFuture);
 
                     loadProfileFuture.setHandler(ar -> {
                         logger.info("Profile load complete. file: {}", profileName);
                         // load_profile might fail, regardless reinsert to take the new utilization into account.
-                        cache.put(profileKey, loadProfileFuture);
+                        cache.put(profileName, loadProfileFuture);
                     });
 
                     if(loadProfileFuture.isComplete()) {
@@ -129,23 +124,17 @@ public class ClusterAwareCache {
         return getView(profileName, traceName, viewCreator, false);
     }
 
-    private void doCleanUpOnEviction(RemovalNotification<String, Future<AggregatedProfileInfo>> onRemoval) {
+    private void doCleanUpOnEviction(RemovalNotification<AggregatedProfileNamingStrategy, Future<AggregatedProfileInfo>> onRemoval) {
         if(!RemovalCause.REPLACED.equals(onRemoval.getCause())) {
             // remove any dependent values from other cache objects
 
-            AggregatedProfileNamingStrategy profileName = AggregatedProfileNamingStrategy.fromFileName(onRemoval.getKey());
+            AggregatedProfileNamingStrategy profileName = onRemoval.getKey();
 
             doAsync(f -> {
-                synchronized (this) {
-                    List<String> dependentKeys = loadedViews.remove(toKey(profileName));
-                    if (dependentKeys != null) {
-                        cache.invalidateViews(dependentKeys);
-                    }
-                }
-
                 try(AutoCloseable lock = zkStore.getLock()) {
                     ProfileResidencyInfo residencyInfo = zkStore.readProfileResidencyInfo(profileName);
                     boolean deleteProfileNode = false;
+                    //TODO: bug here. what if cache has it, and residencyInfo has my ip
                     if(residencyInfo != null && (myIp.equals(residencyInfo.getIp()) && port == residencyInfo.getPort())) {
                         deleteProfileNode = true;
                     }
@@ -175,8 +164,7 @@ public class ClusterAwareCache {
     private <ViewType extends Cacheable> Future<Pair<AggregatedSamplesPerTraceCtx, ViewType>> getView(AggregatedProfileNamingStrategy profileName, String traceName, Function<AggregatedProfileInfo, ViewType> viewCreator, boolean isCallersView) {
         Future<Pair<AggregatedSamplesPerTraceCtx, ViewType>> viewFuture = Future.future();
         // TODO succeed fast
-        String profileKey = toKey(profileName);
-        if (cache.get(profileKey) != null) {
+        if (cache.get(profileName) != null) {
             workerExecutor.executeBlocking(f -> getOrCreateView(profileName, traceName, viewCreator, f, isCallersView), viewFuture.completer());
         }
         else {
@@ -208,7 +196,7 @@ public class ClusterAwareCache {
 
     private <ViewType extends Cacheable> void getOrCreateView(AggregatedProfileNamingStrategy profileName, String traceName, Function<AggregatedProfileInfo, ViewType> viewCreator, Future<Pair<AggregatedSamplesPerTraceCtx, ViewType>> f, boolean isCallersView) {
         synchronized (this) {
-            Future<AggregatedProfileInfo> cachedProfileInfo = cache.get(toKey(profileName));
+            Future<AggregatedProfileInfo> cachedProfileInfo = cache.get(profileName);
             if (cachedProfileInfo != null) {
                 if (!cachedProfileInfo.isComplete()) {
                     f.fail(new ProfileLoadInProgressException(profileName));
@@ -221,10 +209,9 @@ public class ClusterAwareCache {
                     return;
                 }
 
-                String viewKey = toKeyForViews(profileName, traceName, isCallersView);
                 AggregatedSamplesPerTraceCtx samplesPerTraceCtx = cachedProfileInfo.result().getAggregatedSamples(traceName);
 
-                ViewType ctView = cache.getView(viewKey);
+                ViewType ctView = cache.getView(profileName, getViewName(isCallersView));
                 if (ctView != null) {
                     f.complete(new Pair<>(samplesPerTraceCtx, ctView));
                 }
@@ -233,7 +220,7 @@ public class ClusterAwareCache {
                     switch (profileName.workType) {
                         case cpu_sample_work:
                             ctView = viewCreator.apply(cachedProfileInfo.result());
-                            addViewToCache(profileName, viewKey, ctView);
+                            cache.putView(profileName, getViewName(isCallersView), ctView);
                             f.complete(new Pair<>(samplesPerTraceCtx, ctView));
                             break;
                         default:
@@ -247,28 +234,11 @@ public class ClusterAwareCache {
         }
     }
 
-    private void addViewToCache(AggregatedProfileNamingStrategy profileName, String key, Cacheable cacheable) {
-        cache.putView(key, cacheable);
-        loadedViews.compute(toKey(profileName), (k, v) -> {
-            if (v == null) {
-                v = new ArrayList<>();
-            }
-            v.add(key);
-            return v;
-        });
-    }
-
-    private String toKey(AggregatedProfileNamingStrategy profileName) {
-        return profileName.toString();
-    }
-
-    private String toKeyForViews(AggregatedProfileNamingStrategy profileName, String traceName, boolean isCallersView) {
-        if (isCallersView) {
-            return profileName.toString() + "/" + traceName + "/callersView";
+    private String getViewName(boolean isCallersView) {
+        if(isCallersView) {
+            return "callers";
         }
-        else {
-            return profileName.toString() + "/" + traceName + "/calleesView";
-        }
+        return "callees";
     }
 
     interface BlockingTask<T> {

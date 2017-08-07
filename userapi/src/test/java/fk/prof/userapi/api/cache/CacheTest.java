@@ -165,7 +165,7 @@ public class CacheTest {
         setUpDefaultCache(context);
         Exception e = new IOException();
         AggregatedProfileNamingStrategy profileName = profileName("proc1", dt(0));
-        localProfileCache.put(profileName.toString(), Future.failedFuture(e));
+        localProfileCache.put(profileName, Future.failedFuture(e));
 
         Future<AggregatedProfileInfo> profile1 = cache.getAggregatedProfile(profileName, mockedProfileLoader());
 
@@ -190,7 +190,7 @@ public class CacheTest {
         Async async = context.async(2);
         setUpDefaultCache(context);
         NameProfilePair npPair = npPair("proc1", dt(0));
-        localProfileCache.put(npPair.name.toString(), Future.succeededFuture(npPair.profileInfo));
+        localProfileCache.put(npPair.name, Future.succeededFuture(npPair.profileInfo));
 
         Function<AggregatedProfileInfo, CallTreeView> viewCreator = mockedViewCreator(CallTreeView.class, npPair);
 

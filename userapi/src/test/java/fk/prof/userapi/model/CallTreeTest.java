@@ -1,5 +1,6 @@
 package fk.prof.userapi.model;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
 import fk.prof.aggregation.model.AggregationWindowStorage;
 import fk.prof.aggregation.model.FinalizedAggregationWindow;
@@ -8,6 +9,8 @@ import fk.prof.aggregation.proto.AggregatedProfileModel.FrameNode;
 import fk.prof.storage.AsyncStorage;
 import fk.prof.userapi.api.AggregatedProfileLoader;
 import fk.prof.userapi.api.MockAggregationWindow;
+import fk.prof.userapi.model.json.CustomSerializers;
+import fk.prof.userapi.model.json.ProtoSerializers;
 import fk.prof.userapi.model.tree.*;
 import fk.prof.userapi.model.tree.CalleesTreeView.HotMethodNode;
 import io.vertx.core.Future;
@@ -41,6 +44,7 @@ public class CallTreeTest {
     private static List<String> methodIdLookup;
     private static IndexedTreeNode<FrameNode> expectedTree;
     private static List<IndexedTreeNode<HotMethodNode>> expectedHotMethodsTree;
+    private static ObjectMapper mapper;
 
     @BeforeClass
     public static void setup() throws Exception {
@@ -114,6 +118,10 @@ public class CallTreeTest {
                     hmnode(8, mId("F()"), 0,
                         hmnode(7, mId("E()"), 0,
                             hmnode(0, 0, 0)))));
+
+        mapper = new ObjectMapper();
+        ProtoSerializers.registerSerializers(mapper);
+        CustomSerializers.registerSerializers(mapper);
     }
 
     @Test
@@ -205,6 +213,15 @@ public class CallTreeTest {
         // get callers of G() [sampleCount:1]
         List<IndexedTreeNode<HotMethodNode>> G1_callers_5deep = hmtv.getSubTree(toList(4), 5, false);
         testTreeEquality(G1_callers_5deep, toList(expectedHotMethodsTree.get(0)));
+    }
+
+    @Test
+    public void testIndexedTreeNodeSerialize() throws Exception {
+        CallTreeView ctv = new CallTreeView(calltree);
+        List<IndexedTreeNode<FrameNode>> subtree = ctv.getSubTree(toList(ctv.getRootNodes().get(0).getIdx()), 1, false);
+
+        Assert.assertEquals("[{\"data\":[0,3,0,[23,0]],\"chld\":{\"1\":{\"data\":[1,0,0,[0,0]]},\"2\":{\"data\":[2,2,0,[14,0]]},\"7\":{\"data\":[7,1,0,[9,0]]}}}]",
+            mapper.writeValueAsString(subtree));
     }
 
     private void testTreeEquality(IndexedTreeNode<FrameNode> node, CallTree callTree) {

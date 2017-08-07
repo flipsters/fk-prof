@@ -8,4 +8,8 @@ public class ServiceUnavailableException extends Exception {
     public ServiceUnavailableException(String msg) {
         super(msg);
     }
+
+    public ServiceUnavailableException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

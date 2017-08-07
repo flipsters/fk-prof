@@ -20,6 +20,7 @@ import fk.prof.userapi.api.cache.LocalProfileCache;
 import fk.prof.userapi.deployer.VerticleDeployer;
 import fk.prof.userapi.deployer.impl.UserapiHttpVerticleDeployer;
 import fk.prof.userapi.http.UserapiApiPathConstants;
+import fk.prof.userapi.model.json.CustomSerializers;
 import fk.prof.userapi.model.json.ProtoSerializers;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -110,6 +111,7 @@ public class UserapiManager {
     private void registerSerializers(ObjectMapper mapper) {
         // protobuf
         ProtoSerializers.registerSerializers(mapper);
+        CustomSerializers.registerSerializers(mapper);
 
         // java 8, datetime
         mapper.registerModule(new Jdk8Module());
