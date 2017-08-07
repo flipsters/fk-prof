@@ -18,7 +18,6 @@ export function getProcsFailureAction(error, req) {
 }
 
 export default function fetchProcsAction(app, cluster, prefix) {
-  console.log("proc fetch called with", app , " ", cluster, " ", prefix);
   return (dispatch) => {
     dispatch(getProcsRequestAction({req: {cluster}}));
     const queryParams = prefix ? '?' + objectToQueryParams({prefix}) : '';
