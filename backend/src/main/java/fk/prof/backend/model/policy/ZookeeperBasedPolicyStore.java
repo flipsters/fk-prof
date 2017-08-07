@@ -17,6 +17,7 @@ import recording.Recorder;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -117,12 +118,18 @@ public class ZookeeperBasedPolicyStore implements PolicyStore {
 
     public Set<String> getClusterIds(String appId, String prefix) throws Exception {
         String filterPrefix = (prefix == null) ? "" : prefix;
-        return processGroupHierarchy.get(appId).keySet().stream().filter(clusterIds -> clusterIds.startsWith(filterPrefix)).collect(Collectors.toSet());
+        if(processGroupHierarchy.get(appId) != null) {
+          return processGroupHierarchy.get(appId).keySet().stream().filter(clusterIds -> clusterIds.startsWith(filterPrefix)).collect(Collectors.toSet());
+        }
+        return new HashSet<>();
     }
 
     public Set<String> getProcNames(String appId, String clusterId, String prefix) throws Exception {
         String filterPrefix = (prefix == null) ? "" : prefix;
+      if(processGroupHierarchy.get(appId) != null && processGroupHierarchy.get(appId).get(clusterId) != null) {
         return processGroupHierarchy.get(appId).get(clusterId).stream().filter(procNames -> procNames.startsWith(filterPrefix)).collect(Collectors.toSet());
+      }
+      return new HashSet<>();
     }
 
     @Override
