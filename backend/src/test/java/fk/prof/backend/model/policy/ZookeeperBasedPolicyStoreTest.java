@@ -392,7 +392,7 @@ public class ZookeeperBasedPolicyStoreTest {
         Map<List<String>, Set<String>> testPairs = new HashMap<List<String>, Set<String>>() {{
             put(Arrays.asList("a1", "c1"), new HashSet<>(Arrays.asList("c1")));
             put(Arrays.asList("a1", ""), new HashSet<>(Arrays.asList("c1", "c2")));
-            put(Arrays.asList("", ""), null);
+            put(Arrays.asList("", ""), new HashSet<>());
             put(Arrays.asList("a2", null), new HashSet<>(Arrays.asList("c1")));
             put(Arrays.asList(null, "c1"), null);
         }};
@@ -430,8 +430,8 @@ public class ZookeeperBasedPolicyStoreTest {
             put(Arrays.asList("a1", "c1", "p1"), new HashSet<>(Arrays.asList("p1")));
             put(Arrays.asList("a1", "c1", ""), new HashSet<>(Arrays.asList("p1", "p2")));
             put(Arrays.asList("a1", "c1", null), new HashSet<>(Arrays.asList("p1", "p2")));
-            put(Arrays.asList("", "c1", ""), null);
-            put(Arrays.asList("", "c1", null), null);
+            put(Arrays.asList("", "c1", ""), new HashSet<>());
+            put(Arrays.asList("", "c1", null), new HashSet<>());
             put(Arrays.asList(null, "c1", "p1"), null);
         }};
         CompositeFuture.all(futures).setHandler(event -> {
@@ -439,11 +439,12 @@ public class ZookeeperBasedPolicyStoreTest {
                 for (List<String> args : testPairs.keySet()) {
                     try {
                         Set<String> got = policyStoreAPI.getProcNames(args.get(0), args.get(1), args.get(2));
-                        context.assertEquals(got, testPairs.get(args));
+                        context.assertEquals(testPairs.get(args), got);
                     } catch (NullPointerException ex) {
                         //Expected exception
                         if (testPairs.get(args) != null) {
-                            context.fail("Unexpected NPE");
+                            ex.printStackTrace();
+                            context.fail("Unexpected NPE ");
                         }
                     } catch (Exception ex) {
                         context.fail("Unexpected exception thrown");
