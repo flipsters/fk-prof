@@ -227,7 +227,7 @@ public class BackendManager {
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.APPS_PREFIX + ".*").setAlias(ApiPathConstants.APPS_PREFIX).setType(MatchType.REGEX))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.CLUSTERS_PREFIX + ".*").setAlias(ApiPathConstants.CLUSTERS_PREFIX).setType(MatchType.REGEX))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.PROCS_PREFIX + ".*").setAlias(ApiPathConstants.PROCS_PREFIX).setType(MatchType.REGEX))
-        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_GET_POLICY_FOR_APP_CLUSTER_PROC + ".*").setAlias(ApiPathConstants.POLICY_API_PREFIX).setType(MatchType.REGEX))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.POLICY_API_PREFIX + ".*").setAlias(ApiPathConstants.POLICY_API_PREFIX).setType(MatchType.REGEX))
 
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_POST_ASSOCIATION).setType(MatchType.EQUALS))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_POST_LOAD).setType(MatchType.EQUALS))
@@ -235,7 +235,7 @@ public class BackendManager {
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.APPS_PREFIX + ".*").setAlias(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.APPS_PREFIX).setType(MatchType.REGEX))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.CLUSTERS_PREFIX + ".*").setAlias(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.CLUSTERS_PREFIX).setType(MatchType.REGEX))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.PROCS_PREFIX + ".*").setAlias(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.PROCS_PREFIX ).setType(MatchType.REGEX))
-        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_GET_POLICY_FOR_APP_CLUSTER_PROC + ".*").setAlias(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX).setType(MatchType.REGEX));
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX + ".*").setAlias(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX).setType(MatchType.REGEX));
     return metricsOptions;
   }
 
