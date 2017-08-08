@@ -32,7 +32,7 @@ public interface PolicyStore {
      * @param appId  for which the clusterIds are to be found
      * @param prefix string to filter the clusterIds
      * @return Set of clusterIds
-     * @throws Exception
+     * @throws Exception NPE if appId is null
      */
     Set<String> getClusterIds(String appId, String prefix) throws Exception;
 
@@ -43,7 +43,7 @@ public interface PolicyStore {
      * @param clusterId for which the procNames are to be found
      * @param prefix    string to filter the procNames
      * @return Set of procNames
-     * @throws Exception NPE if appId is null
+     * @throws Exception NPE if appId or clusterId is null
      */
     Set<String> getProcNames(String appId, String clusterId, String prefix) throws Exception;
 

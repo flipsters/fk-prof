@@ -112,9 +112,9 @@ public class BackendHttpVerticle extends AbstractVerticle {
 
     HttpHelper.attachHandlersToRoute(router, HttpMethod.GET, ApiPathConstants.BACKEND_GET_POLICY_FOR_APP_CLUSTER_PROC, this::proxyToLeader);
     HttpHelper.attachHandlersToRoute(router, HttpMethod.PUT, ApiPathConstants.BACKEND_PUT_POLICY_FOR_APP_CLUSTER_PROC,
-            BodyHandler.create().setBodyLimit(1024 * 10), this::proxyToLeader);
+        BodyHandler.create().setBodyLimit(1024 * 10), this::proxyToLeader);
     HttpHelper.attachHandlersToRoute(router, HttpMethod.POST, ApiPathConstants.BACKEND_POST_POLICY_FOR_APP_CLUSTER_PROC,
-            BodyHandler.create().setBodyLimit(1024 * 10), this::proxyToLeader);
+        BodyHandler.create().setBodyLimit(1024 * 10), this::proxyToLeader);
 
     return router;
   }
@@ -152,7 +152,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
         .endHandler(v -> {
           try {
             if (!context.response().ended()) {
-              if(profileProcessor.isProcessed()) {
+              if (profileProcessor.isProcessed()) {
                 context.response().end();
               } else {
                 throw new AggregationFailure("Incomplete profile received: " + profileProcessor);
@@ -168,7 +168,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
   private void handlePostPoll(RoutingContext context) {
     try {
       Recorder.PollReq pollReq = ProtoUtil.buildProtoFromBuffer(Recorder.PollReq.parser(), context.getBody());
-      if(logger.isDebugEnabled()) {
+      if (logger.isDebugEnabled()) {
         logger.debug("Poll request: " + RecorderProtoUtil.pollReqCompactRepr(pollReq));
       }
 
@@ -178,13 +178,13 @@ public class BackendHttpVerticle extends AbstractVerticle {
       Counter ctrWinMiss = metricRegistry.counter(MetricRegistry.name(MetricName.Poll_Window_Miss.get(), processGroupStr));
 
       ProcessGroupContextForPolling processGroupContextForPolling = this.processGroupDiscoveryContext.getProcessGroupContextForPolling(processGroup);
-      if(processGroupContextForPolling == null) {
+      if (processGroupContextForPolling == null) {
         mtrAssocMiss.mark();
         throw new BadRequestException("Process group " + RecorderProtoUtil.processGroupCompactRepr(processGroup) + " not associated with the backend");
       }
 
       Recorder.WorkAssignment nextWorkAssignment = processGroupContextForPolling.getWorkAssignment(pollReq);
-      if(nextWorkAssignment != null) {
+      if (nextWorkAssignment != null) {
         AggregationWindow aggregationWindow = aggregationWindowDiscoveryContext.getAssociatedAggregationWindow(nextWorkAssignment.getWorkId());
         if (aggregationWindow == null) {
           ctrWinMiss.inc();
@@ -200,12 +200,12 @@ public class BackendHttpVerticle extends AbstractVerticle {
           .setLocalTime(nextWorkAssignment == null
               ? LocalDateTime.now(Clock.systemUTC()).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
               : nextWorkAssignment.getIssueTime());
-      if(nextWorkAssignment != null) {
+      if (nextWorkAssignment != null) {
         pollResBuilder.setAssignment(nextWorkAssignment);
       }
 
       Recorder.PollRes pollRes = pollResBuilder.build();
-      if(logger.isDebugEnabled()) {
+      if (logger.isDebugEnabled()) {
         logger.debug("Poll response: " + RecorderProtoUtil.pollResCompactRepr(pollRes));
       }
       context.response().end(ProtoUtil.buildBufferFromProto(pollRes));
@@ -223,7 +223,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
         Recorder.RecorderInfo recorderInfo = ProtoUtil.buildProtoFromBuffer(Recorder.RecorderInfo.parser(), context.getBody());
         Recorder.ProcessGroup processGroup = RecorderProtoUtil.mapRecorderInfoToProcessGroup(recorderInfo);
         ProcessGroupContextForPolling processGroupContextForPolling = this.processGroupDiscoveryContext.getProcessGroupContextForPolling(processGroup);
-        if(processGroupContextForPolling != null) {
+        if (processGroupContextForPolling != null) {
           Recorder.AssignedBackend assignedBackend = Recorder.AssignedBackend.newBuilder().setHost(ipAddress).setPort(backendHttpPort).build();
           context.response().end(ProtoUtil.buildBufferFromProto(assignedBackend));
           return;
@@ -233,7 +233,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
 
         //Proxy request to leader if self(backend) is not associated with the recorder
         makeRequestToLeader(leaderDetail, HttpMethod.POST, ApiPathConstants.BACKEND_POST_ASSOCIATION, recorderInfoAsBuffer, true)
-          .setHandler(ar -> proxyResponseFromLeader(context, ar));
+            .setHandler(ar -> proxyResponseFromLeader(context, ar));
       } catch (Exception ex) {
         HttpFailure httpFailure = HttpFailure.failure(ex);
         HttpHelper.handleFailure(context, httpFailure);
@@ -248,14 +248,14 @@ public class BackendHttpVerticle extends AbstractVerticle {
       try {
         //Proxy request to leader
         makeRequestToLeader(leaderDetail, HttpMethod.GET, ApiPathConstants.BACKEND_GET_ASSOCIATIONS, null, true).setHandler(ar -> {
-          if(ar.failed()) {
+          if (ar.failed()) {
             HttpFailure httpFailure = HttpFailure.failure(ar.cause());
             HttpHelper.handleFailure(context, httpFailure);
             return;
           }
 
           int statusCode = ar.result().getStatusCode();
-          if(statusCode != 200) {
+          if (statusCode != 200) {
             context.response().setStatusCode(statusCode);
             context.response().end(ar.result().getResponse());
             return;
@@ -279,11 +279,11 @@ public class BackendHttpVerticle extends AbstractVerticle {
 
   private void proxyToLeader(RoutingContext context) {
     BackendDTO.LeaderDetail leaderDetail = verifyLeaderAvailabilityOrFail(context.response());
-    final String path = context.normalisedPath() + ((context.request().query() != null)? "?" + context.request().query(): "");
+    final String path = context.normalisedPath() + ((context.request().query() != null) ? "?" + context.request().query() : "");
     if (leaderDetail != null) {
       try {
-        makeRequestToLeader(leaderDetail, context.request().method(),  path, context.getBody(), false)
-                .setHandler(ar -> proxyResponseFromLeader(context, ar));
+        makeRequestToLeader(leaderDetail, context.request().method(), path, context.getBody(), false)
+            .setHandler(ar -> proxyResponseFromLeader(context, ar));
       } catch (Exception ex) {
         HttpFailure httpFailure = HttpFailure.failure(ex);
         HttpHelper.handleFailure(context, httpFailure);
@@ -318,7 +318,7 @@ public class BackendHttpVerticle extends AbstractVerticle {
   }
 
   private void proxyResponseFromLeader(RoutingContext context, AsyncResult<ProfHttpClient.ResponseWithStatusTuple> ar) {
-    if(ar.succeeded()) {
+    if (ar.succeeded()) {
       context.response().setStatusCode(ar.result().getStatusCode());
       context.response().end(ar.result().getResponse());
     } else {

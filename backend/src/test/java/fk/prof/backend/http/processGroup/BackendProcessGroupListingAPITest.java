@@ -129,7 +129,7 @@ public class BackendProcessGroupListingAPITest {
         leaderServer.listen(leaderPort, result -> {
             if (result.succeeded()) {
                 when(inMemoryLeaderStore.getLeader()).thenReturn(BackendDTO.LeaderDetail.newBuilder().setHost(LEADER_IP).setPort(leaderPort).build());
-                client.getNow(backendPort, "localhost", "/clusterIds/" + APP_ID + "?prefix=" + CLUSTER_ID.substring(0, 1 + new Random().nextInt(CLUSTER_ID.length() - 1)), httpClientResponse -> {
+                client.getNow(backendPort, "localhost", "/clusters/" + APP_ID + "?prefix=" + CLUSTER_ID.substring(0, 1 + new Random().nextInt(CLUSTER_ID.length() - 1)), httpClientResponse -> {
                     context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
                     httpClientResponse.bodyHandler(buffer -> {
                         context.assertEquals(buffer.toJsonArray().size(), 1);
@@ -155,7 +155,7 @@ public class BackendProcessGroupListingAPITest {
         leaderServer.listen(leaderPort, result -> {
             if (result.succeeded()) {
                 when(inMemoryLeaderStore.getLeader()).thenReturn(BackendDTO.LeaderDetail.newBuilder().setHost(LEADER_IP).setPort(leaderPort).build());
-                client.getNow(backendPort, "localhost", "/procNames/" + APP_ID + DELIMITER + CLUSTER_ID + "?prefix=" + PROC.substring(0, 1 + new Random().nextInt(PROC.length() - 1)), httpClientResponse -> {
+                client.getNow(backendPort, "localhost", "/procs/" + APP_ID + DELIMITER + CLUSTER_ID + "?prefix=" + PROC.substring(0, 1 + new Random().nextInt(PROC.length() - 1)), httpClientResponse -> {
                     context.assertEquals(httpClientResponse.statusCode(), HttpResponseStatus.OK.code());
                     httpClientResponse.bodyHandler(buffer -> {
                         context.assertEquals(buffer.toJsonArray().size(), 1);
