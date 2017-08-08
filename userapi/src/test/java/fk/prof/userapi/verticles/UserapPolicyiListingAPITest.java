@@ -107,7 +107,7 @@ public class UserapPolicyiListingAPITest {
     @Test
     public void TestGetClusterIdsRoute(TestContext context) throws Exception {
         final Async async = context.async();
-        String userapiGetClusterIdsURI = UserapiApiPathConstants.LIST_POLICY_API_PREFIX + "/clusterIds/" + APP_ID + "?prefix=" + CLUSTER_ID.substring(0, 1 + new Random().nextInt(CLUSTER_ID.length() - 1));
+        String userapiGetClusterIdsURI = UserapiApiPathConstants.LIST_POLICY_API_PREFIX + "/clusters/" + APP_ID + "?prefix=" + CLUSTER_ID.substring(0, 1 + new Random().nextInt(CLUSTER_ID.length() - 1));
         Router router = Router.router(vertx);
         UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
                 UserapiApiPathConstants.POLICY_CLUSTERS_FOR_APP.substring(UserapiApiPathConstants.LIST_POLICY_API_PREFIX.length()), routingContext -> {
@@ -135,7 +135,7 @@ public class UserapPolicyiListingAPITest {
     @Test
     public void TestGetProcNamesRoute(TestContext context) throws Exception {
         final Async async = context.async();
-        String userapiGetProcNamesURI = UserapiApiPathConstants.LIST_POLICY_API_PREFIX + "/procNames/" + APP_ID + DELIMITER + CLUSTER_ID + "?prefix=" + PROC.substring(0, 1 + new Random().nextInt(PROC.length() - 1));
+        String userapiGetProcNamesURI = UserapiApiPathConstants.LIST_POLICY_API_PREFIX + "/procs/" + APP_ID + DELIMITER + CLUSTER_ID + "?prefix=" + PROC.substring(0, 1 + new Random().nextInt(PROC.length() - 1));
         Router router = Router.router(vertx);
         UserapiHttpHelper.attachHandlersToRoute(router, HttpMethod.GET,
                 UserapiApiPathConstants.POLICY_PROCS_FOR_APP_CLUSTER.substring(UserapiApiPathConstants.LIST_POLICY_API_PREFIX.length()), req -> req.response().end(Json.encode(Sets.newSet(PROC))));

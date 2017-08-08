@@ -24,7 +24,7 @@ export default function fetchPolicyAppIdsAction(prefix) {
   return (dispatch) => {
     dispatch(getPolicyAppIdsRequestAction());
     const queryParams = prefix ? '?' + objectToQueryParams({prefix}) : '';
-    const url = `/api/list/policy/appIds${queryParams}`;
+    const url = `/api/list/policy/apps${queryParams}`;
     return http.get(url)
       .then(json => dispatch(getPolicyAppIdsSuccessAction(json))) // success, send the data to reducers
       .catch(err => dispatch(getPolicyAppIdsFailureAction(err))); // for error

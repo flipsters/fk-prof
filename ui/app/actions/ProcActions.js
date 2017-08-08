@@ -21,7 +21,7 @@ export default function fetchProcsAction(app, cluster, prefix) {
   return (dispatch) => {
     dispatch(getProcsRequestAction({req: {cluster}}));
     const queryParams = prefix ? '?' + objectToQueryParams({prefix}) : '';
-    const baseUrl = `/api/procNames/${app}/${cluster}`;
+    const baseUrl = `/api/procs/${app}/${cluster}`;
     const url = `${baseUrl}${queryParams}`;
     return http.get(url)
       .then(json => dispatch(getProcsSuccessAction({res: json, req: {app, cluster}})))

@@ -21,7 +21,7 @@ export default function fetchPolicyClustersAction(policyApp, prefix) {
   return (dispatch) => {
     dispatch(getPolicyClustersRequestAction({req: {policyApp}}));
     const queryParams = prefix ? '?' + objectToQueryParams({prefix}) : '';
-    const baseUrl = `/api/list/policy/clusterIds/${policyApp}`;
+    const baseUrl = `/api/list/policy/clusters/${policyApp}`;
     const url = `${baseUrl}${queryParams}`;
     return http.get(url)
       .then(res => dispatch(getPolicyClustersSuccessAction({res, req: {policyApp}})))

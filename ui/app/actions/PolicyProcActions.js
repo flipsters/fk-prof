@@ -21,7 +21,7 @@ export default function fetchPolicyProcsAction(policyApp, policyCluster, prefix)
   return (dispatch) => {
     dispatch(getPolicyProcsRequestAction({req: {policyApp, policyCluster}}));
     const queryParams = prefix ? '?' + objectToQueryParams({prefix}) : '';
-    const baseUrl = `/api/list/policy/procNames/${policyApp}/${policyCluster}`;
+    const baseUrl = `/api/list/policy/procs/${policyApp}/${policyCluster}`;
     const url = `${baseUrl}${queryParams}`;
     return http.get(url)
       .then(json => dispatch(getPolicyProcsSuccessAction({res: json, req: {policyApp, policyCluster}})))

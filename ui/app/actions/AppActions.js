@@ -21,7 +21,7 @@ export default function fetchAppIdsAction(prefix) {
   return (dispatch) => {
     dispatch(getAppIdsRequestAction());
     const queryParams = prefix ? '?' + objectToQueryParams({prefix}) : '';
-    const url = `/api/appIds${queryParams}`;
+    const url = `/api/apps${queryParams}`;
     return http.get(url)
       .then(json => dispatch(getAppIdsSuccessAction(json))) // success, send the data to reducers
       .catch(err => dispatch(getAppIdsFailureAction(err))); // for error
