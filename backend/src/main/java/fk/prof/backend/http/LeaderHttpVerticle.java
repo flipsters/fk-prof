@@ -228,7 +228,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
       if (versionedPolicyDetails == null) {
         context.response().setStatusCode(404).end("Policy not found for process group " + RecorderProtoUtil.processGroupCompactRepr(pg));
       } else {
-        context.response().setStatusCode(200).end(ProtoUtil.buildBufferFromProto(versionedPolicyDetails));
+        context.response().end(ProtoUtil.buildBufferFromProto(versionedPolicyDetails));
       }
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
@@ -251,8 +251,7 @@ public class LeaderHttpVerticle extends AbstractVerticle {
   private void handleUpdatePolicy(RoutingContext context) {
     try {
       Recorder.ProcessGroup pg = parseProcessGroup(context);
-      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = ProtoUtil.buildProtoFromBuffer(PolicyDTO.VersionedPolicyDetails.parser(), context.getBody());
-      PolicyDTOProtoUtil.validatePolicyValues(versionedPolicyDetails);
+      PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = parseVersionedPolicyDetailsFromPayload(context);
       policyStore.updateVersionedPolicy(pg, versionedPolicyDetails).setHandler(ar -> setResponse(ar, context, 200));
     } catch (Exception ex) {
       HttpFailure httpFailure = HttpFailure.failure(ex);
@@ -280,6 +279,12 @@ public class LeaderHttpVerticle extends AbstractVerticle {
     final String procName = context.request().getParam("procName");
 
     return Recorder.ProcessGroup.newBuilder().setAppId(appId).setCluster(clusterId).setProcName(procName).build();
+  }
+
+  private PolicyDTO.VersionedPolicyDetails parseVersionedPolicyDetailsFromPayload(RoutingContext context) throws Exception {
+    PolicyDTO.VersionedPolicyDetails versionedPolicyDetails = ProtoUtil.buildProtoFromBuffer(PolicyDTO.VersionedPolicyDetails.parser(), context.getBody());
+    PolicyDTOProtoUtil.validatePolicyValues(versionedPolicyDetails);
+    return versionedPolicyDetails;
   }
 
   private void handleGetAssociations(RoutingContext context) {

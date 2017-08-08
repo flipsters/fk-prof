@@ -176,36 +176,41 @@ public class ZookeeperBasedPolicyStore implements PolicyStore {
                         throw new PolicyException("Failing create of policy, initial version must be -1, requested version = " + requestedVersionedPolicyDetails.getVersion(), false);
                     }
                     try {
-                        String policyNodePathWithNodeName = curatorClient.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT_SEQUENTIAL).
-                                forPath(policyNodePath, requestedVersionedPolicyDetails.getPolicyDetails().toByteArray());
-                        String policyNodeName = ZKPaths.getNodeFromPath(policyNodePathWithNodeName);
-                        Integer newVersion = Integer.parseInt(policyNodeName);      //Policy Node names are incrementing numbers (the versions)
-                        PolicyDTO.VersionedPolicyDetails.Builder versionedPolicyDetailsBuilder = requestedVersionedPolicyDetails.toBuilder();
-                        versionedPolicyDetailsBuilder.setVersion(newVersion);
-                        String currentTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-                        PolicyDTO.PolicyDetails.Builder policyDetailsBuilder = versionedPolicyDetailsBuilder.getPolicyDetails().toBuilder().setModifiedAt(currentTime);
-                        if(create){
-                            policyDetailsBuilder.setCreatedAt(currentTime);
-                        }
-                        versionedPolicyDetailsBuilder.setPolicyDetails(policyDetailsBuilder.build());
-                        PolicyDTO.VersionedPolicyDetails updated = versionedPolicyDetailsBuilder.build();
-                        updateProcessGroupHierarchy(processGroup);
-                        return updated;
+                        return putPolicyDetailsInZK(processGroup, requestedVersionedPolicyDetails, policyNodePath, create);
                     } catch (Exception e) {
                         throw new PolicyException("Exception thrown by ZK while writing policy for ProcessGroup = " + RecorderProtoUtil.processGroupCompactRepr(processGroup), e, true);
                     }
                 });
-                if(create)
+                if (create) {
                     LOGGER.info("Policy : {} created for process group: {}", PolicyDTOProtoUtil.versionedPolicyDetailsCompactRepr(newVersionedPolicy), RecorderProtoUtil.processGroupCompactRepr(processGroup));
-                else
+                } else {
                     LOGGER.info("Policy : {} updated for process group: {}", PolicyDTOProtoUtil.versionedPolicyDetailsCompactRepr(newVersionedPolicy), RecorderProtoUtil.processGroupCompactRepr(processGroup));
-
+                }
                 fut.complete(newVersionedPolicy);
             } catch (Exception e) {
                 fut.fail(e);
             }
         }, false, future.completer());
         return future;
+    }
+
+    private PolicyDTO.VersionedPolicyDetails putPolicyDetailsInZK(Recorder.ProcessGroup processGroup, PolicyDTO.VersionedPolicyDetails requestedVersionedPolicyDetails, String policyNodePath, boolean create) throws Exception {
+        String currentTime = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        PolicyDTO.PolicyDetails.Builder policyDetailsBuilder = requestedVersionedPolicyDetails.getPolicyDetails().toBuilder().setModifiedAt(currentTime);
+        if (create) {
+          policyDetailsBuilder.setCreatedAt(currentTime);
+        }
+        PolicyDTO.PolicyDetails policyDetailsWithCurrentTime = policyDetailsBuilder.build();
+        String policyNodePathWithNodeName = curatorClient.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT_SEQUENTIAL).
+            forPath(policyNodePath, policyDetailsWithCurrentTime.toByteArray());
+
+        PolicyDTO.VersionedPolicyDetails.Builder versionedPolicyDetailsBuilder = requestedVersionedPolicyDetails.toBuilder();
+        Integer newVersion = Integer.parseInt(ZKPaths.getNodeFromPath(policyNodePathWithNodeName)); //Policy Node names are incrementing numbers (the versions)
+
+        versionedPolicyDetailsBuilder.setVersion(newVersion).setPolicyDetails(policyDetailsWithCurrentTime);
+        PolicyDTO.VersionedPolicyDetails updatedVersionedPolicyDetails = versionedPolicyDetailsBuilder.build();
+        updateProcessGroupHierarchy(processGroup);
+        return updatedVersionedPolicyDetails;
     }
 
     private void updateProcessGroupHierarchy(Recorder.ProcessGroup processGroup) {

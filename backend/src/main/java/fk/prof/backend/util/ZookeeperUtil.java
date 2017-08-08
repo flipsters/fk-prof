@@ -19,8 +19,9 @@ public class ZookeeperUtil {
 
   public static Map.Entry<String, byte[]> readLatestSeqZNodeChild(CuratorFramework curatorClient, String curatorPath) throws Exception {
     String zNodePath = curatorPath;
-    if (!curatorClient.getNamespace().isEmpty())
+    if (!curatorClient.getNamespace().isEmpty()) {
       zNodePath = DELIMITER + curatorClient.getNamespace() + curatorPath;
+    }
     List<String> sortedPolicyNodes = ZKPaths.getSortedChildren(curatorClient.getZookeeperClient().getZooKeeper(), zNodePath);
     if (sortedPolicyNodes.isEmpty()) {
       return null;
@@ -31,8 +32,9 @@ public class ZookeeperUtil {
 
   public static String getLatestSeqZNodeChildName(CuratorFramework curatorClient, String curatorPath) throws Exception {
     String zNodePath = curatorPath;
-    if (!curatorClient.getNamespace().isEmpty())
+    if (!curatorClient.getNamespace().isEmpty()) {
       zNodePath = DELIMITER + curatorClient.getNamespace() + curatorPath;
+    }
     List<String> sortedPolicyNodes = ZKPaths.getSortedChildren(curatorClient.getZookeeperClient().getZooKeeper(), zNodePath);
     if (sortedPolicyNodes.isEmpty()) {
       return null;

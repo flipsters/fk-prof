@@ -102,7 +102,7 @@ public class ZookeeperBasedPolicyStoreTest {
             String procNamePath = DELIMITER + POLICY_BASEDIR + DELIMITER + POLICY_VERSION + DELIMITER + encode32(pg.getAppId()) + DELIMITER + encode32(pg.getCluster()) + DELIMITER + encode32(pg.getProcName());
             try {
                 //DATA IS ACTUALLY WRITTEN TO ZK
-                context.assertEquals(PolicyDTO.PolicyDetails.parseFrom(ZookeeperUtil.readLatestSeqZNodeChild(curatorClient, procNamePath).getValue()), MockPolicyData.mockVersionedPolicyDetails.get(0).getPolicyDetails());
+                context.assertEquals(PolicyDTO.PolicyDetails.parseFrom(ZookeeperUtil.readLatestSeqZNodeChild(curatorClient, procNamePath).getValue()).getPolicy(), MockPolicyData.mockVersionedPolicyDetails.get(0).getPolicyDetails().getPolicy());
                 int gotVersion = Integer.parseInt(ZookeeperUtil.getLatestSeqZNodeChildName(curatorClient, procNamePath));
                 //VERSION OF WRITTEN TO ZK IS ONE PLUS THE OLD VERSION
                 context.assertEquals(gotVersion, MockPolicyData.mockVersionedPolicyDetails.get(0).getVersion() + 1);
