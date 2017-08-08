@@ -10,7 +10,7 @@ import styles from './ProcSelectComponent.css';
 import fetchPolicyProcsAction from 'actions/PolicyProcActions';
 import debounce from 'utils/debounce';
 
-const noop = () => {};const noop = () => {};
+const noop = () => {};
 
 class ProcSelectComponent extends Component {
   componentDidMount () {
@@ -69,7 +69,7 @@ class ProcSelectComponent extends Component {
           value={valueOption}
           noResultsText={finalProcs.asyncStatus !== 'PENDING' ? 'No results found!' : 'Searching...'}
           placeholder="Type to search..."
-        />
+        />}
       </div>
     );
   }

@@ -59,7 +59,7 @@ class AppSelectComponent extends React.Component {
           isLoading={finalApps.asyncStatus === 'PENDING'}
           noResultsText={noResultsText}
           placeholder="Type to search..."
-        />
+        />}
       </div>
     );
   }
