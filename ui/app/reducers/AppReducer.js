@@ -1,4 +1,8 @@
-import {GET_APPS_FAILURE, GET_APPS_REQUEST, GET_APPS_SUCCESS,} from 'actions/AppActions';
+import {
+  GET_APPS_REQUEST,
+  GET_APPS_SUCCESS,
+  GET_APPS_FAILURE,
+} from 'actions/AppActions';
 
 const INITIAL_STATE = {
   data: [],

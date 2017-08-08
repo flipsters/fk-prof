@@ -1,14 +1,13 @@
-import React from "react";
-import {connect} from "react-redux";
-import Select, {Creatable} from "react-select";
+import React from 'react';
+import { connect } from 'react-redux';
+import Select from 'react-select';
 
-import fetchAppsAction from "actions/AppActions";
-import fetchPolicyAppsAction from "actions/PolicyAppActions";
-import debounce from "utils/debounce";
-import styles from "./AppSelectComponent.css";
+import fetchAppsAction from 'actions/AppActions';
+import debounce from 'utils/debounce';
+import styles from './AppSelectComponent.css';
+import fetchPolicyAppsAction from 'actions/PolicyAppActions';
 
-const noop = () => {
-};
+const noop = () => {};
 
 class AppSelectComponent extends React.Component {
   componentDidMount() {
@@ -60,13 +59,13 @@ class AppSelectComponent extends React.Component {
           isLoading={finalApps.asyncStatus === 'PENDING'}
           noResultsText={noResultsText}
           placeholder="Type to search..."
-        />}
+        />
       </div>
     );
   }
 }
 
-const mapStateToProps = state => ({apps: state.apps, policyApps: state.policyApps});
+const mapStateToProps = state => ({ apps: state.apps, policyApps: state.policyApps });
 const mapDispatchToProps = dispatch => ({
   getApps: prefix => dispatch(fetchAppsAction(prefix)),
   getPolicyApps: prefix => dispatch(fetchPolicyAppsAction(prefix))

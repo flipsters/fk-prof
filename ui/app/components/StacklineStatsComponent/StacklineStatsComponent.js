@@ -1,4 +1,4 @@
-import React, {Component} from 'react';
+import React, { Component } from 'react';
 import styles from './StacklineStatsComponent.css';
 
 export default class StacklineStatsComponent extends Component {

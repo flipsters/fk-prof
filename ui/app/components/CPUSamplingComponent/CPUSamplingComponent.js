@@ -1,6 +1,6 @@
-import React, {Component, PropTypes} from 'react';
-import {connect} from 'react-redux';
-import {AutoSizer} from 'react-virtualized';
+import React, { Component, PropTypes } from 'react';
+import { connect } from 'react-redux';
+import { AutoSizer } from 'react-virtualized';
 import fetchCPUSamplingAction from 'actions/AggregatedProfileDataActions';
 import safeTraverse from 'utils/safeTraverse';
 import Loader from 'components/LoaderComponent';

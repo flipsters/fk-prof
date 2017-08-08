@@ -1,6 +1,6 @@
 import React from 'react';
-import {withRouter} from 'react-router';
-import {connect} from 'react-redux';
+import { withRouter } from 'react-router';
+import { connect } from 'react-redux';
 
 import CPUSampling from 'components/CPUSamplingComponent';
 import safeTraverse from 'utils/safeTraverse';

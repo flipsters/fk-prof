@@ -1,19 +1,20 @@
-import React, {Component, PropTypes} from "react";
-import {connect} from "react-redux";
-import Select, {Creatable} from "react-select";
+import React, { Component, PropTypes } from 'react';
+import { connect } from 'react-redux';
+import Select from 'react-select';
 
-import fetchProcsAction from "actions/ProcActions";
-import fetchPolicyProcsAction from "actions/PolicyProcActions";
-import safeTraverse from "utils/safeTraverse";
-import debounce from "utils/debounce";
-import styles from "./ProcSelectComponent.css";
+import fetchProcsAction from 'actions/ProcActions';
+import safeTraverse from 'utils/safeTraverse';
 
-const noop = () => {
-};
+import styles from './ProcSelectComponent.css';
+
+import fetchPolicyProcsAction from 'actions/PolicyProcActions';
+import debounce from 'utils/debounce';
+
+const noop = () => {};const noop = () => {};
 
 class ProcSelectComponent extends Component {
-  componentDidMount() {
-    const {cluster, app} = this.props;
+  componentDidMount () {
+    const { cluster, app } = this.props;
     if (cluster && app) {
       this.props.isPolicyPage ? this.props.getPolicyProcs(app)(cluster)() : this.props.getProcs(app)(cluster)();
     }
@@ -68,7 +69,7 @@ class ProcSelectComponent extends Component {
           value={valueOption}
           noResultsText={finalProcs.asyncStatus !== 'PENDING' ? 'No results found!' : 'Searching...'}
           placeholder="Type to search..."
-        />}
+        />
       </div>
     );
   }

@@ -1,22 +1,27 @@
-import React from "react";
-import ReactDOM from "react-dom";
-import {browserHistory, IndexRedirect, Route, Router} from "react-router";
-import {Provider} from "react-redux";
+import React from 'react';
+import ReactDOM from 'react-dom';
+import {
+  Route,
+  Router,
+  IndexRedirect,
+  browserHistory,
+} from 'react-router';
+import { Provider } from 'react-redux';
 
-import "react-select/dist/react-select.css";
-import "react-datetime/css/react-datetime.css";
+import 'react-select/dist/react-select.css';
+import 'react-datetime/css/react-datetime.css';
 import "./assets/styles/mdl/material.min.css";
 import "./assets/styles/mdl/material.min";
 
-import store from "./store";
+import store from './store';
 
-import Root from "components/RootComponent";
-import App from "components/AppComponent";
-import CPUSampling from "components/CPUSamplingComponent";
+import Root from 'components/RootComponent';
+import App from 'components/AppComponent';
+import CPUSampling from 'components/CPUSamplingComponent';
+import AggregatedProfileDataContainer from 'components/AggregatedProfileDataContainer';
 import Policy from "components/PolicyComponent";
-import AggregatedProfileDataContainer from "components/AggregatedProfileDataContainer";
 
-import "./assets/styles/global.css";
+import './assets/styles/global.css';
 
 const routes = (
   <Route path="/" component={Root}>

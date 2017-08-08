@@ -1,4 +1,8 @@
-import {GET_CLUSTERS_FAILURE, GET_CLUSTERS_REQUEST, GET_CLUSTERS_SUCCESS,} from 'actions/ClusterActions';
+import {
+  GET_CLUSTERS_REQUEST,
+  GET_CLUSTERS_SUCCESS,
+  GET_CLUSTERS_FAILURE,
+} from 'actions/ClusterActions';
 
 export default function (state = {}, action) {
   switch (action.type) {
@@ -31,7 +35,6 @@ export default function (state = {}, action) {
         },
       };
 
-    default:
-      return state;
+    default: return state;
   }
 }

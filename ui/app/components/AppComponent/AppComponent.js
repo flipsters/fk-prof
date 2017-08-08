@@ -1,13 +1,13 @@
-import React from "react";
-import {withRouter} from "react-router";
-import DateTime from "react-datetime";
+import React from 'react';
+import { withRouter } from 'react-router';
+import DateTime from 'react-datetime';
 
-import AppSelect from "components/AppSelectComponent";
-import ClusterSelect from "components/ClusterSelectComponent";
-import ProcSelect from "components/ProcSelectComponent";
-import ProfileList from "components/ProfileListComponent";
+import AppSelect from 'components/AppSelectComponent';
+import ClusterSelect from 'components/ClusterSelectComponent';
+import ProcSelect from 'components/ProcSelectComponent';
+import ProfileList from 'components/ProfileListComponent';
 
-import styles from "./AppComponent.css";
+import styles from './AppComponent.css';
 import PolicyComponent from "../PolicyComponent/PolicyComponent";
 
 const AppComponent = (props) => {
@@ -17,23 +17,26 @@ const AppComponent = (props) => {
   const start = props.location.query.start;
   const end = start ? (new Date(start).getTime() + (24 * 3600 * 1000)) : '';
 
-  const updateQueryParams = ({pathname = '/', query}) => props.router.push({pathname, query});
+  const updateQueryParams = ({ pathname = '/', query }) => props.router.push({ pathname, query });
   const updatePolicyQueryParams = ({pathname = '/profiler/policy', query}) => props.router.push({pathname, query});
-  const updateAppQueryParam = o => updateQueryParams({query: {app: o.name}});
+
+  const updateAppQueryParam = o => updateQueryParams({ query: { app: o.name } });
   const updatePolicyAppQueryParam = o => updatePolicyQueryParams({query: {app: o.name}});
 
   const updateClusterQueryParam = (o) => {
-    updateQueryParams({query: {app: selectedApp, cluster: o.name}});
+    updateQueryParams({ query: { app: selectedApp, cluster: o.name } });
   };
   const updatePolicyClusterQueryParam = (o) => {
     updatePolicyQueryParams({query: {app: selectedApp, cluster: o.name}});
   };
+
   const updateProcQueryParam = (o) => {
-    updateQueryParams({query: {app: selectedApp, cluster: selectedCluster, proc: o.name}});
+    updateQueryParams({ query: { app: selectedApp, cluster: selectedCluster, proc: o.name } });
   };
   const updatePolicyProcQueryParam = (o) => {
     updatePolicyQueryParams({query: {app: selectedApp, cluster: selectedCluster, proc: o.name}});
   };
+
   const updateStartTime = (dateTimeObject) => {
     updateQueryParams({
       query: {

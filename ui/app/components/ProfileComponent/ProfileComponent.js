@@ -1,7 +1,7 @@
 import React from 'react';
-import {Link, withRouter} from 'react-router';
+import { Link, withRouter } from 'react-router';
 import Modal from 'react-modal';
-import {Chart} from 'react-google-charts';
+import { Chart } from 'react-google-charts';
 import moment from 'moment';
 import $ from 'jquery';
 

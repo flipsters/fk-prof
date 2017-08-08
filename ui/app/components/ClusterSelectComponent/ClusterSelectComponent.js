@@ -1,19 +1,20 @@
-import React, {Component, PropTypes} from "react";
-import {connect} from "react-redux";
-import Select, {Creatable} from "react-select";
+import React, { Component, PropTypes } from 'react';
+import { connect } from 'react-redux';
+import Select from 'react-select';
 
-import fetchClustersAction from "actions/ClusterActions";
-import fetchPolicyClustersAction from "actions/PolicyClusterActions";
-import safeTraverse from "utils/safeTraverse";
-import debounce from "utils/debounce";
-import styles from "./ClusterSelectComponent.css";
+import fetchClustersAction from 'actions/ClusterActions';
+import safeTraverse from 'utils/safeTraverse';
 
-const noop = () => {
-};
+import styles from './ClusterSelectComponent.css';
+
+import fetchPolicyClustersAction from 'actions/PolicyClusterActions';
+import debounce from 'utils/debounce';
+
+const noop = () => {};
 
 class ClusterSelectComponent extends Component {
-  componentDidMount() {
-    const {app} = this.props;
+  componentDidMount () {
+    const { app } = this.props;
     if (app) {
       this.props.isPolicyPage ? this.props.getPolicyClusters(app)() : this.props.getClusters(app)();
     }
@@ -26,10 +27,8 @@ class ClusterSelectComponent extends Component {
   }
 
   render() {
-
     const {onChange, clusters, policyClusters} = this.props;
     const finalClusters = this.props.isPolicyPage ? policyClusters : clusters;
-
     const clusterList = finalClusters.asyncStatus === 'SUCCESS'
       ? finalClusters.data.map(c => ({name: c})) : [];
     const valueOption = this.props.value && {name: this.props.value};
