@@ -20,7 +20,6 @@ export default class Header extends React.Component {
     Object.keys(queryObject).filter(k => !reqKeys.includes(k)).forEach(k => delete queryObject[k]);
     return (
       <div className="mdl-layout__header mdl-layout__header--transparent">
-
         <div className="mdl-layout__tab-bar mdl-js-ripple-effect">
           <div className="mdl-layout--large-screen-only" style={{ height: '50%'}}>
             <Link to={loc => ({pathname: '/profiler/', query: ''})}
