@@ -224,17 +224,17 @@ public class BackendManager {
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.AGGREGATOR_POST_PROFILE).setType(MatchType.EQUALS))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_POST_POLL).setType(MatchType.EQUALS))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_POST_ASSOCIATION).setType(MatchType.EQUALS))
-        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_GET_APPS + ".*").setAlias("/apps").setType(MatchType.REGEX))
-        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_GET_CLUSTERS_FOR_APP + ".*").setAlias("/clusters").setType(MatchType.REGEX))
-        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_GET_PROCS_FOR_APP_CLUSTER + ".*").setAlias("/procs").setType(MatchType.REGEX))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.APPS_PREFIX + ".*").setAlias(ApiPathConstants.APPS_PREFIX).setType(MatchType.REGEX))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.CLUSTERS_PREFIX + ".*").setAlias(ApiPathConstants.CLUSTERS_PREFIX).setType(MatchType.REGEX))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.PROCS_PREFIX + ".*").setAlias(ApiPathConstants.PROCS_PREFIX).setType(MatchType.REGEX))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.BACKEND_GET_POLICY_FOR_APP_CLUSTER_PROC + ".*").setAlias(ApiPathConstants.POLICY_API_PREFIX).setType(MatchType.REGEX))
 
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_POST_ASSOCIATION).setType(MatchType.EQUALS))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_POST_LOAD).setType(MatchType.EQUALS))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_GET_WORK + ".*").setAlias(ApiPathConstants.LEADER_GET_WORK).setType(MatchType.REGEX))
-        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_GET_APPS + ".*").setAlias("/leader/apps").setType(MatchType.REGEX))
-        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_GET_CLUSTERS_FOR_APP + ".*").setAlias("/leader/clusters").setType(MatchType.REGEX))
-        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_GET_PROCS_FOR_APP_CLUSTER + ".*").setAlias("/leader/procs").setType(MatchType.REGEX))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.APPS_PREFIX + ".*").setAlias(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.APPS_PREFIX).setType(MatchType.REGEX))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.CLUSTERS_PREFIX + ".*").setAlias(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.CLUSTERS_PREFIX).setType(MatchType.REGEX))
+        .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.PROCS_PREFIX + ".*").setAlias(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.PROCS_PREFIX ).setType(MatchType.REGEX))
         .addMonitoredHttpServerUri(new Match().setValue(ApiPathConstants.LEADER_GET_POLICY_FOR_APP_CLUSTER_PROC + ".*").setAlias(ApiPathConstants.LEADER_API_PREFIX + ApiPathConstants.POLICY_API_PREFIX).setType(MatchType.REGEX));
     return metricsOptions;
   }
