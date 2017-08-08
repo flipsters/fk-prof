@@ -4,6 +4,7 @@ import Modal from 'react-modal';
 import { Chart } from 'react-google-charts';
 import moment from 'moment';
 import $ from 'jquery';
+import Select from 'react-select';
 
 import styles from './ProfileComponent.css';
 import SubProfileStat from 'components/SubProfileStatComponent';
