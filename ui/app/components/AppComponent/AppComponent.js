@@ -7,7 +7,7 @@ import ClusterSelect from "components/ClusterSelectComponent";
 import ProcSelect from "components/ProcSelectComponent";
 import ProfileList from "components/ProfileListComponent";
 
-import styles from "./AppComponent.scss";
+import styles from "./AppComponent.css";
 import PolicyComponent from "../PolicyComponent/PolicyComponent";
 
 const AppComponent = (props) => {

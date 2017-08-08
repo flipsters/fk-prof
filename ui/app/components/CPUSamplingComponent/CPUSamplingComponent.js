@@ -6,7 +6,7 @@ import safeTraverse from 'utils/safeTraverse';
 import Loader from 'components/LoaderComponent';
 import MethodTree from 'components/MethodTreeComponent';
 import Tabs from 'components/Tabs';
-import styles from './CPUSamplingComponent.scss';
+import styles from './CPUSamplingComponent.css';
 
 export class CPUSamplingComponent extends Component {
   componentDidMount () {

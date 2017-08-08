@@ -1,12 +1,11 @@
 import React from 'react';
-import { Link, withRouter } from 'react-router';
+import {Link, withRouter} from 'react-router';
 import Modal from 'react-modal';
-import { Chart } from 'react-google-charts';
+import {Chart} from 'react-google-charts';
 import moment from 'moment';
 import $ from 'jquery';
-import Select from 'react-select';
 
-import styles from './ProfileComponent.scss';
+import styles from './ProfileComponent.css';
 import SubProfileStat from 'components/SubProfileStatComponent';
 
 class ProfileComponent extends React.Component {

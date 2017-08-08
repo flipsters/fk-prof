@@ -1,11 +1,11 @@
-import React, { Component } from 'react';
+import React, {Component} from 'react';
 import StacklineDetail from 'components/StacklineDetailComponent';
 import StacklineStats from 'components/StacklineStatsComponent';
-import { withRouter } from 'react-router';
-import { ScrollSync, AutoSizer, Grid } from 'react-virtualized';
+import {withRouter} from 'react-router';
+import {AutoSizer, Grid, ScrollSync} from 'react-virtualized';
 import debounce from 'utils/debounce';
 
-import styles from './MethodTreeComponent.scss';
+import styles from './MethodTreeComponent.css';
 import HotMethodNode from '../../pojos/HotMethodNode';
 import 'react-virtualized/styles.css';
 
