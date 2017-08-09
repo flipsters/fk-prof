@@ -1,6 +1,4 @@
-package fk.prof.userapi.model;
-
-import fk.prof.userapi.model.tree.IndexedTreeNode;
+package fk.prof.userapi.model.tree;
 
 import java.util.List;
 import java.util.Map;

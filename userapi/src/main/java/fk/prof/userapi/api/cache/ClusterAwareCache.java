@@ -7,6 +7,7 @@ import fk.prof.userapi.Cacheable;
 import fk.prof.userapi.Configuration;
 import fk.prof.userapi.Pair;
 import fk.prof.userapi.api.AggregatedProfileLoader;
+import fk.prof.userapi.api.ProfileViewCreator;
 import fk.prof.userapi.model.AggregatedProfileInfo;
 import fk.prof.userapi.model.AggregatedSamplesPerTraceCtx;
 import fk.prof.userapi.model.tree.CallTreeView;
@@ -18,9 +19,6 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
 
-import java.util.function.Function;
-
-// TODO: take factory param in constructor to create different types of instances
 /**
  * Created by gaurav.ashok on 21/06/17.
  */
@@ -30,6 +28,8 @@ public class ClusterAwareCache {
     private final LocalProfileCache cache;
 
     private final WorkerExecutor workerExecutor;
+    private final AggregatedProfileLoader profileLoader;
+    private final ProfileViewCreator viewCreator;
     /*
     zookeeper node structure:
         /fk-prof-userapi                                                        (session namespace)
@@ -40,13 +40,16 @@ public class ClusterAwareCache {
     private final String myIp;
     private final int port;
 
-    public ClusterAwareCache(CuratorFramework zookeeper, WorkerExecutor workerExecutor, LocalProfileCache cache, Configuration config) {
+    public ClusterAwareCache(CuratorFramework zookeeper, WorkerExecutor workerExecutor, LocalProfileCache cache,
+                             AggregatedProfileLoader profileLoader, ProfileViewCreator viewCreator, Configuration config) {
         this.myIp = config.getIpAddress();
         this.port = config.getHttpConfig().getHttpPort();
 
         this.cache = cache;
         this.cache.setRemovalListener(this::doCleanUpOnEviction);
 
+        this.profileLoader = profileLoader;
+        this.viewCreator = viewCreator;
         this.zkStore = new ZkLoadInfoStore(zookeeper, myIp, port, this.cache::cachedProfiles);
 
         this.workerExecutor = workerExecutor;
@@ -60,7 +63,7 @@ public class ClusterAwareCache {
     returns the aggregated profile if already cached, throws CachedProfileNotFoundException if found on other node,
     or loads the profile into memory and then returns and updating zookeeper accordingly
      */
-    public Future<AggregatedProfileInfo> getAggregatedProfile(AggregatedProfileNamingStrategy profileName, AggregatedProfileLoader profileLoader) {
+    public Future<AggregatedProfileInfo> getAggregatedProfile(AggregatedProfileNamingStrategy profileName) {
         Future<AggregatedProfileInfo> profileFuture = Future.future();
 
         Future<AggregatedProfileInfo> cachedProfileInfo = cache.get(profileName);
@@ -116,12 +119,12 @@ public class ClusterAwareCache {
         return profileFuture;
     }
 
-    public Future<Pair<AggregatedSamplesPerTraceCtx, CallTreeView>> getCallTreeView(AggregatedProfileNamingStrategy profileName, String traceName, Function<AggregatedProfileInfo, CallTreeView> viewCreator) {
-        return getView(profileName, traceName, viewCreator, true);
+    public Future<Pair<AggregatedSamplesPerTraceCtx, CallTreeView>> getCallTreeView(AggregatedProfileNamingStrategy profileName, String traceName) {
+        return getView(profileName, traceName, true);
     }
 
-    public Future<Pair<AggregatedSamplesPerTraceCtx, CalleesTreeView>> getCalleesTreeView(AggregatedProfileNamingStrategy profileName, String traceName, Function<AggregatedProfileInfo, CalleesTreeView> viewCreator) {
-        return getView(profileName, traceName, viewCreator, false);
+    public Future<Pair<AggregatedSamplesPerTraceCtx, CalleesTreeView>> getCalleesTreeView(AggregatedProfileNamingStrategy profileName, String traceName) {
+        return getView(profileName, traceName, false);
     }
 
     private void doCleanUpOnEviction(RemovalNotification<AggregatedProfileNamingStrategy, Future<AggregatedProfileInfo>> onRemoval) {
@@ -134,8 +137,7 @@ public class ClusterAwareCache {
                 try(AutoCloseable lock = zkStore.getLock()) {
                     ProfileResidencyInfo residencyInfo = zkStore.readProfileResidencyInfo(profileName);
                     boolean deleteProfileNode = false;
-                    //TODO: bug here. what if cache has it, and residencyInfo has my ip
-                    if(residencyInfo != null && (myIp.equals(residencyInfo.getIp()) && port == residencyInfo.getPort())) {
+                    if(residencyInfo != null && (myIp.equals(residencyInfo.getIp()) && port == residencyInfo.getPort()) && cache.get(profileName) == null) {
                         deleteProfileNode = true;
                     }
                     zkStore.removeProfile(profileName, deleteProfileNode);
@@ -161,11 +163,11 @@ public class ClusterAwareCache {
         }
     }
 
-    private <ViewType extends Cacheable> Future<Pair<AggregatedSamplesPerTraceCtx, ViewType>> getView(AggregatedProfileNamingStrategy profileName, String traceName, Function<AggregatedProfileInfo, ViewType> viewCreator, boolean isCallersView) {
+    private <ViewType extends Cacheable> Future<Pair<AggregatedSamplesPerTraceCtx, ViewType>> getView(AggregatedProfileNamingStrategy profileName, String traceName, boolean isCallersView) {
         Future<Pair<AggregatedSamplesPerTraceCtx, ViewType>> viewFuture = Future.future();
         // TODO succeed fast
         if (cache.get(profileName) != null) {
-            workerExecutor.executeBlocking(f -> getOrCreateView(profileName, traceName, viewCreator, f, isCallersView), viewFuture.completer());
+            workerExecutor.executeBlocking(f -> getOrCreateView(profileName, traceName, f, isCallersView), viewFuture.completer());
         }
         else {
             // else check into zookeeper if this is cached in another node
@@ -178,7 +180,7 @@ public class ClusterAwareCache {
                 if(residencyInfo != null) {
                     // by the time we got the lock, it is possible a profile load has started
                     if (residencyInfo.getIp().equals(myIp) && residencyInfo.getPort() == port) {
-                        getOrCreateView(profileName, traceName, viewCreator, f, isCallersView);
+                        getOrCreateView(profileName, traceName, f, isCallersView);
                     }
                     else {
                         // cached in another node
@@ -194,7 +196,7 @@ public class ClusterAwareCache {
         return viewFuture;
     }
 
-    private <ViewType extends Cacheable> void getOrCreateView(AggregatedProfileNamingStrategy profileName, String traceName, Function<AggregatedProfileInfo, ViewType> viewCreator, Future<Pair<AggregatedSamplesPerTraceCtx, ViewType>> f, boolean isCallersView) {
+    private <ViewType extends Cacheable> void getOrCreateView(AggregatedProfileNamingStrategy profileName, String traceName, Future<Pair<AggregatedSamplesPerTraceCtx, ViewType>> f, boolean isCallersView) {
         synchronized (this) {
             Future<AggregatedProfileInfo> cachedProfileInfo = cache.get(profileName);
             if (cachedProfileInfo != null) {
@@ -219,7 +221,7 @@ public class ClusterAwareCache {
                     // no cached view, so create a new one
                     switch (profileName.workType) {
                         case cpu_sample_work:
-                            ctView = viewCreator.apply(cachedProfileInfo.result());
+                            ctView = buildView(cachedProfileInfo.result(), traceName, isCallersView);
                             cache.putView(profileName, getViewName(isCallersView), ctView);
                             f.complete(new Pair<>(samplesPerTraceCtx, ctView));
                             break;
@@ -231,6 +233,15 @@ public class ClusterAwareCache {
             else {
                 f.fail(new CachedProfileNotFoundException());
             }
+        }
+    }
+
+    private <ViewType extends Cacheable> ViewType buildView(AggregatedProfileInfo profile, String traceName, boolean isCallersView) {
+        if(isCallersView) {
+            return (ViewType) viewCreator.buildCallTreeView(profile, traceName);
+        }
+        else {
+            return (ViewType) viewCreator.buildCalleesTreeView(profile, traceName);
         }
     }
 

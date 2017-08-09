@@ -1,6 +1,5 @@
 package fk.prof.userapi.verticles;
 
-import com.amazonaws.util.StringUtils;
 import com.google.common.base.MoreObjects;
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
 import fk.prof.aggregation.proto.AggregatedProfileModel.FrameNode;
@@ -8,14 +7,15 @@ import fk.prof.aggregation.proto.AggregatedProfileModel.WorkType;
 import fk.prof.storage.StreamTransformer;
 import fk.prof.userapi.Configuration;
 import fk.prof.userapi.Pair;
+import fk.prof.userapi.ServiceUnavailableException;
 import fk.prof.userapi.api.ProfileStoreAPI;
+import fk.prof.userapi.api.cache.CachedProfileNotFoundException;
+import fk.prof.userapi.api.cache.ProfileLoadInProgressException;
 import fk.prof.userapi.http.UserapiApiPathConstants;
-import fk.prof.userapi.model.AggregatedProfileInfo;
 import fk.prof.userapi.model.AggregatedSamplesPerTraceCtx;
 import fk.prof.userapi.model.AggregationWindowSummary;
+import fk.prof.userapi.model.tree.TreeViewResponse;
 import fk.prof.userapi.model.tree.CallTreeView;
-import fk.prof.userapi.model.tree.CalleesTreeView;
-import fk.prof.userapi.model.tree.CalleesTreeView.HotMethodNode;
 import fk.prof.userapi.model.tree.IndexedTreeNode;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
@@ -26,7 +26,6 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.impl.CompositeFutureImpl;
 import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -43,6 +42,8 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static fk.prof.userapi.util.RequestParam.getParam;
 
 /**
  * Routes requests to their respective handlers
@@ -76,13 +77,9 @@ public class HttpVerticle extends AbstractVerticle {
         router.get(UserapiApiPathConstants.CLUSTER_GIVEN_APPID).handler(this::getClusterIds);
         router.get(UserapiApiPathConstants.PROC_GIVEN_APPID_CLUSTERID).handler(this::getProcId);
         router.get(UserapiApiPathConstants.PROFILES_GIVEN_APPID_CLUSTERID_PROCID).handler(this::getProfiles);
-        router.get(UserapiApiPathConstants.PROFILE_GIVEN_APPID_CLUSTERID_PROCID_WORKTYPE_TRACENAME).handler(this::getCpuSamplingTraces);
 
-        router.post(UserapiApiPathConstants.CALLERS_WITH_CPU_SAMPLING_INFO).handler(BodyHandler.create().setBodyLimit(1024 * 1024));
-        router.post(UserapiApiPathConstants.CALLERS_WITH_CPU_SAMPLING_INFO).handler(this::getCallersWithCpuSamplingInfo);
-
-        router.post(UserapiApiPathConstants.CALLEES_WITH_CPU_SAMPLING_INFO).handler(BodyHandler.create().setBodyLimit(1024 * 1024));
-        router.post(UserapiApiPathConstants.CALLEES_WITH_CPU_SAMPLING_INFO).handler(this::getCalleesWithCpuSamplingInfo);
+        router.post(UserapiApiPathConstants.VIEW_FOR_CPU_SAMPLING).handler(BodyHandler.create().setBodyLimit(1024 * 1024));
+        router.post(UserapiApiPathConstants.VIEW_FOR_CPU_SAMPLING).handler(this::getViewForCpuSampling);
 
         router.get(UserapiApiPathConstants.HEALTHCHECK).handler(this::handleGetHealth);
 
@@ -160,6 +157,11 @@ public class HttpVerticle extends AbstractVerticle {
 
         Future<List<AggregatedProfileNamingStrategy>> foundProfiles = Future.future();
         foundProfiles.setHandler(result -> {
+            if(result.failed()) {
+                setResponse(result, routingContext);
+                return;
+            }
+
             List<Future> profileSummaries = new ArrayList<>();
             for (AggregatedProfileNamingStrategy filename: result.result()) {
                 Future<AggregationWindowSummary> summary = Future.future();
@@ -211,143 +213,76 @@ public class HttpVerticle extends AbstractVerticle {
             baseDir, appId, clusterId, proc, startTime, duration);
     }
 
-    private void getCallersWithCpuSamplingInfo(RoutingContext routingContext) {
+    private void getViewForCpuSampling(RoutingContext routingContext) {
         HttpServerRequest req = routingContext.request();
 
         String appId, clusterId, procId, traceName;
         Boolean autoExpand;
         Integer maxDepth, duration;
         ZonedDateTime startTime;
+        String viewType;
+        List<Integer> nodeIds;
         try {
-            appId = parse(req, "appId");
-            clusterId = parse(req, "clusterId");
-            procId = parse(req, "procId");
-            traceName = parse(req, "traceName");
-            startTime = parse(req, "start", ZonedDateTime.class);
-            duration = parse(req, "duration", Integer.class);
-            autoExpand = MoreObjects.firstNonNull(parse(req, "autoExpand", Boolean.class, false), false);
-            maxDepth = Math.min(maxDepthForTreeExpand, MoreObjects.firstNonNull(parse(req, "maxDepth", Integer.class, false), maxDepthForTreeExpand));
+            viewType = getParam(req, "viewType");
+
+            if(!("callers".equals(viewType) || "callees".equals(viewType))) {
+                throw new IllegalArgumentException("viewType \"" + viewType + "\" not supported");
+            }
+
+            appId = getParam(req, "appId");
+            clusterId = getParam(req, "clusterId");
+            procId = getParam(req, "procId");
+            traceName = getParam(req, "traceName");
+            startTime = getParam(req, "start", ZonedDateTime.class);
+            duration = getParam(req, "duration", Integer.class);
+            autoExpand = MoreObjects.firstNonNull(getParam(req, "autoExpand", Boolean.class, false), false);
+            maxDepth = Math.min(maxDepthForTreeExpand, MoreObjects.firstNonNull(getParam(req, "maxDepth", Integer.class, false), maxDepthForTreeExpand));
         }
         catch (IllegalArgumentException e) {
             setResponse(Future.failedFuture(e), routingContext);
             return;
         }
 
-        JsonArray payload = routingContext.getBodyAsJsonArray();
+        try {
+            nodeIds = routingContext.getBodyAsJsonArray().getList();
+        }
+        catch (Exception e) {
+            setResponse(Future.failedFuture(new IllegalArgumentException(e)), routingContext);
+            return;
+        }
 
         AggregatedProfileNamingStrategy profileName = new AggregatedProfileNamingStrategy(baseDir, VERSION, appId, clusterId, procId, startTime, duration, WorkType.cpu_sample_work);
+
+        if("callers".equals(viewType)) {
+            getCallersViewForCpuSampling(routingContext, profileName, traceName, nodeIds, autoExpand, maxDepth);
+        }
+    }
+
+    private void getCallersViewForCpuSampling(RoutingContext routingContext, AggregatedProfileNamingStrategy profileName, String traceName,
+                                              List<Integer> nodeIds, boolean autoExpand, int maxDepth) {
         Future<Pair<AggregatedSamplesPerTraceCtx,CallTreeView>> callTreeView = profileStoreAPI.getCpuSamplingCallersTreeView(profileName, traceName);
 
         callTreeView.setHandler(ar -> {
             if(ar.failed()) {
-                //TODO : handle error codes properly
                 setResponse(ar, routingContext);
             }
             else {
                 AggregatedSamplesPerTraceCtx samplesPerTraceCtx = ar.result().first;
                 CallTreeView treeView = ar.result().second;
 
-                List<Integer> originIds;
-                if(payload == null) {
+                List<Integer> originIds = nodeIds;
+                if(originIds == null || originIds.isEmpty()) {
                     originIds = treeView.getRootNodes().stream().map(e -> e.getIdx()).collect(Collectors.toList());
-                }
-                else {
-                    originIds = payload.getList();
                 }
 
                 List<IndexedTreeNode<FrameNode>> subTree = treeView.getSubTree(originIds, maxDepth, autoExpand);
-                // TODO : serialize subTree and write to response
-                setResponse(Future.succeededFuture("Got the treeView, so chill out until you write a serializer." + subTree.size()), routingContext);
+                Map<Integer, String> methodLookup = new HashMap<>();
+
+                subTree.forEach(e -> e.visit((i,data) -> methodLookup.put(data.getMethodId(), samplesPerTraceCtx.getMethodLookup().get(data.getMethodId()))));
+
+                setResponse(Future.succeededFuture(new TreeViewResponse<>(subTree, methodLookup)), routingContext);
             }
         });
-    }
-
-    private void getCalleesWithCpuSamplingInfo(RoutingContext routingContext) {
-        HttpServerRequest req = routingContext.request();
-
-        String appId, clusterId, procId, traceName;
-        Boolean autoExpand;
-        Integer maxDepth, duration;
-        ZonedDateTime startTime;
-        try {
-            appId = parse(req, "appId");
-            clusterId = parse(req, "clusterId");
-            procId = parse(req, "procId");
-            traceName = parse(req, "traceName");
-            startTime = parse(req, "start", ZonedDateTime.class);
-            duration = parse(req, "duration", Integer.class);
-            autoExpand = MoreObjects.firstNonNull(parse(req, "autoExpand", Boolean.class, false), false);
-            maxDepth = Math.min(maxDepthForTreeExpand, MoreObjects.firstNonNull(parse(req, "maxDepth", Integer.class, false), maxDepthForTreeExpand));
-        }
-        catch (IllegalArgumentException e) {
-            setResponse(Future.failedFuture(e), routingContext);
-            return;
-        }
-
-        JsonArray payload = routingContext.getBodyAsJsonArray();
-
-        AggregatedProfileNamingStrategy profileName = new AggregatedProfileNamingStrategy(baseDir, VERSION, appId, clusterId, procId, startTime, duration, WorkType.cpu_sample_work);
-        Future<Pair<AggregatedSamplesPerTraceCtx,CalleesTreeView>> calleesTreeView = profileStoreAPI.getCpuSamplingCalleesTreeView(profileName, traceName);
-
-        calleesTreeView.setHandler(ar -> {
-            if(ar.failed()) {
-                //TODO : handle error codes properly
-                setResponse(ar, routingContext);
-            }
-            else {
-                AggregatedSamplesPerTraceCtx samplesPerTraceCtx = ar.result().first;
-                CalleesTreeView treeView = ar.result().second;
-
-                List<Integer> originIds;
-                if(payload == null) {
-                    originIds = treeView.getRootNodes().stream().map(e -> e.getIdx()).collect(Collectors.toList());
-                }
-                else {
-                    originIds = payload.getList();
-                }
-
-                List<IndexedTreeNode<HotMethodNode>> subTree = treeView.getSubTree(originIds, maxDepth, autoExpand);
-                // TODO : serialize subTree and write to response
-                setResponse(Future.succeededFuture("Got the treeView, so chill out until you write a serializer." + subTree.size()), routingContext);
-            }
-        });
-    }
-
-    private void getCpuSamplingTraces(RoutingContext routingContext) {
-        String appId = routingContext.request().getParam("appId");
-        String clusterId = routingContext.request().getParam("clusterId");
-        String procId = routingContext.request().getParam("procId");
-        WorkType workType = WorkType.cpu_sample_work;
-        String traceName = routingContext.request().getParam("traceName");
-
-        ZonedDateTime startTime;
-        int duration;
-
-        try {
-            startTime = ZonedDateTime.parse(routingContext.request().getParam("start"), DateTimeFormatter.ISO_ZONED_DATE_TIME);
-            duration = Integer.parseInt(routingContext.request().getParam("duration"));
-        } catch (Exception e) {
-            setResponse(Future.failedFuture(new IllegalArgumentException(e)), routingContext);
-            return;
-        }
-
-        AggregatedProfileNamingStrategy filename;
-        try {
-            filename = new AggregatedProfileNamingStrategy(baseDir, 1, appId, clusterId, procId, startTime, duration, workType);
-        } catch (Exception e) {
-            setResponse(Future.failedFuture(new IllegalArgumentException(e)), routingContext);
-            return;
-        }
-
-        Future<AggregatedProfileInfo> future = Future.future();
-        future.setHandler((AsyncResult<AggregatedProfileInfo> result) -> {
-            if (result.succeeded()) {
-                setResponse(Future.succeededFuture(result.result().getAggregatedSamples(traceName)), routingContext, true);
-            } else {
-                setResponse(result, routingContext);
-            }
-        });
-        profileStoreAPI.load(future, filename);
     }
 
     private void handleGetHealth(RoutingContext routingContext) {
@@ -362,22 +297,46 @@ public class HttpVerticle extends AbstractVerticle {
         if(routingContext.response().ended()) {
             return;
         }
-        if(result.failed()) {
-            LOGGER.error(routingContext.request().uri(), result.cause());
 
-            if(result.cause() instanceof FileNotFoundException) {
-                endResponseWithError(routingContext.response(), result.cause(), 404);
+        HttpServerResponse response = routingContext.response();
+
+        if(result.failed()) {
+            Throwable cause = result.cause();
+            LOGGER.error(routingContext.request().uri(), cause);
+
+
+            if(cause instanceof ProfileLoadInProgressException) {
+                // 202 for notifying that profile loading is in progress, and the request can be tried again after some time.
+                endResponseWithError(response, cause, 202);
             }
-            else if(result.cause() instanceof IllegalArgumentException) {
-                endResponseWithError(routingContext.response(), result.cause(), 400);
+            else if(cause instanceof FileNotFoundException) {
+                if(cause instanceof CachedProfileNotFoundException) {
+                    CachedProfileNotFoundException ex = (CachedProfileNotFoundException) cause;
+                    if(ex.isCachedRemotely()) {
+                        response.putHeader("location", "http://" + ex.getIp() + ":" + ex.getPort() + "/");
+                        endResponse(response, 307);
+                        return;
+                    }
+                    else if(ex.getCause() != null) {
+                        // something went wrong while loading it. send 500
+                        endResponseWithError(response, ex.getCause(), 500);
+                        return;
+                    }
+                }
+                endResponseWithError(response, cause, 404);
+            }
+            else if(cause instanceof IllegalArgumentException) {
+                endResponseWithError(response, cause, 400);
+            }
+            else if(cause instanceof ServiceUnavailableException) {
+                endResponseWithError(response, cause, 503);
             }
             else {
-                endResponseWithError(routingContext.response(), result.cause(), 500);
+                endResponseWithError(response, cause, 500);
             }
         }
         else {
             String encodedResponse = Json.encode(result.result());
-            HttpServerResponse response = routingContext.response();
 
             response.putHeader("content-type", "application/json");
             if(gzipped && safeContains(routingContext.request().getHeader("Accept-Encoding"), "gzip")) {
@@ -408,6 +367,10 @@ public class HttpVerticle extends AbstractVerticle {
 
     private void endResponseWithError(HttpServerResponse response, Throwable error, int statusCode) {
         response.setStatusCode(statusCode).end(buildHttpErrorObject(error.getMessage(), statusCode).encode());
+    }
+
+    private void endResponse(HttpServerResponse response, int statusCode) {
+        response.setStatusCode(statusCode).end();
     }
 
     private JsonObject buildHttpErrorObject(String msg, int statusCode) {
@@ -453,41 +416,5 @@ public class HttpVerticle extends AbstractVerticle {
         public String getError() {
             return error;
         }
-    }
-
-    private <T> T parse(HttpServerRequest request, String param, Class<T> clazz, boolean required) {
-        String value = request.getParam(param);
-        if(required && StringUtils.isNullOrEmpty(value)) {
-            throw new IllegalArgumentException(param + " is a required request parameter");
-        }
-        if(!StringUtils.isNullOrEmpty(value)) {
-            try {
-                if(String.class.equals(clazz)) {
-                    return (T) value;
-                }
-                else if(Integer.class.equals(clazz)) {
-                    return (T) Integer.valueOf(value);
-                }
-                else if(ZonedDateTime.class.equals(clazz)) {
-                    return (T) ZonedDateTime.parse(value, DateTimeFormatter.ISO_ZONED_DATE_TIME);
-                }
-                else if(Boolean.class.equals(clazz)) {
-                    return (T) Boolean.valueOf(value);
-                }
-            }
-            catch (Exception e) {
-                throw new IllegalArgumentException("Illegal request parameter \"" + param + "\". " + e.getMessage());
-            }
-            throw new IllegalArgumentException("Request parameter \"" + param + "\" of type " + clazz.getName() + " is not yet supported");
-        }
-        return null;
-    }
-
-    private String parse(HttpServerRequest request, String param) {
-        return parse(request, param, String.class);
-    }
-
-    private <T> T parse(HttpServerRequest request, String param, Class<T> clazz) {
-        return parse(request, param, clazz, true);
     }
 }

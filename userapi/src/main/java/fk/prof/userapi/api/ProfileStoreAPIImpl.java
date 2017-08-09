@@ -8,6 +8,7 @@ import fk.prof.storage.AsyncStorage;
 import fk.prof.userapi.Cacheable;
 import fk.prof.userapi.Configuration;
 import fk.prof.userapi.Pair;
+import fk.prof.userapi.api.cache.CachedProfileNotFoundException;
 import fk.prof.userapi.model.*;
 import fk.prof.userapi.api.cache.ClusterAwareCache;
 import fk.prof.userapi.model.tree.CallTreeView;
@@ -147,7 +148,7 @@ public class ProfileStoreAPIImpl implements ProfileStoreAPI {
     }
 
     public void load(Future<AggregatedProfileInfo> future, AggregatedProfileNamingStrategy filename) {
-        clusterAwareCache.getAggregatedProfile(filename, profileLoader).setHandler(future.completer());
+        clusterAwareCache.getAggregatedProfile(filename).setHandler(future.completer());
     }
 
     public void loadSummary(Future<AggregationWindowSummary> future, AggregatedProfileNamingStrategy filename) {
@@ -182,19 +183,42 @@ public class ProfileStoreAPIImpl implements ProfileStoreAPI {
 
     @Override
     public Future<Pair<AggregatedSamplesPerTraceCtx, CallTreeView>> getCpuSamplingCallersTreeView(AggregatedProfileNamingStrategy profileName, String traceName) {
-        return clusterAwareCache.getCallTreeView(profileName, traceName, aggregatedProfileInfo -> {
-            AggregatedOnCpuSamples samplesData = (AggregatedOnCpuSamples) aggregatedProfileInfo.getAggregatedSamples(traceName).getAggregatedSamples();
-            return new CallTreeView(samplesData.getCallTree());
+        Future<Pair<AggregatedSamplesPerTraceCtx, CallTreeView>> result = Future.future();
+
+        clusterAwareCache.getCallTreeView(profileName, traceName).setHandler(ar -> {
+            if(ar.failed() && ar.cause() instanceof CachedProfileNotFoundException && !((CachedProfileNotFoundException) ar.cause()).isCachedRemotely()) {
+                // initiate the load locally
+                Future<AggregatedProfileInfo> profileLoad = Future.future();
+                load(profileLoad, profileName);
+
+                profileLoad.setHandler(ar2 -> clusterAwareCache.getCallTreeView(profileName, traceName).setHandler(result.completer()));
+            }
+            else {
+                result.handle(ar);
+            }
         });
 
+        return result;
     }
 
     @Override
     public Future<Pair<AggregatedSamplesPerTraceCtx, CalleesTreeView>> getCpuSamplingCalleesTreeView(AggregatedProfileNamingStrategy profileName, String traceName) {
-        return clusterAwareCache.getCalleesTreeView(profileName, traceName, aggregatedProfileInfo -> {
-            AggregatedOnCpuSamples samplesData = (AggregatedOnCpuSamples) aggregatedProfileInfo.getAggregatedSamples(traceName).getAggregatedSamples();
-            return new CalleesTreeView(samplesData.getCallTree());
+        Future<Pair<AggregatedSamplesPerTraceCtx, CalleesTreeView>> result = Future.future();
+
+        clusterAwareCache.getCalleesTreeView(profileName, traceName).setHandler(ar -> {
+            if(ar.failed() && ar.cause() instanceof CachedProfileNotFoundException && !((CachedProfileNotFoundException) ar.cause()).isCachedRemotely()) {
+                // initiate the load locally
+                Future<AggregatedProfileInfo> profileLoad = Future.future();
+                load(profileLoad, profileName);
+
+                profileLoad.setHandler(ar2 -> clusterAwareCache.getCalleesTreeView(profileName, traceName).setHandler(result.completer()));
+            }
+            else {
+                result.handle(ar);
+            }
         });
+
+        return result;
     }
 
     private <T> void saveRequestedFuture(String filename, Future<T> future) {

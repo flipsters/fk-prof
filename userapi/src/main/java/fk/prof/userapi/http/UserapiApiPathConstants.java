@@ -9,7 +9,6 @@ public final class UserapiApiPathConstants {
   public static final String PROC_GIVEN_APPID_CLUSTERID = "/proc/:appId/:clusterId";
   public static final String PROFILES_GIVEN_APPID_CLUSTERID_PROCID = "/profiles/:appId/:clusterId/:procId";
   public static final String PROFILE_GIVEN_APPID_CLUSTERID_PROCID_WORKTYPE_TRACENAME = "/profile/:appId/:clusterId/:procId/cpu-sampling/:traceName";
-  public static final String CALLEES_WITH_CPU_SAMPLING_INFO = "/callees/:appId/:clusterId/:procId/cpu-sampling/:traceName";
-  public static final String CALLERS_WITH_CPU_SAMPLING_INFO = "/callers/:appId/:clusterId/:procId/cpu-sampling/:traceName";
+  public static final String VIEW_FOR_CPU_SAMPLING = "/:viewType/:appId/:clusterId/:procId/cpu-sampling/:traceName";
   public static final String HEALTHCHECK = "/health";
 }

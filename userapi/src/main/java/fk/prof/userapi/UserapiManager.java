@@ -13,8 +13,10 @@ import com.google.common.base.Preconditions;
 import fk.prof.storage.AsyncStorage;
 import fk.prof.storage.S3AsyncStorage;
 import fk.prof.storage.S3ClientFactory;
+import fk.prof.userapi.api.AggregatedProfileLoader;
 import fk.prof.userapi.api.ProfileStoreAPI;
 import fk.prof.userapi.api.ProfileStoreAPIImpl;
+import fk.prof.userapi.api.ProfileViewCreator;
 import fk.prof.userapi.api.cache.ClusterAwareCache;
 import fk.prof.userapi.api.cache.LocalProfileCache;
 import fk.prof.userapi.deployer.VerticleDeployer;
@@ -65,12 +67,14 @@ public class UserapiManager {
         curatorClient.start();
         curatorClient.blockUntilConnected(config.getCuratorConfig().getConnectionTimeoutMs(), TimeUnit.MILLISECONDS);
 
+        this.storage = initStorage();
+
         this.cache = new ClusterAwareCache(curatorClient,
             vertx.createSharedWorkerExecutor(this.config.getBlockingWorkerPool().getName(), this.config.getBlockingWorkerPool().getSize()),
             new LocalProfileCache(this.config),
+            new AggregatedProfileLoader(this.storage),
+            new ProfileViewCreator(),
             this.config);
-
-        this.storage = initStorage();
     }
 
     public Future<Void> close() {

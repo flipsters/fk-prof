@@ -9,6 +9,7 @@ import fk.prof.userapi.Pair;
 import fk.prof.userapi.UserapiConfigManager;
 import fk.prof.userapi.api.AggregatedProfileLoader;
 import fk.prof.userapi.api.ProfileStoreAPIImpl;
+import fk.prof.userapi.api.ProfileViewCreator;
 import fk.prof.userapi.model.AggregatedProfileInfo;
 import fk.prof.userapi.model.AggregatedSamplesPerTraceCtx;
 import fk.prof.userapi.model.tree.CallTreeView;
@@ -39,7 +40,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -92,20 +92,13 @@ public class CacheTest {
         cleanUpZookeeper();
     }
 
-    private void setUpDefaultCache(TestContext context) {
-        localProfileCache = new LocalProfileCache(config);
-        cache = new ClusterAwareCache(curator, executor, localProfileCache, config);
-        Async async = context.async();
-        cache.onClusterJoin().setHandler(ar -> {
-            context.assertTrue(ar.succeeded());
-            async.complete();
-        });
-        async.awaitSuccess(500);
+    private void setUpDefaultCache(TestContext context, AggregatedProfileLoader profileLoader, ProfileViewCreator viewCreator) {
+        setUpCache(context, new LocalProfileCache(config), profileLoader, viewCreator);
     }
 
-    private void setUpCache(TestContext context, LocalProfileCache localCache) {
+    private void setUpCache(TestContext context, LocalProfileCache localCache, AggregatedProfileLoader profileLoader, ProfileViewCreator viewCreator) {
         localProfileCache = localCache;
-        cache = new ClusterAwareCache(curator, executor, localProfileCache, config);
+        cache = new ClusterAwareCache(curator, executor, localProfileCache, profileLoader, viewCreator, config);
         Async async = context.async();
         cache.onClusterJoin().setHandler(ar -> {
             context.assertTrue(ar.succeeded());
@@ -116,7 +109,8 @@ public class CacheTest {
 
     @Test(timeout = 1000)
     public void testNodesInfoExistWhenCacheIsCreated(TestContext context) throws Exception {
-        setUpDefaultCache(context);
+        setUpDefaultCache(context, null, null);
+
         byte[] bytes = curator.getData().forPath("/nodesInfo/127.0.0.1:" + config.getHttpConfig().getHttpPort());
         Assert.assertNotNull(bytes);
         Assert.assertNotNull(LoadInfoEntities.NodeLoadInfo.parseFrom(bytes));
@@ -124,13 +118,14 @@ public class CacheTest {
 
     @Test(timeout = 3500)
     public void testLoadProfile_shouldCallLoaderOnlyOnceOnMultipleInvocations(TestContext context) throws Exception {
-        setUpDefaultCache(context);
         Async async = context.async(2);
         NameProfilePair npPair = npPair("proc1", dt(0));
         AggregatedProfileLoader loader = mockedProfileLoader(npPair);
 
-        Future<AggregatedProfileInfo> profile1 = cache.getAggregatedProfile(npPair.name, loader);
-        Future<AggregatedProfileInfo> profile2 = cache.getAggregatedProfile(npPair.name, loader);
+        setUpDefaultCache(context, loader, null);
+
+        Future<AggregatedProfileInfo> profile1 = cache.getAggregatedProfile(npPair.name);
+        Future<AggregatedProfileInfo> profile2 = cache.getAggregatedProfile(npPair.name);
 
         profile1.setHandler(ar -> {
             context.assertTrue(ar.failed());
@@ -150,7 +145,7 @@ public class CacheTest {
         // fetch it again after waiting for some time
         Thread.sleep(1000);
         Async async2 = context.async(1);
-        profile1 = cache.getAggregatedProfile(npPair.name, loader);
+        profile1 = cache.getAggregatedProfile(npPair.name);
 
         profile1.setHandler(ar -> {
             context.assertTrue(ar.succeeded());
@@ -162,12 +157,14 @@ public class CacheTest {
     @Test(timeout =  2500)
     public void testLoadProfileAndView_shouldReturnWithTheExactCause(TestContext context) throws Exception {
         Async async = context.async(2);
-        setUpDefaultCache(context);
         Exception e = new IOException();
+
+        setUpDefaultCache(context, mockedProfileLoader(), null);
+
         AggregatedProfileNamingStrategy profileName = profileName("proc1", dt(0));
         localProfileCache.put(profileName, Future.failedFuture(e));
 
-        Future<AggregatedProfileInfo> profile1 = cache.getAggregatedProfile(profileName, mockedProfileLoader());
+        Future<AggregatedProfileInfo> profile1 = cache.getAggregatedProfile(profileName);
 
         profile1.setHandler(ar -> {
             context.assertTrue(ar.failed());
@@ -176,7 +173,7 @@ public class CacheTest {
             async.countDown();
         });
 
-        Future<Pair<AggregatedSamplesPerTraceCtx, CallTreeView>> view = cache.getCallTreeView(profileName, "", null);
+        Future<Pair<AggregatedSamplesPerTraceCtx, CallTreeView>> view = cache.getCallTreeView(profileName, "");
         view.setHandler(ar -> {
             context.assertTrue(ar.failed());
             context.assertTrue(ar.cause() instanceof CachedProfileNotFoundException);
@@ -188,14 +185,15 @@ public class CacheTest {
     @Test(timeout = 2500)
     public void testLoadCallersView_shouldReturnCallersViewForAlreadyLoadedProfile(TestContext context) throws Exception {
         Async async = context.async(2);
-        setUpDefaultCache(context);
+
         NameProfilePair npPair = npPair("proc1", dt(0));
+        ProfileViewCreator viewCreator = mockedViewCreator(CallTreeView.class, npPair);
+
+        setUpDefaultCache(context, null, viewCreator);
         localProfileCache.put(npPair.name, Future.succeededFuture(npPair.profileInfo));
 
-        Function<AggregatedProfileInfo, CallTreeView> viewCreator = mockedViewCreator(CallTreeView.class, npPair);
-
-        Future<Pair<AggregatedSamplesPerTraceCtx, CallTreeView>> view1 = cache.getCallTreeView(npPair.name, "t1", viewCreator);
-        Future<Pair<AggregatedSamplesPerTraceCtx, CallTreeView>> view2 = cache.getCallTreeView(npPair.name, "t1", viewCreator);
+        Future<Pair<AggregatedSamplesPerTraceCtx, CallTreeView>> view1 = cache.getCallTreeView(npPair.name, "t1");
+        Future<Pair<AggregatedSamplesPerTraceCtx, CallTreeView>> view2 = cache.getCallTreeView(npPair.name, "t1");
 
         view1.setHandler(ar -> {
             context.assertTrue(ar.succeeded());
@@ -210,18 +208,19 @@ public class CacheTest {
         });
 
         async.awaitSuccess(2000);
-        verify(viewCreator, times(1)).apply(same(npPair.profileInfo));
+        verify(viewCreator, times(1)).buildCallTreeView(same(npPair.profileInfo), eq("t1"));
     }
 
     @Test(timeout = 2500)
     public void testLoadProfileAndViewWhenRemotelyCached_shouldThrowExceptionWithRemoteIp(TestContext context) throws Exception {
         Async async = context.async(1);
-        setUpDefaultCache(context);
+
         AggregatedProfileNamingStrategy profileName = profileName("proc1", dt(0));
         // update zookeeper that tells that profile is loaded somewhere else
         createProfileNode(profileName, "127.0.0.1", 3456);
+        setUpDefaultCache(context, mockedProfileLoader(), null);
 
-        Future<AggregatedProfileInfo> profile1 = cache.getAggregatedProfile(profileName, mockedProfileLoader());
+        Future<AggregatedProfileInfo> profile1 = cache.getAggregatedProfile(profileName);
 
         profile1.setHandler(ar -> {
             context.assertTrue(ar.failed());
@@ -236,7 +235,7 @@ public class CacheTest {
         async.awaitSuccess(2000);
 
         Async async2 = context.async(1);
-        Future<?> f = cache.getCalleesTreeView(profileName, "t1", null);
+        Future<?> f = cache.getCalleesTreeView(profileName, "t1");
         f.setHandler(ar -> {
             context.assertTrue(ar.failed());
             context.assertTrue(ar.cause() instanceof CachedProfileNotFoundException);
@@ -248,20 +247,21 @@ public class CacheTest {
         });
     }
 
-    @Test(timeout = 4000)
+    @Test(timeout = 4000000)
     public void testProfileExpiry_cacheShouldGetInvalidated_EntryShouldBeRemovedFromZookeeper(TestContext context) throws Exception {
         TestTicker ticker = new TestTicker();
-        setUpCache(context, new LocalProfileCache(config, ticker));
 
         NameProfilePair npPair = npPair("proc2", dt(0));
         AggregatedProfileLoader loader = mockedProfileLoader(npPair);
-        Function<AggregatedProfileInfo, CallTreeView> viewCreator = mockedViewCreator(CallTreeView.class, npPair);
+        ProfileViewCreator viewCreator = mockedViewCreator(CallTreeView.class, npPair);
+
+        setUpCache(context, new LocalProfileCache(config, ticker), loader, viewCreator);
 
         Async async1 = context.async();
-        cache.getAggregatedProfile(npPair.name, loader);
+        cache.getAggregatedProfile(npPair.name);
         Thread.sleep(1200);
 
-        Future<?> profile1 = cache.getAggregatedProfile(npPair.name, loader);
+        Future<?> profile1 = cache.getAggregatedProfile(npPair.name);
         profile1.setHandler(ar -> {
             context.assertTrue(ar.succeeded());
             async1.countDown();
@@ -269,7 +269,7 @@ public class CacheTest {
         async1.awaitSuccess(2000);
 
         Async async2 = context.async();
-        Future<?> view1 = cache.getCallTreeView(npPair.name, "t1", viewCreator);
+        Future<?> view1 = cache.getCallTreeView(npPair.name, "t1");
         view1.setHandler(ar -> {
             context.assertTrue(ar.succeeded());
             async2.countDown();
@@ -281,15 +281,15 @@ public class CacheTest {
 
         // retry fetching
         Async async3 = context.async(1);
-        view1 = cache.getCallTreeView(npPair.name, "t1", viewCreator);
+        view1 = cache.getCallTreeView(npPair.name, "t1");
         view1.setHandler(ar -> {
             context.assertTrue(ar.failed());
             context.assertTrue(ar.cause() instanceof CachedProfileNotFoundException);
             async3.countDown();
         });
-        async3.awaitSuccess(1000);
+        async3.awaitSuccess(1000000);
 
-        verify(viewCreator, times(1)).apply(same(npPair.profileInfo));
+        verify(viewCreator, times(1)).buildCallTreeView(same(npPair.profileInfo), eq("t1"));
         verify(loader, times(1)).load(any(), same(npPair.name));
     }
 
@@ -304,16 +304,17 @@ public class CacheTest {
         return loader;
     }
 
-    private <T> Function<AggregatedProfileInfo, T> mockedViewCreator(Class<T> clazz, NameProfilePair... npPairs) {
-        Function<AggregatedProfileInfo, T> foo = mock(Function.class);
+    private <T> ProfileViewCreator mockedViewCreator(Class<T> clazz, NameProfilePair... npPairs) {
+        ProfileViewCreator foo = mock(ProfileViewCreator.class);
         for(NameProfilePair npPair : npPairs) {
             if(CallTreeView.class.equals(clazz)) {
-                doReturn(npPair.calltreeView).when(foo).apply(npPair.profileInfo);
+                doReturn(npPair.calltreeView).when(foo).buildCallTreeView(same(npPair.profileInfo), any());
             }
             else {
-                doReturn(npPair.calleesTreeView).when(foo).apply(npPair.profileInfo);
+                doReturn(npPair.calleesTreeView).when(foo).buildCalleesTreeView(same(npPair.profileInfo), any());
             }
         }
+
         return foo;
     }
 

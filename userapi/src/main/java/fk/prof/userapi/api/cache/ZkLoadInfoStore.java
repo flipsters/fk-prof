@@ -65,7 +65,12 @@ public class ZkLoadInfoStore {
 
     public boolean ensureBasePathExists() throws Exception {
         ensureConnected();
-        zookeeper.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(zkNodesInfoPath, buildNodeLoadInfo(0).toByteArray());
+        if(zookeeper.checkExists().forPath(zkNodesInfoPath) == null) {
+            zookeeper.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(zkNodesInfoPath, buildNodeLoadInfo(0).toByteArray());
+        }
+        else {
+            zookeeper.setData().forPath(zkNodesInfoPath, buildNodeLoadInfo(0).toByteArray());
+        }
         if(zookeeper.checkExists().forPath("/profilesLoadStatus") == null) {
             zookeeper.create().withMode(CreateMode.PERSISTENT).forPath("/profilesLoadStatus");
             return true;
