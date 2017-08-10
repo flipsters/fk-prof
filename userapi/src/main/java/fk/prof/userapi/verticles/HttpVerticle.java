@@ -15,7 +15,6 @@ import fk.prof.userapi.http.UserapiApiPathConstants;
 import fk.prof.userapi.model.AggregatedSamplesPerTraceCtx;
 import fk.prof.userapi.model.AggregationWindowSummary;
 import fk.prof.userapi.model.tree.CalleesTreeView;
-import fk.prof.userapi.model.tree.TreeViewResponse;
 import fk.prof.userapi.model.tree.CallTreeView;
 import fk.prof.userapi.model.tree.IndexedTreeNode;
 import fk.prof.userapi.model.tree.TreeViewResponse.CpuSampleCalleesTreeViewResponse;
@@ -240,14 +239,11 @@ public class HttpVerticle extends AbstractVerticle {
             duration = getParam(req, "duration", Integer.class);
             autoExpand = MoreObjects.firstNonNull(getParam(req, "autoExpand", Boolean.class, false), false);
             maxDepth = Math.min(maxDepthForTreeExpand, MoreObjects.firstNonNull(getParam(req, "maxDepth", Integer.class, false), maxDepthForTreeExpand));
+            nodeIds = routingContext.getBodyAsJsonArray().getList();
         }
         catch (IllegalArgumentException e) {
             setResponse(Future.failedFuture(e), routingContext);
             return;
-        }
-
-        try {
-            nodeIds = routingContext.getBodyAsJsonArray().getList();
         }
         catch (Exception e) {
             setResponse(Future.failedFuture(new IllegalArgumentException(e)), routingContext);

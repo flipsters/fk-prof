@@ -221,7 +221,7 @@ public class CallTreeTest {
         CallTreeView ctv = new CallTreeView(calltree);
         List<IndexedTreeNode<FrameNode>> subtree = ctv.getSubTree(toList(ctv.getRootNodes().get(0).getIdx()), 1, false);
 
-        Assert.assertEquals("{\"method_lookup\":{},\"0\":{\"1\":{\"data\":[1,0,0]},\"2\":{\"data\":[2,0,14]},\"7\":{\"data\":[7,0,9]}}}",
+        Assert.assertEquals("{\"method_lookup\":{},\"0\":{\"data\":[0,0,23],\"chld\":{\"1\":{\"data\":[1,0,0]},\"2\":{\"data\":[2,0,14]},\"7\":{\"data\":[7,0,9]}}}}",
             mapper.writeValueAsString(new TreeViewResponse.CpuSampleCallersTreeViewResponse(subtree, new HashMap<>())));
     }
 

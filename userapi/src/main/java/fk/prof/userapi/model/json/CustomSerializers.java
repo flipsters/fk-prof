@@ -74,13 +74,7 @@ public class CustomSerializers {
 
             for (IndexedTreeNode node : nodes) {
                 gen.writeFieldName(String.valueOf(node.getIdx()));
-                gen.writeStartObject();
-                List<IndexedTreeNode> children = node.getChildren();
-                for (IndexedTreeNode chld : children) {
-                    gen.writeFieldName(String.valueOf(chld.getIdx()));
-                    indexedNodeSerializer.serialize(chld, gen, serializers);
-                }
-                gen.writeEndObject();
+                indexedNodeSerializer.serialize(node, gen, serializers);
             }
         }
     }
