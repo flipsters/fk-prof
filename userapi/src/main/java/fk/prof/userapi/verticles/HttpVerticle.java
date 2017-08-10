@@ -18,6 +18,8 @@ import fk.prof.userapi.model.tree.CalleesTreeView;
 import fk.prof.userapi.model.tree.TreeViewResponse;
 import fk.prof.userapi.model.tree.CallTreeView;
 import fk.prof.userapi.model.tree.IndexedTreeNode;
+import fk.prof.userapi.model.tree.TreeViewResponse.CpuSampleCalleesTreeViewResponse;
+import fk.prof.userapi.model.tree.TreeViewResponse.CpuSampleCallersTreeViewResponse;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -284,7 +286,7 @@ public class HttpVerticle extends AbstractVerticle {
 
                 subTree.forEach(e -> e.visit((i,data) -> methodLookup.put(data.getMethodId(), samplesPerTraceCtx.getMethodLookup().get(data.getMethodId()))));
 
-                setResponse(Future.succeededFuture(new TreeViewResponse<>(subTree, methodLookup)), routingContext);
+                setResponse(Future.succeededFuture(new CpuSampleCallersTreeViewResponse(subTree, methodLookup)), routingContext);
             }
         });
     }
@@ -311,7 +313,7 @@ public class HttpVerticle extends AbstractVerticle {
 
                 subTree.forEach(e -> e.visit((i,data) -> methodLookup.put(data.getMethodId(), samplesPerTraceCtx.getMethodLookup().get(data.getMethodId()))));
 
-                setResponse(Future.succeededFuture(new TreeViewResponse<>(subTree, methodLookup)), routingContext);
+                setResponse(Future.succeededFuture(new CpuSampleCalleesTreeViewResponse(subTree, methodLookup)), routingContext);
             }
         });
     }

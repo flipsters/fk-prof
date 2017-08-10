@@ -12,7 +12,6 @@ import fk.prof.userapi.api.MockAggregationWindow;
 import fk.prof.userapi.model.json.CustomSerializers;
 import fk.prof.userapi.model.json.ProtoSerializers;
 import fk.prof.userapi.model.tree.*;
-import fk.prof.userapi.model.tree.CalleesTreeView.HotMethodNode;
 import io.vertx.core.Future;
 
 import org.junit.Assert;
@@ -24,6 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -44,7 +44,7 @@ public class CallTreeTest {
     private static CallTree calltree;
     private static List<String> methodIdLookup;
     private static IndexedTreeNode<FrameNode> expectedTree;
-    private static List<IndexedTreeNode<HotMethodNode>> expectedHotMethodsTree;
+    private static List<IndexedTreeNode<FrameNode>> expectedHotMethodsTree;
     private static ObjectMapper mapper;
 
     @BeforeClass
@@ -92,33 +92,33 @@ public class CallTreeTest {
         // expected hotMethodTree
         expectedHotMethodsTree =
             Arrays.asList(
-                hmnode(4, mId("G()"), 1,
-                    hmnode(3, mId("D()"), 6,
-                        hmnode(2, mId("A()"), 0,
-                            hmnode(0, 0, 0)))),
-                hmnode(3, mId("D()"), 6,
-                    hmnode(2, mId("A()"), 0,
-                        hmnode(0, 0, 0))),
-                hmnode(6, mId("C()"), 2,
-                    hmnode(5, mId("B()"), 5,
-                        hmnode(2, mId("A()"), 0,
-                            hmnode(0, 0, 0)))),
-                hmnode(5, mId("B()"), 5,
-                    hmnode(2, mId("A()"), 0,
-                        hmnode(0, 0, 0))),
-                hmnode(10, mId("C()"), 3,
-                    hmnode(9, mId("B()"), 2,
-                        hmnode(8, mId("F()"), 0,
-                            hmnode(7, mId("E()"), 0,
-                                hmnode(0, 0, 0))))),
-                hmnode(9, mId("B()"), 2,
-                    hmnode(8, mId("F()"), 0,
-                        hmnode(7, mId("E()"), 0,
-                            hmnode(0, 0, 0)))),
-                hmnode(11, mId("D()"), 4,
-                    hmnode(8, mId("F()"), 0,
-                        hmnode(7, mId("E()"), 0,
-                            hmnode(0, 0, 0)))));
+                hmnode(4, mId("G()"), 1, 1, 0,
+                    hmnode(3, mId("D()"), 6, 7, 1,
+                        hmnode(2, mId("A()"), 0, 14, 2,
+                            hmnode(0, 0, 0, 23, 3)))),
+                hmnode(3, mId("D()"), 6, 7, 1,
+                    hmnode(2, mId("A()"), 0, 14, 2,
+                        hmnode(0, 0, 0, 23, 3))),
+                hmnode(6, mId("C()"), 2, 2, 0,
+                    hmnode(5, mId("B()"), 5, 7, 1,
+                        hmnode(2, mId("A()"), 0, 14, 2,
+                            hmnode(0, 0, 0, 0, 3)))),
+                hmnode(5, mId("B()"), 5, 7, 1,
+                    hmnode(2, mId("A()"), 0, 14, 2,
+                        hmnode(0, 0, 0, 0, 3))),
+                hmnode(10, mId("C()"), 3, 3, 0,
+                    hmnode(9, mId("B()"), 2, 5, 1,
+                        hmnode(8, mId("F()"), 0, 9, 2,
+                            hmnode(7, mId("E()"), 0, 9, 1,
+                                hmnode(0, 0, 0, 0, 3))))),
+                hmnode(9, mId("B()"), 2, 5, 1,
+                    hmnode(8, mId("F()"), 0, 9, 2,
+                        hmnode(7, mId("E()"), 0, 9, 1,
+                            hmnode(0, 0, 0, 0, 3)))),
+                hmnode(11, mId("D()"), 4, 4, 0,
+                    hmnode(8, mId("F()"), 0, 9, 2,
+                        hmnode(7, mId("E()"), 0, 9, 1,
+                            hmnode(0, 0, 0, 0, 3)))));
 
         mapper = new ObjectMapper();
         ProtoSerializers.registerSerializers(mapper);
@@ -184,15 +184,15 @@ public class CallTreeTest {
         CalleesTreeView hmtv = new CalleesTreeView(calltree);
 
         // all hotmethods
-        List<IndexedTreeNode<HotMethodNode>> hm = hmtv.getRootNodes();
+        List<IndexedTreeNode<FrameNode>> hm = hmtv.getRootNodes();
         testTreeEquality(hm, expectedHotMethodsTree);
 
         // get callers of C() [sampleCount:3]
-        List<IndexedTreeNode<HotMethodNode>> C3_callers_2deep = hmtv.getSubTree(toList(10), 2, false);
+        List<IndexedTreeNode<FrameNode>> C3_callers_2deep = hmtv.getSubTree(toList(10), 2, false);
         testTreeEquality(C3_callers_2deep, toList(expectedHotMethodsTree.get(4)));
 
         // get callers of D() [sampleCount:6]
-        List<IndexedTreeNode<HotMethodNode>> D6_callers_1deep = hmtv.getSubTree(toList(3), 1, false);
+        List<IndexedTreeNode<FrameNode>> D6_callers_1deep = hmtv.getSubTree(toList(3), 1, false);
         testTreeEquality(D6_callers_1deep, toList(expectedHotMethodsTree.get(1)));
     }
 
@@ -207,12 +207,12 @@ public class CallTreeTest {
         /* all hotmethods
            only those branches will be visible which has D in it, i.e. 0, 1, 6th element from expectedHotMethodTree
          */
-        List<IndexedTreeNode<HotMethodNode>> hm = hmtv.getRootNodes();
+        List<IndexedTreeNode<FrameNode>> hm = hmtv.getRootNodes();
         testTreeEquality(hm,
             Arrays.asList(expectedHotMethodsTree.get(0), expectedHotMethodsTree.get(1), expectedHotMethodsTree.get(6)));
 
         // get callers of G() [sampleCount:1]
-        List<IndexedTreeNode<HotMethodNode>> G1_callers_5deep = hmtv.getSubTree(toList(4), 5, false);
+        List<IndexedTreeNode<FrameNode>> G1_callers_5deep = hmtv.getSubTree(toList(4), 5, false);
         testTreeEquality(G1_callers_5deep, toList(expectedHotMethodsTree.get(0)));
     }
 
@@ -240,12 +240,13 @@ public class CallTreeTest {
     }
 
     private <T> void testTreeEquality(List<IndexedTreeNode<T>> actual, List<IndexedTreeNode<T>> expected) {
-        Assert.assertTrue(actual != null ? actual.size() == expected.size() : true);
+        Assert.assertTrue(actual == null || actual.size() == expected.size());
         for(IndexedTreeNode<T> child: actual) {
             testTreeEquality(child, expected.get(expected.indexOf(child)));
         }
     }
 
+    @SafeVarargs
     private static IndexedTreeNode<FrameNode> node(int id, int methodId, int cpuSamples, int stackSamples, IndexedTreeNode<FrameNode>... children) {
         return new IndexedTreeNode<>(id, FrameNode.newBuilder()
             .setChildCount(children == null ? 0 : children.length)
@@ -257,8 +258,16 @@ public class CallTreeTest {
             ).build(), children == null ? null : Arrays.asList(children));
     }
 
-    private static IndexedTreeNode<HotMethodNode> hmnode(int id, int methodId, int samples, IndexedTreeNode<HotMethodNode>... children) {
-        return new IndexedTreeNode<>(id, new HotMethodNode(methodId, 0, samples), children == null ? null : Arrays.asList(children));
+    @SafeVarargs
+    private static IndexedTreeNode<FrameNode> hmnode(int id, int methodId, int cpuSamples, int stackSamples, int childCount, IndexedTreeNode<FrameNode>... children) {
+        return new IndexedTreeNode<>(id, FrameNode.newBuilder()
+            .setChildCount(childCount)
+            .setMethodId(methodId)
+            .setLineNo(0)
+            .setCpuSamplingProps(AggregatedProfileModel.CPUSamplingNodeProps.newBuilder()
+                .setOnStackSamples(stackSamples)
+                .setOnCpuSamples(cpuSamples)
+            ).build(), children == null ? null : Arrays.asList(children));
     }
 
     private static IndexedTreeNode<FrameNode> filterTree(IndexedTreeNode<FrameNode> tree, List<Integer> except) {
@@ -269,14 +278,15 @@ public class CallTreeTest {
     }
 
     private static List<IndexedTreeNode<FrameNode>> filterTree(List<IndexedTreeNode<FrameNode>> nodes, List<Integer> except) {
-        return nodes.stream().map(c -> filterTree(c, except)).filter(c -> c != null).collect(Collectors.toList());
+        return nodes.stream().map(c -> filterTree(c, except)).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     private static int mId(String methodName) {
         return methodIdLookup.indexOf(methodName);
     }
 
-    private <T> List<T> toList(T... elements) {
+    @SafeVarargs
+    private static <T> List<T> toList(T... elements) {
         return Arrays.asList(elements);
     }
 }
