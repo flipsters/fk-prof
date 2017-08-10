@@ -1,5 +1,7 @@
 package fk.prof.userapi.model.tree;
 
+import fk.prof.aggregation.proto.AggregatedProfileModel.FrameNode;
+
 import java.util.List;
 import java.util.Map;
 
@@ -22,5 +24,29 @@ public class TreeViewResponse<T> {
 
     public Map<Integer, String> getMethodLookup() {
         return methodLookup;
+    }
+
+    public static class CpuSampleCallersTreeViewResponse extends TreeViewResponse<FrameNode> {
+
+        public CpuSampleCallersTreeViewResponse(List<IndexedTreeNode<FrameNode>> tree, Map<Integer, String> methodLookup) {
+            super(tree, methodLookup);
+        }
+
+        @Override
+        public List<IndexedTreeNode<FrameNode>> getTree() {
+            return super.getTree();
+        }
+    }
+
+    public static class CpuSampleCalleesTreeViewResponse extends TreeViewResponse<FrameNode> {
+
+        public CpuSampleCalleesTreeViewResponse(List<IndexedTreeNode<FrameNode>> tree, Map<Integer, String> methodLookup) {
+            super(tree, methodLookup);
+        }
+
+        @Override
+        public List<IndexedTreeNode<FrameNode>> getTree() {
+            return super.getTree();
+        }
     }
 }

@@ -73,7 +73,7 @@ public class Configuration {
 
     @NotNull
     @JsonProperty("maxDepthExpansion")
-    private Integer maxDepthExpansion = 24;
+    private Integer maxDepthExpansion = 8;
 
     public String getIpAddress() {
         return ipAddress;

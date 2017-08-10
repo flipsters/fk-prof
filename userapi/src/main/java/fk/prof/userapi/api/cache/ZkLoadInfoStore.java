@@ -220,7 +220,7 @@ public class ZkLoadInfoStore {
 
     private void reInit() throws Exception {
         List<AggregatedProfileNamingStrategy> cachedProfiles = this.cachedProfiles.get();
-        try(AutoCloseable lock = getLock()) {
+        try(AutoCloseable lock = new CloseableSharedLock(false)) {
 
             List<Boolean> exists;
 

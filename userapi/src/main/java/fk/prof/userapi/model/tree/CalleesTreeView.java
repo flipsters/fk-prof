@@ -14,18 +14,18 @@ import java.util.stream.Collectors;
 public class CalleesTreeView implements Cacheable {
 
     private Tree<FrameNode> callTree;
-    private List<IndexedTreeNode<HotMethodNode>> hotMethods;
+    private List<IndexedTreeNode<FrameNode>> hotMethods;
 
     public CalleesTreeView(Tree<FrameNode> callTree) {
         this.callTree = callTree;
         findOnCpuFrames();
     }
 
-    public List<IndexedTreeNode<HotMethodNode>> getRootNodes() {
+    public List<IndexedTreeNode<FrameNode>> getRootNodes() {
         return hotMethods;
     }
 
-    public List<IndexedTreeNode<HotMethodNode>> getSubTree(List<Integer> ids, int depth, boolean autoExpand) {
+    public List<IndexedTreeNode<FrameNode>> getSubTree(List<Integer> ids, int depth, boolean autoExpand) {
         return new Expander(ids, depth, autoExpand).expand();
     }
 
@@ -34,7 +34,7 @@ public class CalleesTreeView implements Cacheable {
         callTree.foreach((i, fn) -> {
             int cpuSampleCount = fn.getCpuSamplingProps().getOnCpuSamples();
             if(cpuSampleCount > 0) {
-                hotMethods.add(new IndexedTreeNode<>(i, new HotMethodNode(fn)));
+                hotMethods.add(new IndexedTreeNode<>(i, fn));
             }
         });
     }
@@ -50,16 +50,16 @@ public class CalleesTreeView implements Cacheable {
             this.autoExpand = autoExpand;
         }
 
-        List<IndexedTreeNode<HotMethodNode>> expand() {
-            Map<Integer, List<IndexedTreeNode<HotMethodNode>>> idxGroupedByMethodId = ids.stream()
-                .map(e -> new IndexedTreeNode<>(e, new HotMethodNode(callTree.get(e))))
-                .collect(Collectors.groupingBy(e -> e.getData().methodId));
+        List<IndexedTreeNode<FrameNode>> expand() {
+            Map<Integer, List<IndexedTreeNode<FrameNode>>> idxGroupedByMethodId = ids.stream()
+                .map(e -> new IndexedTreeNode<>(e, callTree.get(e)))
+                .collect(Collectors.groupingBy(e -> e.getData().getMethodId()));
             return idxGroupedByMethodId.values().stream().peek(this::expand).flatMap(List::stream).collect(Collectors.toList());
         }
 
-        void expand(List<IndexedTreeNode<HotMethodNode>> nodes) {
+        void expand(List<IndexedTreeNode<FrameNode>> nodes) {
             // next set of callers.
-            List<IndexedTreeNode<HotMethodNode>> callers = new ArrayList<>(nodes);
+            List<IndexedTreeNode<FrameNode>> callers = new ArrayList<>(nodes);
             HashSet<Integer> methodidSet = new HashSet<>();
 
             for(int d = 0; d < maxDepth; ++d) {
@@ -70,7 +70,7 @@ public class CalleesTreeView implements Cacheable {
                     // if parent node exist, add it as a caller to the current caller, and update the current caller
                     if(callerId > 0) {
                         FrameNode fn = callTree.get(callerId);
-                        IndexedTreeNode<HotMethodNode> caller = new IndexedTreeNode<>(callerId, new HotMethodNode(fn));
+                        IndexedTreeNode<FrameNode> caller = new IndexedTreeNode<>(callerId, fn);
                         callers.get(i).setChildren(Collections.singletonList(caller));
                         callers.set(i, caller);
                         // add the methodid to set
@@ -82,45 +82,6 @@ public class CalleesTreeView implements Cacheable {
                     return;
                 }
             }
-        }
-    }
-
-
-    public static class HotMethodNode {
-        public final int methodId;
-        public final int lineNo;
-        public final int sampleCount;
-
-        public HotMethodNode(FrameNode fn) {
-            this.methodId = fn.getMethodId();
-            this.lineNo = fn.getLineNo();
-            this.sampleCount = fn.getCpuSamplingProps().getOnCpuSamples();
-        }
-
-        public HotMethodNode(int methodId, int lineNo, int sampleCount) {
-            this.methodId = methodId;
-            this.lineNo = lineNo;
-            this.sampleCount = sampleCount;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            HotMethodNode that = (HotMethodNode) o;
-
-            if (methodId != that.methodId) return false;
-            if (lineNo != that.lineNo) return false;
-            return sampleCount == that.sampleCount;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = methodId;
-            result = 31 * result + lineNo;
-            result = 31 * result + sampleCount;
-            return result;
         }
     }
 }

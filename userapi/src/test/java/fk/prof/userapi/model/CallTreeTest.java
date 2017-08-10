@@ -22,6 +22,7 @@ import org.junit.Test;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -220,8 +221,8 @@ public class CallTreeTest {
         CallTreeView ctv = new CallTreeView(calltree);
         List<IndexedTreeNode<FrameNode>> subtree = ctv.getSubTree(toList(ctv.getRootNodes().get(0).getIdx()), 1, false);
 
-        Assert.assertEquals("[{\"data\":[0,3,0,[23,0]],\"chld\":{\"1\":{\"data\":[1,0,0,[0,0]]},\"2\":{\"data\":[2,2,0,[14,0]]},\"7\":{\"data\":[7,1,0,[9,0]]}}}]",
-            mapper.writeValueAsString(subtree));
+        Assert.assertEquals("{\"method_lookup\":{},\"0\":{\"1\":{\"data\":[1,0,0]},\"2\":{\"data\":[2,0,14]},\"7\":{\"data\":[7,0,9]}}}",
+            mapper.writeValueAsString(new TreeViewResponse.CpuSampleCallersTreeViewResponse(subtree, new HashMap<>())));
     }
 
     private void testTreeEquality(IndexedTreeNode<FrameNode> node, CallTree callTree) {

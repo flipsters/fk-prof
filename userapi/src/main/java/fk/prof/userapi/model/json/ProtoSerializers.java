@@ -1,7 +1,6 @@
 package fk.prof.userapi.model.json;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,7 +34,7 @@ public class ProtoSerializers {
         }
 
         @Override
-        public void serialize(AggregatedProfileModel.FrameNode value, JsonGenerator gen, SerializerProvider serializers) throws IOException, JsonProcessingException {
+        public void serialize(AggregatedProfileModel.FrameNode value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
             gen.writeStartArray();
             gen.writeNumber(value.getMethodId());
             gen.writeNumber(value.getChildCount());
@@ -48,6 +47,38 @@ public class ProtoSerializers {
         }
     }
 
+    public static class CpuSampleFrameNodeWithStackSampleSerializer extends StdSerializer<AggregatedProfileModel.FrameNode> {
+
+        public CpuSampleFrameNodeWithStackSampleSerializer() {
+            super(AggregatedProfileModel.FrameNode.class);
+        }
+
+        @Override
+        public void serialize(AggregatedProfileModel.FrameNode value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+            gen.writeStartArray();
+            gen.writeNumber(value.getMethodId());
+            gen.writeNumber(value.getLineNo());
+            gen.writeNumber(value.getCpuSamplingProps().getOnStackSamples());
+            gen.writeEndArray();
+        }
+    }
+
+    public static class CpuSampleFrameNodeWithCpuSampleSerializer extends StdSerializer<AggregatedProfileModel.FrameNode> {
+
+        public CpuSampleFrameNodeWithCpuSampleSerializer() {
+            super(AggregatedProfileModel.FrameNode.class);
+        }
+
+        @Override
+        public void serialize(AggregatedProfileModel.FrameNode value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+            gen.writeStartArray();
+            gen.writeNumber(value.getMethodId());
+            gen.writeNumber(value.getLineNo());
+            gen.writeNumber(value.getCpuSamplingProps().getOnCpuSamples());
+            gen.writeEndArray();
+        }
+    }
+
     static class TraceCtxDetailsSerializer extends StdSerializer<AggregatedProfileModel.TraceCtxDetail> {
 
         public TraceCtxDetailsSerializer() {
@@ -55,7 +86,7 @@ public class ProtoSerializers {
         }
 
         @Override
-        public void serialize(AggregatedProfileModel.TraceCtxDetail value, JsonGenerator gen, SerializerProvider serializers) throws IOException, JsonProcessingException {
+        public void serialize(AggregatedProfileModel.TraceCtxDetail value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
             gen.writeStartObject();
             gen.writeNumberField("trace_idx", value.getTraceIdx());
             gen.writeFieldName("props");
