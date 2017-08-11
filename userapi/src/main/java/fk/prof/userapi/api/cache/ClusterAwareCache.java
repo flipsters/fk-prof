@@ -129,10 +129,7 @@ public class ClusterAwareCache {
 
     private void doCleanUpOnEviction(RemovalNotification<AggregatedProfileNamingStrategy, Future<AggregatedProfileInfo>> onRemoval) {
         if(!RemovalCause.REPLACED.equals(onRemoval.getCause())) {
-            // remove any dependent values from other cache objects
-
             AggregatedProfileNamingStrategy profileName = onRemoval.getKey();
-
             doAsync(f -> {
                 try(AutoCloseable lock = zkStore.getLock()) {
                     ProfileResidencyInfo residencyInfo = zkStore.readProfileResidencyInfo(profileName);
@@ -142,7 +139,6 @@ public class ClusterAwareCache {
                     }
                     zkStore.removeProfile(profileName, deleteProfileNode);
                 }
-
                 f.complete();
             }, "Error while cleaning for file: {}", profileName.toString());
         }

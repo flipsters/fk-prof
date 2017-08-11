@@ -9,7 +9,7 @@ import java.time.format.DateTimeFormatter;
 /**
  * Created by gaurav.ashok on 07/08/17.
  */
-public class RequestParam {
+public class HttpRequestUtil {
     public static <T> T getParam(HttpServerRequest request, String param, Class<T> clazz, boolean required) {
         String value = request.getParam(param);
         if(required && StringUtils.isNullOrEmpty(value)) {

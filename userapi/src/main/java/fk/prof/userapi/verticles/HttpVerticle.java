@@ -19,6 +19,7 @@ import fk.prof.userapi.model.tree.CallTreeView;
 import fk.prof.userapi.model.tree.IndexedTreeNode;
 import fk.prof.userapi.model.tree.TreeViewResponse.CpuSampleCalleesTreeViewResponse;
 import fk.prof.userapi.model.tree.TreeViewResponse.CpuSampleCallersTreeViewResponse;
+import fk.prof.userapi.util.HttpResponseUtil;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -45,15 +46,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static fk.prof.userapi.util.RequestParam.getParam;
+import static fk.prof.userapi.util.HttpRequestUtil.getParam;
+import static fk.prof.userapi.util.HttpResponseUtil.setResponse;
 
 /**
  * Routes requests to their respective handlers
  * Created by rohit.patiyal on 18/01/17.
  */
 public class HttpVerticle extends AbstractVerticle {
-
-    private static Logger LOGGER = LoggerFactory.getLogger(HttpVerticle.class);
+    private static Logger logger = LoggerFactory.getLogger(HttpVerticle.class);
     private static int VERSION = 1;
 
     private String baseDir;
@@ -282,7 +283,7 @@ public class HttpVerticle extends AbstractVerticle {
 
                 subTree.forEach(e -> e.visit((i,data) -> methodLookup.put(data.getMethodId(), samplesPerTraceCtx.getMethodLookup().get(data.getMethodId()))));
 
-                setResponse(Future.succeededFuture(new CpuSampleCallersTreeViewResponse(subTree, methodLookup)), routingContext);
+                setResponse(Future.succeededFuture(new CpuSampleCallersTreeViewResponse(subTree, methodLookup)), routingContext, true);
             }
         });
     }
@@ -309,118 +310,13 @@ public class HttpVerticle extends AbstractVerticle {
 
                 subTree.forEach(e -> e.visit((i,data) -> methodLookup.put(data.getMethodId(), samplesPerTraceCtx.getMethodLookup().get(data.getMethodId()))));
 
-                setResponse(Future.succeededFuture(new CpuSampleCalleesTreeViewResponse(subTree, methodLookup)), routingContext);
+                setResponse(Future.succeededFuture(new CpuSampleCalleesTreeViewResponse(subTree, methodLookup)), routingContext, true);
             }
         });
     }
 
     private void handleGetHealth(RoutingContext routingContext) {
         routingContext.response().setStatusCode(200).end();
-    }
-
-    private <T> void setResponse(AsyncResult<T> result, RoutingContext routingContext) {
-        setResponse(result, routingContext, false);
-    }
-
-    private <T> void setResponse(AsyncResult<T> result, RoutingContext routingContext, boolean gzipped) {
-        if(routingContext.response().ended()) {
-            return;
-        }
-
-        HttpServerResponse response = routingContext.response();
-
-        if(result.failed()) {
-            Throwable cause = result.cause();
-            LOGGER.error(routingContext.request().uri(), cause);
-
-
-            if(cause instanceof ProfileLoadInProgressException) {
-                // 202 for notifying that profile loading is in progress, and the request can be tried again after some time.
-                endResponseWithError(response, cause, 202);
-            }
-            else if(cause instanceof FileNotFoundException) {
-                if(cause instanceof CachedProfileNotFoundException) {
-                    CachedProfileNotFoundException ex = (CachedProfileNotFoundException) cause;
-                    if(ex.isCachedRemotely()) {
-                        response.putHeader("location", "http://" + ex.getIp() + ":" + ex.getPort() + "/");
-                        endResponse(response, 307);
-                        return;
-                    }
-                    else if(ex.getCause() != null) {
-                        // something went wrong while loading it. send 500
-                        endResponseWithError(response, ex.getCause(), 500);
-                        return;
-                    }
-                }
-                endResponseWithError(response, cause, 404);
-            }
-            else if(cause instanceof IllegalArgumentException) {
-                endResponseWithError(response, cause, 400);
-            }
-            else if(cause instanceof ServiceUnavailableException) {
-                endResponseWithError(response, cause, 503);
-            }
-            else {
-                endResponseWithError(response, cause, 500);
-            }
-        }
-        else {
-            String encodedResponse = Json.encode(result.result());
-
-            response.putHeader("content-type", "application/json");
-            if(gzipped && safeContains(routingContext.request().getHeader("Accept-Encoding"), "gzip")) {
-                Buffer compressedBuf;
-                try {
-                    compressedBuf = Buffer.buffer(StreamTransformer.compress(encodedResponse.getBytes(Charset.forName("utf-8"))));
-                }
-                catch(IOException e) {
-                    setResponse(Future.failedFuture(e), routingContext, false);
-                    return;
-                }
-
-                response.putHeader("Content-Encoding", "gzip");
-                response.end(compressedBuf);
-            }
-            else {
-                response.end(encodedResponse);
-            }
-        }
-    }
-
-    private boolean safeContains(String str, String subStr) {
-        if(str == null || subStr == null) {
-            return false;
-        }
-        return str.toLowerCase().contains(subStr.toLowerCase());
-    }
-
-    private void endResponseWithError(HttpServerResponse response, Throwable error, int statusCode) {
-        response.setStatusCode(statusCode).end(buildHttpErrorObject(error.getMessage(), statusCode).encode());
-    }
-
-    private void endResponse(HttpServerResponse response, int statusCode) {
-        response.setStatusCode(statusCode).end();
-    }
-
-    private JsonObject buildHttpErrorObject(String msg, int statusCode) {
-        final JsonObject error = new JsonObject()
-                .put("timestamp", System.currentTimeMillis())
-                .put("status", statusCode);
-
-        switch (statusCode) {
-            case 400: error.put("error", "BAD_REQUEST");
-                break;
-            case 404: error.put("error", "NOT_FOUND");
-                break;
-            case 500: error.put("error", "INTERNAL_SERVER_ERROR");
-                break;
-            default:  error.put("error", "SOMETHING_WENT_WRONG");
-        }
-
-        if (msg != null) {
-            error.put("message", msg);
-        }
-        return error;
     }
 
     public static class ErroredGetSummaryResponse {

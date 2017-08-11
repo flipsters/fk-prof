@@ -84,7 +84,7 @@ public class CacheTest {
 
     @AfterClass
     public static void afterClass() throws IOException {
-        zookeeper.stop();
+        zookeeper.close();
     }
 
     @Before
@@ -184,7 +184,7 @@ public class CacheTest {
         });
     }
 
-    @Test(timeout = 2500000)
+    @Test(timeout = 2500)
     public void testLoadCallersView_shouldReturnCallersViewForAlreadyLoadedProfile(TestContext context) throws Exception {
         Async async = context.async(2);
 
@@ -279,7 +279,7 @@ public class CacheTest {
         });
     }
 
-    @Test(timeout = 4000000)
+    @Test(timeout = 4000)
     public void testProfileExpiry_cacheShouldGetInvalidated_EntryShouldBeRemovedFromZookeeper(TestContext context) throws Exception {
         TestTicker ticker = new TestTicker();
 
@@ -319,7 +319,7 @@ public class CacheTest {
             context.assertTrue(ar.cause() instanceof CachedProfileNotFoundException);
             async3.countDown();
         });
-        async3.awaitSuccess(1000000);
+        async3.awaitSuccess(1000);
 
         verify(viewCreator, times(1)).buildCallTreeView(same(npPair.profileInfo), eq("t1"));
         verify(loader, times(1)).load(any(), same(npPair.name));
