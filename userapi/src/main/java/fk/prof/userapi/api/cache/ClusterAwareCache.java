@@ -129,10 +129,7 @@ public class ClusterAwareCache {
 
     private void doCleanUpOnEviction(RemovalNotification<AggregatedProfileNamingStrategy, Future<AggregatedProfileInfo>> onRemoval) {
         if(!RemovalCause.REPLACED.equals(onRemoval.getCause())) {
-            // remove any dependent values from other cache objects
-
             AggregatedProfileNamingStrategy profileName = onRemoval.getKey();
-
             doAsync(f -> {
                 try(AutoCloseable lock = zkStore.getLock()) {
                     ProfileResidencyInfo residencyInfo = zkStore.readProfileResidencyInfo(profileName);
@@ -142,7 +139,6 @@ public class ClusterAwareCache {
                     }
                     zkStore.removeProfile(profileName, deleteProfileNode);
                 }
-
                 f.complete();
             }, "Error while cleaning for file: {}", profileName.toString());
         }
@@ -165,9 +161,16 @@ public class ClusterAwareCache {
 
     private <ViewType extends Cacheable> Future<Pair<AggregatedSamplesPerTraceCtx, ViewType>> getView(AggregatedProfileNamingStrategy profileName, String traceName, boolean isCallersView) {
         Future<Pair<AggregatedSamplesPerTraceCtx, ViewType>> viewFuture = Future.future();
-        // TODO succeed fast
-        if (cache.get(profileName) != null) {
-            workerExecutor.executeBlocking(f -> getOrCreateView(profileName, traceName, f, isCallersView), viewFuture.completer());
+
+        Pair<Future<AggregatedProfileInfo>, ViewType> profileViewPair = cache.getView(profileName, getViewName(traceName, isCallersView));
+
+        if(profileViewPair.first != null) {
+            if(profileViewPair.second != null) {
+                return Future.succeededFuture(Pair.of(profileViewPair.first.result().getAggregatedSamples(traceName), profileViewPair.second));
+            }
+            else {
+                workerExecutor.executeBlocking(f -> getOrCreateView(profileName, traceName, f, isCallersView), viewFuture.completer());
+            }
         }
         else {
             // else check into zookeeper if this is cached in another node
@@ -197,42 +200,45 @@ public class ClusterAwareCache {
     }
 
     private <ViewType extends Cacheable> void getOrCreateView(AggregatedProfileNamingStrategy profileName, String traceName, Future<Pair<AggregatedSamplesPerTraceCtx, ViewType>> f, boolean isCallersView) {
-        synchronized (this) {
-            Future<AggregatedProfileInfo> cachedProfileInfo = cache.get(profileName);
-            if (cachedProfileInfo != null) {
-                if (!cachedProfileInfo.isComplete()) {
-                    f.fail(new ProfileLoadInProgressException(profileName));
-                    return;
-                }
+        Pair<Future<AggregatedProfileInfo>, ViewType> profileViewPair = cache.getView(profileName, getViewName(traceName, isCallersView));
+        Future<AggregatedProfileInfo> cachedProfileInfo = profileViewPair.first;
+        ViewType ctView = profileViewPair.second;
 
-                // unlikely case where profile load failed
-                if (!cachedProfileInfo.succeeded()) {
-                    f.fail(new CachedProfileNotFoundException(cachedProfileInfo.cause()));
-                    return;
-                }
+        if (cachedProfileInfo != null) {
+            if (!cachedProfileInfo.isComplete()) {
+                f.fail(new ProfileLoadInProgressException(profileName));
+                return;
+            }
 
-                AggregatedSamplesPerTraceCtx samplesPerTraceCtx = cachedProfileInfo.result().getAggregatedSamples(traceName);
+            // unlikely case where profile load failed
+            if (!cachedProfileInfo.succeeded()) {
+                f.fail(new CachedProfileNotFoundException(cachedProfileInfo.cause()));
+                return;
+            }
 
-                ViewType ctView = cache.getView(profileName, getViewName(isCallersView));
-                if (ctView != null) {
-                    f.complete(new Pair<>(samplesPerTraceCtx, ctView));
-                }
-                else {
-                    // no cached view, so create a new one
-                    switch (profileName.workType) {
-                        case cpu_sample_work:
-                            ctView = buildView(cachedProfileInfo.result(), traceName, isCallersView);
-                            cache.putView(profileName, getViewName(isCallersView), ctView);
-                            f.complete(new Pair<>(samplesPerTraceCtx, ctView));
-                            break;
-                        default:
-                            f.fail(new IllegalArgumentException("Unsupported workType: " + profileName.workType));
-                    }
-                }
+            AggregatedSamplesPerTraceCtx samplesPerTraceCtx = cachedProfileInfo.result().getAggregatedSamples(traceName);
+            if (ctView != null) {
+                f.complete(Pair.of(samplesPerTraceCtx, ctView));
             }
             else {
-                f.fail(new CachedProfileNotFoundException());
+                // no cached view, so create a new one
+                switch (profileName.workType) {
+                    case cpu_sample_work:
+                        profileViewPair = cache.computeViewIfAbsent(profileName, traceName, p -> buildView(p, traceName, isCallersView));
+                        if(profileViewPair.second == null) {
+                            f.fail(new CachedProfileNotFoundException());
+                        }
+                        else {
+                            f.complete(Pair.of(profileViewPair.first.result().getAggregatedSamples(traceName), profileViewPair.second));
+                        }
+                        break;
+                    default:
+                        f.fail(new IllegalArgumentException("Unsupported workType: " + profileName.workType));
+                }
             }
+        }
+        else {
+            f.fail(new CachedProfileNotFoundException());
         }
     }
 
@@ -245,11 +251,8 @@ public class ClusterAwareCache {
         }
     }
 
-    private String getViewName(boolean isCallersView) {
-        if(isCallersView) {
-            return "callers";
-        }
-        return "callees";
+    private String getViewName(String traceName, boolean isCallersView) {
+        return "/" + traceName + "/" + (isCallersView ? "callers" : "callees");
     }
 
     interface BlockingTask<T> {

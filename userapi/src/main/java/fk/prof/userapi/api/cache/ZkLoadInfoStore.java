@@ -11,7 +11,6 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.transaction.CuratorTransactionFinal;
-import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.framework.recipes.locks.InterProcessSemaphoreMutex;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -29,7 +28,7 @@ import java.util.stream.Collectors;
 /**
  * Created by gaurav.ashok on 01/08/17.
  */
-public class ZkLoadInfoStore {
+class ZkLoadInfoStore {
     private static final Logger logger = LoggerFactory.getLogger(ZkLoadInfoStore.class);
     private static final String distributedLockPath = "/global_mutex";
 
@@ -44,7 +43,7 @@ public class ZkLoadInfoStore {
     private final byte[] myResidencyInfo;
     private Supplier<List<AggregatedProfileNamingStrategy>> cachedProfiles;
 
-    public ZkLoadInfoStore(CuratorFramework zookeeper, String myIp, int port, Supplier<List<AggregatedProfileNamingStrategy>> cachedProfiles) {
+    ZkLoadInfoStore(CuratorFramework zookeeper, String myIp, int port, Supplier<List<AggregatedProfileNamingStrategy>> cachedProfiles) {
         this.zookeeper = zookeeper;
 
         this.zkNodesInfoPath = "/nodesInfo/" + myIp + ":" + port;
@@ -63,7 +62,7 @@ public class ZkLoadInfoStore {
             zookeeper.getZookeeperClient().isConnected() ? ConnectionState.Connected : ConnectionState.Disconnected);
     }
 
-    public boolean ensureBasePathExists() throws Exception {
+    boolean ensureBasePathExists() throws Exception {
         ensureConnected();
         if(zookeeper.checkExists().forPath(zkNodesInfoPath) == null) {
             zookeeper.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(zkNodesInfoPath, buildNodeLoadInfo(0).toByteArray());
@@ -78,17 +77,17 @@ public class ZkLoadInfoStore {
         return false;
     }
 
-    public boolean profileInfoExists(AggregatedProfileNamingStrategy profileName) throws Exception {
+    boolean profileInfoExists(AggregatedProfileNamingStrategy profileName) throws Exception {
         ensureConnected();
         return zookeeper.checkExists().forPath(zkPathForProfile(profileName)) != null;
     }
 
-    public boolean nodeInfoExists() throws Exception {
+    boolean nodeInfoExists() throws Exception {
         ensureConnected();
         return zookeeper.checkExists().forPath(zkNodesInfoPath) != null;
     }
 
-    public ProfileResidencyInfo readProfileResidencyInfo(AggregatedProfileNamingStrategy profileName) throws Exception {
+    ProfileResidencyInfo readProfileResidencyInfo(AggregatedProfileNamingStrategy profileName) throws Exception {
         ensureConnected();
         try {
             return readFrom(zkPathForProfile(profileName), ProfileResidencyInfo.parser());
@@ -97,10 +96,11 @@ public class ZkLoadInfoStore {
         }
     }
 
-    public void updateProfileStatusToLoading(AggregatedProfileNamingStrategy profileName, boolean profileNodeExists) throws Exception {
+    void updateProfileStatusToLoading(AggregatedProfileNamingStrategy profileName, boolean profileNodeExists) throws Exception {
         ensureConnected();
         LoadInfoEntities.NodeLoadInfo nodeLoadInfo = readFrom(zkNodesInfoPath, LoadInfoEntities.NodeLoadInfo.parser());
-        CuratorTransactionFinal transaction = zookeeper.inTransaction().setData().forPath(zkNodesInfoPath, buildNodeLoadInfo(nodeLoadInfo.getProfilesLoaded() + 1).toByteArray()).and();
+        int profileLoadedCount = nodeLoadInfo.getProfilesLoaded() + (profileNodeExists ? 0 : 1);
+        CuratorTransactionFinal transaction = zookeeper.inTransaction().setData().forPath(zkNodesInfoPath, buildNodeLoadInfo(profileLoadedCount).toByteArray()).and();
         if(profileNodeExists) {
             transaction = transaction.setData().forPath(zkPathForProfile(profileName), myResidencyInfo).and();
         }
@@ -110,7 +110,7 @@ public class ZkLoadInfoStore {
         transaction.commit();
     }
 
-    public void removeProfile(AggregatedProfileNamingStrategy profileName, boolean deleteProfileNode) throws Exception {
+    void removeProfile(AggregatedProfileNamingStrategy profileName, boolean deleteProfileNode) throws Exception {
         ensureConnected();
         LoadInfoEntities.NodeLoadInfo nodeLoadInfo = readFrom(zkNodesInfoPath, LoadInfoEntities.NodeLoadInfo.parser());
         byte[] newData = buildNodeLoadInfo(nodeLoadInfo.getProfilesLoaded() - 1).toByteArray();
@@ -124,11 +124,11 @@ public class ZkLoadInfoStore {
         }
     }
 
-    public AutoCloseable getLock() throws Exception {
+    AutoCloseable getLock() throws Exception {
         return getLock(false);
     }
 
-    public AutoCloseable getLock(Boolean canExpectAlreadyAcquired) throws Exception {
+    AutoCloseable getLock(Boolean canExpectAlreadyAcquired) throws Exception {
         ensureConnected();
         return new CloseableSharedLock(canExpectAlreadyAcquired);
     }
@@ -252,6 +252,8 @@ public class ZkLoadInfoStore {
             }
 
             writeTransaction.commit();
+
+            //TODO: might wanna consider invalidating already existing profiles. They are probably cached on some other node.
         }
     }
 }

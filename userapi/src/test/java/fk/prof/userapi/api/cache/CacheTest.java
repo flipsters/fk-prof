@@ -26,10 +26,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.apache.zookeeper.CreateMode;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
@@ -40,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.IntStream;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -84,6 +82,10 @@ public class CacheTest {
         curator.blockUntilConnected(config.getCuratorConfig().getConnectionTimeoutMs(), TimeUnit.MILLISECONDS);
     }
 
+    @AfterClass
+    public static void afterClass() throws IOException {
+        zookeeper.close();
+    }
 
     @Before
     public void beforeTest() throws Exception {
@@ -197,18 +199,48 @@ public class CacheTest {
 
         view1.setHandler(ar -> {
             context.assertTrue(ar.succeeded());
-            context.assertEquals(ar.result().second, npPair.calltreeView);
+            context.assertEquals(ar.result().second, npPair.getCallTreeView(1));
             async.countDown();
         });
 
         view2.setHandler(ar -> {
             context.assertTrue(ar.succeeded());
-            context.assertEquals(ar.result().second, npPair.calltreeView);
+            context.assertEquals(ar.result().second, npPair.getCallTreeView(1));
             async.countDown();
         });
 
         async.awaitSuccess(2000);
         verify(viewCreator, times(1)).buildCallTreeView(same(npPair.profileInfo), eq("t1"));
+    }
+
+    @Test(timeout = 2500)
+    public void testLoadCallersViewForDifferentTraces_shouldReturnCallersViewForAlreadyLoadedProfile(TestContext context) throws Exception {
+        Async async = context.async(2);
+
+        NameProfilePair npPair = npPair("proc1", dt(0), 2);
+        ProfileViewCreator viewCreator = mockedViewCreator(CallTreeView.class, npPair);
+
+        setUpDefaultCache(context, null, viewCreator);
+        localProfileCache.put(npPair.name, Future.succeededFuture(npPair.profileInfo));
+
+        Future<Pair<AggregatedSamplesPerTraceCtx, CallTreeView>> view1 = cache.getCallTreeView(npPair.name, "t1");
+        Future<Pair<AggregatedSamplesPerTraceCtx, CallTreeView>> view2 = cache.getCallTreeView(npPair.name, "t2");
+
+        view1.setHandler(ar -> {
+            context.assertTrue(ar.succeeded());
+            context.assertEquals(ar.result().second, npPair.getCallTreeView(1));
+            async.countDown();
+        });
+
+        view2.setHandler(ar -> {
+            context.assertTrue(ar.succeeded());
+            context.assertEquals(ar.result().second, npPair.getCallTreeView(2));
+            async.countDown();
+        });
+
+        async.awaitSuccess(2000);
+        verify(viewCreator, times(1)).buildCallTreeView(same(npPair.profileInfo), eq("t1"));
+        verify(viewCreator, times(1)).buildCallTreeView(same(npPair.profileInfo), eq("t2"));
     }
 
     @Test(timeout = 2500)
@@ -247,7 +279,7 @@ public class CacheTest {
         });
     }
 
-    @Test(timeout = 4000000)
+    @Test(timeout = 4000)
     public void testProfileExpiry_cacheShouldGetInvalidated_EntryShouldBeRemovedFromZookeeper(TestContext context) throws Exception {
         TestTicker ticker = new TestTicker();
 
@@ -287,7 +319,7 @@ public class CacheTest {
             context.assertTrue(ar.cause() instanceof CachedProfileNotFoundException);
             async3.countDown();
         });
-        async3.awaitSuccess(1000000);
+        async3.awaitSuccess(1000);
 
         verify(viewCreator, times(1)).buildCallTreeView(same(npPair.profileInfo), eq("t1"));
         verify(loader, times(1)).load(any(), same(npPair.name));
@@ -308,10 +340,12 @@ public class CacheTest {
         ProfileViewCreator foo = mock(ProfileViewCreator.class);
         for(NameProfilePair npPair : npPairs) {
             if(CallTreeView.class.equals(clazz)) {
-                doReturn(npPair.calltreeView).when(foo).buildCallTreeView(same(npPair.profileInfo), any());
+                IntStream.range(0, npPair.callTreeView.size()).forEach(i ->
+                    doReturn(npPair.callTreeView.get(i)).when(foo).buildCallTreeView(same(npPair.profileInfo), eq("t" + (i+1))));
             }
             else {
-                doReturn(npPair.calleesTreeView).when(foo).buildCalleesTreeView(same(npPair.profileInfo), any());
+                IntStream.range(0, npPair.calleesTreeView.size()).forEach(i ->
+                    doReturn(npPair.calleesTreeView.get(i)).when(foo).buildCalleesTreeView(same(npPair.profileInfo), eq("t" + (i+1))));
             }
         }
 
@@ -345,19 +379,37 @@ public class CacheTest {
     private static class NameProfilePair {
         final AggregatedProfileNamingStrategy name;
         final AggregatedProfileInfo profileInfo;
-        final CallTreeView calltreeView;
-        final CalleesTreeView calleesTreeView;
+        final List<CallTreeView> callTreeView = new ArrayList<>();
+        final List<CalleesTreeView> calleesTreeView = new ArrayList<>();
 
-        NameProfilePair(String procId, ZonedDateTime dt) {
+        NameProfilePair(String procId, ZonedDateTime dt, int traceCount) {
             this.name = profileName(procId, dt);
             this.profileInfo = mock(AggregatedProfileInfo.class);
-            this.calltreeView = mock(CallTreeView.class);
-            this.calleesTreeView = mock(CalleesTreeView.class);
+            IntStream.range(0, traceCount).forEach(i -> {
+                callTreeView.add(mock(CallTreeView.class));
+                calleesTreeView.add(mock(CalleesTreeView.class));
+            });
+        }
+
+        NameProfilePair(String procId, ZonedDateTime dt) {
+            this(procId, dt, 1);
+        }
+
+        CallTreeView getCallTreeView(int i) {
+            return callTreeView.get(i - 1);
+        }
+
+        CalleesTreeView getCalleesTreeView(int i) {
+            return calleesTreeView.get(i - 1);
         }
     }
 
     private static NameProfilePair npPair(String procId, ZonedDateTime dt) {
         return new NameProfilePair(procId, dt);
+    }
+
+    private static NameProfilePair npPair(String procId, ZonedDateTime dt, int traceCount) {
+        return new NameProfilePair(procId, dt, traceCount);
     }
 
     private void cleanUpZookeeper() throws Exception {
