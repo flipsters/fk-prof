@@ -48,7 +48,7 @@ class AggregatedProfileDataContainer extends React.Component {
     const Komponent = this.props.workTypes && selectedWorkType && workTypeMap[selectedWorkType] &&
       workTypeMap[selectedWorkType].component;
     return (
-      <div className="mdl-grid mdl-shadow--2dp">
+      <div className="mdl-grid mdl-shadow--2dp mdl-grid--no-spacing">
         <div className="mdl-cell mdl-cell--12-col mdl-grid">
           {this.props.workTypes && this.props.workTypes.map(w => (
             <button
@@ -62,7 +62,7 @@ class AggregatedProfileDataContainer extends React.Component {
             </button>
           ))}
         </div>
-        <div className="mdl-cell mdl-cell--12-col mdl-grid">
+        <div style={{width: '100%', height: '100%', marginTop: '-20px'}}>
           {Komponent && (
             <Komponent
               location={this.props.location}

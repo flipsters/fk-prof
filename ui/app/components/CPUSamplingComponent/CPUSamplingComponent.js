@@ -1,6 +1,7 @@
 import React, { Component, PropTypes } from 'react';
 
 import MethodTreeComponent from 'components/MethodTreeComponent';
+import {  AutoSizer } from 'react-virtualized';
 import Tabs from 'components/Tabs';
 import styles from './CPUSamplingComponent.css';
 
@@ -12,7 +13,7 @@ export class CPUSamplingComponent extends Component {
     const { traceName } = this.props.params;
 
     return (
-      <div className="mdl-cell mdl-cell--12-col">
+      <div>
         {!fullScreen && (
           <div style={{ position: 'relative' }}>
             <a
@@ -52,12 +53,12 @@ export class CPUSamplingComponent extends Component {
         <Tabs>
           <div>
             <div>Hot Methods</div>
-            <div style={{overflowX: 'auto', whiteSpace: 'nowrap'}}><MethodTreeComponent traceName={this.props.params.traceName}/></div>
+            <MethodTreeComponent traceName={this.props.params.traceName}/>
           </div>
-          <div>
-            <div>Call Tree</div>
-            {/*<div><MethodTreeComponent traceName={this.props.params.traceName}/></div>*/}
-          </div>
+          {/*<div>*/}
+            {/*<div>Call Tree</div>*/}
+            {/*<MethodTreeComponent traceName={this.props.params.traceName}/>*/}
+          {/*</div>*/}
         </Tabs>
       </div>
     );
