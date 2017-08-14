@@ -1,6 +1,5 @@
 package fk.prof.userapi.api.cache;
 
-import com.google.common.base.Ticker;
 import com.google.common.io.BaseEncoding;
 import fk.prof.aggregation.AggregatedProfileNamingStrategy;
 import fk.prof.aggregation.proto.AggregatedProfileModel;
@@ -36,7 +35,6 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -427,25 +425,6 @@ public class CacheTest {
         }
         for(String path : nodes) {
             curator.delete().forPath("/nodesInfo/" + path);
-        }
-    }
-
-    private static class TestTicker extends Ticker {
-        final long beginTime;
-        final AtomicLong currTime;
-
-        public TestTicker() {
-            beginTime = System.nanoTime();
-            currTime = new AtomicLong(beginTime);
-        }
-
-        void advance(long duration, TimeUnit unit) {
-            currTime.addAndGet(unit.toNanos(duration));
-        }
-
-        @Override
-        public long read() {
-            return currTime.get();
         }
     }
 

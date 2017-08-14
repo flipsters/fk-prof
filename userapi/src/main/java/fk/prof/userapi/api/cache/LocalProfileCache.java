@@ -38,19 +38,19 @@ public class LocalProfileCache {
     }
 
     @VisibleForTesting
-    protected LocalProfileCache(Configuration config, Ticker ticker) {
+    LocalProfileCache(Configuration config, Ticker ticker) {
         this.viewCache = CacheBuilder.newBuilder()
             .ticker(ticker)
             .weigher((k, v) -> 1)        // default weight of 1, effectively counting the cached objects.
-            .maximumWeight(200)
+            .maximumWeight(config.getMaxProfileViewsToCache())
             .expireAfterAccess(config.getProfileViewRetentionDurationMin(), TimeUnit.MINUTES)
             .build();
 
         this.cache = CacheBuilder.newBuilder()
             .ticker(ticker)
-            .expireAfterAccess(config.getProfileRetentionDurationMin(), TimeUnit.MINUTES)
             .weigher((k, v) -> 1)        // default weight of 1, effectively counting the cached objects.
-            .maximumWeight(100)
+            .maximumWeight(config.getMaxProfilesToCache())
+            .expireAfterAccess(config.getProfileRetentionDurationMin(), TimeUnit.MINUTES)
             .removalListener(this::doCleanupOnEviction)
             .build();
 
@@ -58,20 +58,20 @@ public class LocalProfileCache {
         this.uidGenerator = new AtomicInteger(0);
     }
 
-    public void setRemovalListener(RemovalListener<AggregatedProfileNamingStrategy, Future<AggregatedProfileInfo>> removalListener) {
+    void setRemovalListener(RemovalListener<AggregatedProfileNamingStrategy, Future<AggregatedProfileInfo>> removalListener) {
         this.removalListener = removalListener;
     }
 
-    public Future<AggregatedProfileInfo> get(AggregatedProfileNamingStrategy key) {
+    Future<AggregatedProfileInfo> get(AggregatedProfileNamingStrategy key) {
         CacheableProfile cacheableProfile = cache.getIfPresent(key);
         return cacheableProfile != null ? cacheableProfile.profile : null;
     }
 
-    public void put(AggregatedProfileNamingStrategy key, Future<AggregatedProfileInfo> profileFuture) {
+    void put(AggregatedProfileNamingStrategy key, Future<AggregatedProfileInfo> profileFuture) {
         cache.put(key, new CacheableProfile(key, uidGenerator.incrementAndGet(), profileFuture));
     }
 
-    public <T extends Cacheable> Pair<Future<AggregatedProfileInfo>, T> getView(AggregatedProfileNamingStrategy profileName, String viewName) {
+    <T extends Cacheable> Pair<Future<AggregatedProfileInfo>, T> getView(AggregatedProfileNamingStrategy profileName, String viewName) {
         CacheableProfile cacheableProfile = cache.getIfPresent(profileName);
         if(cacheableProfile != null) {
             String viewKey = toViewKey(profileName, viewName, cacheableProfile.uid);
@@ -80,7 +80,7 @@ public class LocalProfileCache {
         return Pair.of(null, null);
     }
 
-    public <T extends Cacheable> Pair<Future<AggregatedProfileInfo>, T> computeViewIfAbsent(AggregatedProfileNamingStrategy profileName, String viewName, Function<AggregatedProfileInfo, T> viewProvider) {
+    <T extends Cacheable> Pair<Future<AggregatedProfileInfo>, T> computeViewIfAbsent(AggregatedProfileNamingStrategy profileName, String viewName, Function<AggregatedProfileInfo, T> viewProvider) {
         // dont cache it if dependent profile is not there.
         CacheableProfile cacheableProfile = cache.getIfPresent(profileName);
         if(cacheableProfile == null) {
@@ -90,8 +90,13 @@ public class LocalProfileCache {
         return cachedView == null ? Pair.of(null, null) : Pair.of(cacheableProfile.profile, cachedView);
     }
 
-    public List<AggregatedProfileNamingStrategy> cachedProfiles() {
+    List<AggregatedProfileNamingStrategy> cachedProfiles() {
         return new ArrayList<>(cache.asMap().keySet());
+    }
+
+    void claenUp() {
+        cache.cleanUp();
+        viewCache.cleanUp();
     }
 
     private void doCleanupOnEviction(RemovalNotification<AggregatedProfileNamingStrategy, CacheableProfile> evt) {

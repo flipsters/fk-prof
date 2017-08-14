@@ -100,7 +100,7 @@ public class ClusterAwareCache {
                     workerExecutor.executeBlocking(f2 -> profileLoader.load(f2, profileName), loadProfileFuture.completer());
 
                     // update LOADING status in zookeeper
-                    zkStore.updateProfileStatusToLoading(profileName, staleNodeExists);
+                    zkStore.updateProfile(profileName, staleNodeExists);
                     cache.put(profileName, loadProfileFuture);
 
                     loadProfileFuture.setHandler(ar -> {
